@@ -655,6 +655,7 @@
                 font-size: 13px;
             }
         }
+    </style>
     <script>
         // 检测iPad mini7 Safari横屏，自动加body class
         function isIpadMini7SafariLandscape() {
@@ -674,6 +675,54 @@
         window.addEventListener('resize', updateIpadMini7Class);
         window.addEventListener('orientationchange', updateIpadMini7Class);
         document.addEventListener('DOMContentLoaded', updateIpadMini7Class);
+    </script>
+
+    <!-- iPad mini 竖屏浮动按钮 & 检测脚本 -->
+    <div class="ipadmini-fab" id="ipadminiFab" aria-hidden="true">⋯</div>
+    <div class="ipadmini-fab-menu" id="ipadminiFabMenu" aria-hidden="true">
+        <button id="fabPasteBtn">📋 粘贴</button>
+        <button id="fabClearBtn">🗑️ 清空</button>
+    </div>
+    <script>
+        // 检测 iPad mini（通用判断：iPad 且屏幕尺寸较小），并在竖屏下启用自适应按钮替代顶部按钮
+        function isIpadMiniPortrait() {
+            var ua = navigator.userAgent || '';
+            var isIpad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var isPortrait = window.matchMedia('(orientation: portrait)').matches;
+            // iPad mini 常见的短边在 744 或更小，这里用宽度判断
+            var smallHeight = Math.min(screen.width, screen.height) <= 820;
+            return isIpad && isPortrait && smallHeight;
+        }
+
+        function updateIpadMiniPortrait() {
+            if (isIpadMiniPortrait()) {
+                document.body.classList.add('ipadmini-portrait');
+                document.getElementById('ipadminiFab').setAttribute('aria-hidden', 'false');
+            } else {
+                document.body.classList.remove('ipadmini-portrait');
+                document.getElementById('ipadminiFab').setAttribute('aria-hidden', 'true');
+                document.getElementById('ipadminiFabMenu').style.display = 'none';
+            }
+        }
+
+        window.addEventListener('resize', updateIpadMiniPortrait);
+        window.addEventListener('orientationchange', updateIpadMiniPortrait);
+        document.addEventListener('DOMContentLoaded', updateIpadMiniPortrait);
+
+        // FAB 菜单交互
+        const ipadminiFab = document.getElementById('ipadminiFab');
+        const ipadminiFabMenu = document.getElementById('ipadminiFabMenu');
+        ipadminiFab.addEventListener('click', function() {
+            ipadminiFabMenu.style.display = ipadminiFabMenu.style.display === 'flex' ? 'none' : 'flex';
+        });
+        document.getElementById('fabPasteBtn').addEventListener('click', async function() {
+            ipadminiFabMenu.style.display = 'none';
+            try { await pasteFromClipboard(); } catch(e) { showToast('无法访问剪贴板', 'error'); }
+        });
+        document.getElementById('fabClearBtn').addEventListener('click', function() {
+            ipadminiFabMenu.style.display = 'none';
+            clearEditor();
+        });
     </script>
 
         /* 全屏预览移动设备优化 */
@@ -763,6 +812,80 @@
             border-color: #ff4757;
             background: rgba(255, 71, 87, 0.1);
         }
+
+        /* iPad mini 竖屏定制：隐藏顶部按钮行，调整 toast 为文本宽度 */
+        body.ipadmini-portrait .editor-panel .panel-header .btn-group {
+            display: none !important;
+        }
+
+        body.ipadmini-portrait .toast {
+            left: 50%;
+            top: 80px;
+            transform: translateX(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            width: auto;
+            max-width: calc(100% - 32px);
+            white-space: normal;
+            text-align: center;
+            border-radius: 6px;
+            word-break: break-word;
+            background: rgba(0,168,107,0.12); /* 更窄的绿色条 */
+            border-color: rgba(0,168,107,0.3);
+        }
+
+        /* 底部浮动操作按钮（iPad mini 使用） */
+        .ipadmini-fab {
+            position: fixed;
+            right: 16px;
+            bottom: 22px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #007aff;
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        body.ipadmini-portrait .ipadmini-fab {
+            display: flex;
+        }
+
+        .ipadmini-fab-menu {
+            position: fixed;
+            right: 16px;
+            bottom: 82px;
+            background: rgba(30,30,30,0.95);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1200;
+            min-width: 140px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+        }
+
+        .ipadmini-fab-menu button {
+            background: transparent;
+            border: none;
+            color: inherit;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .ipadmini-fab-menu button:hover { background: rgba(255,255,255,0.04); }
     </style>
 </head>
 <body>
@@ -823,7 +946,7 @@
                     </button>
                 </div>
             </div>
-            <iframe id="previewFrame" class="preview-frame"></iframe>
+            <iframe id="previewFrame" class="preview-frame" title="预览窗口"></iframe>
         </div>
     </div>
 
@@ -1322,7 +1445,7 @@
                 </div>
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
-                    <div style="color: #007aff; font-size: 15px; font-weight: bold; margin-bottom: 4px;">版本号 0.911</div>
+                    <div style="color: #007aff; font-size: 15px; font-weight: bold; margin-bottom: 4px;">版本号 0.912</div>
                     <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
