@@ -727,6 +727,9 @@
             position: fixed;
             top: 20px;
             left: 20px;
+            display: inline-block;
+            width: auto;
+            white-space: nowrap;
             background: #2a2a2a;
             color: #ffffff;
             padding: 12px 20px;
@@ -745,12 +748,12 @@
 
         .toast.success {
             border-color: #00a86b;
-            background: rgba(0, 168, 107, 0.1);
+            background: #00a86b;
         }
 
         .toast.error {
             border-color: #ff4757;
-            background: rgba(255, 71, 87, 0.1);
+            background: #ff4757;
         }
     </style>
 </head>
@@ -1080,7 +1083,23 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            document.body.appendChild(toast);
+            
+            // 创建一个容器来包裹toast，实现自适应宽度
+            const toastContainer = document.createElement('div');
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+            `;
+            
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+            
+            // 设置初始宽度为内容宽度
+            toast.style.width = 'auto';
             
             // iPad设备调整通知位置
             adjustToastPositionForiPad();
@@ -1094,7 +1113,7 @@
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
-                    document.body.removeChild(toast);
+                    document.body.removeChild(toastContainer);
                 }, 300);
             }, 3000);
         }
