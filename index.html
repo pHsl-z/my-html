@@ -60,6 +60,7 @@
             border-right: 1px solid #2a2a2a;
             min-width: 0;
             position: relative;
+            max-height: calc(100vh - 120px); /* 限制最大高度避免遮挡 */
         }
 
 .preview-panel {
@@ -392,8 +393,9 @@
             .editor-panel {
                 border-right: none;
                 border-bottom: 1px solid #2a2a2a;
-                flex: 0 0 50%;
-                min-height: 200px;
+                flex: 0 0 45%; /* 减小编辑器面板高度 */
+                min-height: 150px; /* 减小最小高度 */
+                max-height: 50vh; /* 限制最大高度 */
             }
             
             .preview-panel {
@@ -843,6 +845,67 @@
             border-color: #ff4757;
             background: rgba(255, 71, 87, 0.1);
         }
+        
+        /* iPad mini 竖屏定制：隐藏顶部按钮行，调整 toast 为文本宽度 */
+        body.ipadmini-portrait .editor-panel .panel-header .btn-group {
+            display: none !important;
+        }
+
+        body.ipadmini-portrait .toast {
+            left: 50%;
+            top: 80px;
+            transform: translateX(-50%);
+            display: inline-block;
+            padding: 8px 12px;
+            max-width: 85%;
+            white-space: normal;
+            text-align: center;
+            border-radius: 6px;
+            word-break: break-word;
+            background: rgba(0,168,107,0.12); /* 更窄的绿色条 */
+            border-color: rgba(0,168,107,0.3);
+            width: fit-content; /* 使宽度适应内容 */
+        }
+
+        /* 底部浮动操作按钮（iPad mini 使用） */
+        .ipadmini-fab {
+            position: fixed;
+            right: 16px;
+            bottom: 22px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #007aff;
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        body.ipadmini-portrait .ipadmini-fab {
+            display: flex;
+        }
+
+        .ipadmini-fab-menu {
+            position: fixed;
+            right: 16px;
+            bottom: 82px;
+            background: rgba(30,30,30,0.95);
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1200;
+            min-width: 140px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+        }
+
     </style>
 </head>
 <body>
@@ -1426,7 +1489,7 @@
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
                     <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">📱 版本信息</h3>
-                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.914</p>
+                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.915</p>
                     <h3 style="color: #1d1d1f; margin: 8px 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
