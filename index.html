@@ -622,7 +622,11 @@
         }
 
         /* 平板横屏优化 */
+        /* iPad mini7 Safari 横屏优化，避免标签页遮挡顶部按钮 */
         @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+            body.safari-ipadmini7 {
+                padding-top: 48px; /* 预留顶部空间，避免标签页遮挡 */
+            }
             .container {
                 flex-direction: row;
             }
@@ -639,12 +643,32 @@
             
             /* iPad横屏通知优化 - 避免遮挡顶部按钮 */
             .toast {
-                top: 70px; /* 增加顶部距离，避免遮挡面板标题 */
+                top: 90px; /* 再增加顶部距离，适配Safari标签页按钮遮挡 */
                 left: 20px;
                 max-width: 300px;
                 font-size: 13px;
             }
         }
+    <script>
+        // 检测iPad mini7 Safari横屏，自动加body class
+        function isIpadMini7SafariLandscape() {
+            var ua = navigator.userAgent;
+            var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+            var isIpadMini7 = /iPad/.test(ua) && screen.height === 744 && screen.width === 1133;
+            var isLandscape = window.matchMedia('(orientation: landscape)').matches;
+            return isSafari && isIpadMini7 && isLandscape;
+        }
+        function updateIpadMini7Class() {
+            if (isIpadMini7SafariLandscape()) {
+                document.body.classList.add('safari-ipadmini7');
+            } else {
+                document.body.classList.remove('safari-ipadmini7');
+            }
+        }
+        window.addEventListener('resize', updateIpadMini7Class);
+        window.addEventListener('orientationchange', updateIpadMini7Class);
+        document.addEventListener('DOMContentLoaded', updateIpadMini7Class);
+    </script>
 
         /* 全屏预览移动设备优化 */
         @media (max-width: 768px) and (orientation: portrait) {
