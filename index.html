@@ -61,7 +61,8 @@
             min-width: 0;
             position: relative;
         }
-.preview-panel {
+
+        .preview-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -130,16 +131,6 @@
             border-radius: 0;
         }
 
-        /* iOS Safari 优化 */
-        .code-editor:focus {
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .code-editor::placeholder {
-            color: #666666;
-        }
-
         .preview-frame {
             flex: 1;
             border: none;
@@ -147,7 +138,6 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* 按钮触摸优化 - 针对iOS Edge */
         .btn {
             background: #2a2a2a;
             color: #ffffff;
@@ -195,30 +185,12 @@
                 opacity: 0.7;
                 transform: scale(0.98);
             }
-            
-            /* iOS按钮点击延迟修复 */
-            .btn {
-                cursor: pointer;
-                -webkit-touch-callout: none;
-            }
-            
-            /* 防止iOS双击缩放 */
-            * {
-                -webkit-touch-callout: none;
-                -webkit-text-size-adjust: none;
-            }
-            
-            /* iOS滚动优化 */
-            .code-editor {
-                -webkit-overflow-scrolling: touch;
-                overflow-scrolling: touch;
-            }
         }
         
         /* iOS 13+ 增强兼容性 */
         @media (pointer: coarse) {
             .btn {
-                min-height: 44px; /* iOS推荐的最小触摸目标 */
+                min-height: 44px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -257,69 +229,6 @@
         .btn-success:hover {
             background: #008c5a;
             border-color: #008c5a;
-        }
-
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-            min-height: auto;
-        }
-
-        .btn-info {
-            background: #17a2b8;
-            border-color: #17a2b8;
-        }
-
-        .btn-info:hover {
-            background: #138496;
-            border-color: #138496;
-        }
-
-        /* 全屏预览样式 */
-        .fullscreen-preview {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 9999 !important;
-            background: white !important;
-            margin: 0 !important;
-            border: none !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-        }
-
-        .fullscreen-preview .panel-header {
-            position: absolute !important;
-            top: 10px !important;
-            right: 10px !important;
-            background: rgba(0,0,0,0.8) !important;
-            border-radius: 8px !important;
-            padding: 8px !important;
-            z-index: 10000 !important;
-        }
-
-        .fullscreen-preview .panel-title {
-            display: none !important;
-        }
-
-        .fullscreen-preview .preview-frame {
-            width: 100% !important;
-            height: 100% !important;
-            border: none !important;
-        }
-
-        .fullscreen-preview .btn {
-            background: rgba(255,255,255,0.9) !important;
-            border: 1px solid rgba(255,255,255,0.3) !important;
-            color: #333 !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
-        }
-
-        .fullscreen-preview .btn:hover {
-            background: rgba(255,255,255,1) !important;
         }
 
         .btn-group {
@@ -402,398 +311,20 @@
 
             .panel-header {
                 padding: 10px 12px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .panel-title {
-                flex-shrink: 0;
             }
 
             .btn-group {
                 gap: 6px;
-                margin-left: auto;
-                flex-shrink: 0;
             }
 
             .code-editor {
                 padding: 12px;
                 font-size: 13px;
-                line-height: 1.5;
-            }
-            
-            .button {
-                padding: 6px 10px;
-                font-size: 12px;
-                min-height: 36px;
             }
             
             .status-bar {
                 padding: 6px 12px;
                 font-size: 11px;
-            }
-            
-            .char-count {
-                font-size: 11px;
-            }
-            
-            /* 移动设备通知位置优化 */
-            .toast {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                max-width: calc(100vw - 20px);
-                transform: translateX(-100%);
-                font-size: 13px;
-                padding: 10px 15px;
-            }
-            
-            .toast.show {
-                transform: translateX(0);
-            }
-        }
-
-        /* 平板设备优化 */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .button {
-                padding: 7px 12px;
-                font-size: 12px;
-            }
-            
-            .code-editor {
-                font-size: 13px;
-                padding: 15px;
-            }
-            
-            .panel-header {
-                padding: 14px 18px;
-            }
-            
-            /* iPad竖屏通知优化 */
-            @media (orientation: portrait) {
-                .toast {
-                    top: 75px; /* 避免遮挡面板标题 */
-                    left: 20px;
-                    max-width: 280px;
-                    font-size: 13px;
-                }
-            }
-        }
-
-        /* 桌面设备优化 */
-        @media (min-width: 1025px) {
-            .container {
-                max-width: 100vw;
-                margin: 0 auto;
-            }
-        }
-
-        /* iPad横屏特殊优化 */
-        @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-            /* iPad Pro横屏通知优化 */
-            .toast {
-                top: 80px; /* 更大的顶部距离 */
-                left: 30px;
-                max-width: 350px;
-                font-size: 14px;
-            }
-        }
-        
-        @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
-            /* iPad横屏通知优化 */
-            .toast {
-                top: 65px; /* 适中的顶部距离 */
-                left: 25px;
-                max-width: 320px;
-                font-size: 13px;
-            }
-        }
-
-        /* 全屏预览优化 */
-        .fullscreen-preview {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9999;
-            background: #1a1a1a;
-            margin: 0;
-            border: none;
-            border-radius: 0;
-        }
-
-        .fullscreen-preview .panel-header {
-            padding: 12px 20px;
-            background: #2a2a2a;
-            border-bottom: 1px solid #3a3a3a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .fullscreen-preview .panel-title {
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        .fullscreen-preview .preview-frame {
-            height: calc(100vh - 60px);
-            width: 100%;
-            border: none;
-            background: white;
-        }
-
-        .fullscreen-preview .btn {
-            padding: 8px 16px;
-            font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid #3a3a3a;
-            background: #2a2a2a;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .fullscreen-preview .btn:hover {
-            background: #3a3a3a;
-            border-color: #4a4a4a;
-        }
-
-        /* 超小屏幕优化 */
-        @media (max-width: 480px) {
-            .panel-header {
-                padding: 8px 10px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: nowrap;
-                gap: 8px;
-            }
-
-            .panel-title {
-                font-size: 14px;
-                flex-shrink: 0;
-            }
-
-            .btn-group {
-                gap: 4px;
-                margin-left: auto;
-                flex-shrink: 0;
-            }
-
-            .button, .btn {
-                padding: 5px 8px;
-                font-size: 11px;
-                min-height: 32px;
-            }
-
-            .code-editor {
-                padding: 10px;
-                font-size: 12px;
-            }
-
-            .status-bar {
-                padding: 5px 10px;
-                font-size: 10px;
-            }
-
-            .fullscreen-preview .panel-header {
-                padding: 10px 15px;
-            }
-
-            .fullscreen-preview .btn {
-                padding: 6px 12px;
-                font-size: 12px;
-            }
-            
-            /* 超小屏幕通知优化 */
-            .toast {
-                top: 5px;
-                left: 5px;
-                right: 5px;
-                max-width: calc(100vw - 10px);
-                font-size: 12px;
-                padding: 8px 12px;
-                border-radius: 6px;
-                white-space: nowrap;
-                width: auto;
-                max-width: none;
-                display: inline-block;
-                box-sizing: content-box;
-                line-height: 1.4;
-            }
-        }
-
-        /* iPad mini 竖屏优化 */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            /* 减小编辑器高度，避免标签页遮挡按钮 */
-            .editor-panel {
-                height: calc(100vh - 120px); /* 为iPad Safari标签页留出空间 */
-            }
-            
-            .code-editor {
-                height: calc(100vh - 200px); /* 减小编辑器高度 */
-                font-size: 13px; /* 稍小字体 */
-            }
-            
-            /* 按钮优化 - 更小尺寸 */
-            .btn {
-                padding: 4px 8px;
-                font-size: 10px;
-                min-height: 32px;
-            }
-            
-            .btn-group {
-                gap: 3px;
-            }
-            
-            .panel-header {
-                padding: 8px 12px;
-            }
-            
-            .icon {
-                width: 12px;
-                height: 12px;
-            }
-            
-            /* iPad mini 竖屏通知优化 - 确保文字和背景对齐 */
-            .toast {
-                top: 10px; /* 更靠下，避免顶部标签 */
-                left: 10px;
-                max-width: 280px;
-                font-size: 12px;
-                padding: 8px 12px;
-                white-space: nowrap !important;
-                width: auto !important;
-                max-width: none !important;
-                display: inline-block !important;
-                box-sizing: content-box !important;
-                line-height: 1.4;
-            }
-        }
-
-        /* iPad Pro横屏优化 */
-        @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-            /* iPad Pro横屏按钮优化 */
-            .btn {
-                padding: 6px 12px;
-                font-size: 12px;
-                min-height: 38px;
-            }
-            
-            .btn-group {
-                gap: 6px;
-            }
-            
-            .panel-header {
-                padding: 12px 16px;
-            }
-            
-            .icon {
-                width: 15px;
-                height: 15px;
-            }
-            
-            /* iPad Pro横屏通知优化 */
-            .toast {
-                top: 80px;
-                max-width: 350px;
-                font-size: 14px;
-            }
-        }
-
-        /* 平板横屏优化 */
-        @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
-            .container {
-                flex-direction: row;
-            }
-            
-            .editor-panel {
-                flex: 0 0 45%;
-                border-right: 1px solid #2a2a2a;
-                border-bottom: none;
-.toast {
-    white-space: nowrap;
-    width: auto;
-    max-width: none;
-    display: inline-block;
-}
-
-            }
-            
-            .preview-panel {
-                flex: 1;
-            }
-            
-            /* iPad横屏通知优化 - 避免遮挡顶部按钮 */
-            .toast {
-                top: 70px; /* 增加顶部距离，避免遮挡面板标题 */
-                left: 20px;
-                max-width: 300px;
-                font-size: 13px;
-            }
-            
-            /* iPad横屏按钮优化 - 缩小尺寸避免遮挡 */
-            .btn {
-                padding: 5px 10px;
-                font-size: 11px;
-                min-height: 36px;
-            }
-            
-            .btn-group {
-                gap: 5px;
-            }
-            
-            .panel-header {
-                padding: 10px 14px;
-            }
-            
-            .icon {
-                width: 14px;
-                height: 14px;
-            }
-        }
-
-        /* 全屏预览移动设备优化 */
-        @media (max-width: 768px) and (orientation: portrait) {
-            .fullscreen-preview .panel-header {
-                padding: 10px 15px;
-                display: flex;
-                justify-content: flex-end;
-                align-items: center;
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: rgba(0,0,0,0.8);
-                border-radius: 8px;
-                left: auto;
-                width: auto;
-            }
-            
-            .fullscreen-preview .preview-frame {
-                height: calc(100vh - 50px);
-            }
-        }
-
-        @media (max-width: 768px) and (orientation: landscape) {
-            .fullscreen-preview .panel-header {
-                padding: 8px 12px;
-                display: flex;
-                justify-content: flex-end;
-                align-items: center;
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: rgba(0,0,0,0.8);
-                border-radius: 8px;
-                left: auto;
-                width: auto;
-            }
-            
-            .fullscreen-preview .preview-frame {
-                height: calc(100vh - 45px);
             }
         }
 
@@ -808,7 +339,7 @@
             100% { transform: scale(1); }
         }
 
-        /* 消息提示样式 */
+        /* 消息提示样式 - 已修复 */
         .toast {
             position: fixed;
             top: 20px;
@@ -823,10 +354,11 @@
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             backdrop-filter: blur(10px);
-            white-space: nowrap;
+            /* 优化：让宽度完全适应内容 */
+            display: inline-block;
             width: auto;
             max-width: none;
-            display: inline-block;
+            white-space: nowrap;
         }
 
         .toast.show {
@@ -835,74 +367,36 @@
 
         .toast.success {
             border-color: #00a86b;
-            background: rgba(0, 168, 107, 0.1);
+            background: #00a86b;
+            /* 移除背景透明度，确保绿色框完全覆盖 */
         }
 
         .toast.error {
             border-color: #ff4757;
-            background: rgba(255, 71, 87, 0.1);
-        }
-        
-        /* iPad mini 竖屏定制：隐藏顶部按钮行，调整 toast 为文本宽度 */
-        body.ipadmini-portrait .editor-panel .panel-header .btn-group {
-            display: none !important;
+            background: #ff4757;
         }
 
-        body.ipadmini-portrait .toast {
-            left: 50%;
-            top: 80px;
-            transform: translateX(-50%);
-            display: inline-block;
-            padding: 8px 12px;
-            max-width: 85%;
-            white-space: normal;
-            text-align: center;
-            border-radius: 6px;
-            word-break: break-word;
-            background: rgba(0,168,107,0.12); /* 更窄的绿色条 */
-            border-color: rgba(0,168,107,0.3);
-            width: fit-content; /* 使宽度适应内容 */
+        /* 移动设备通知优化 */
+        @media (max-width: 768px) {
+            .toast {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: calc(100vw - 20px);
+                font-size: 13px;
+                padding: 10px 15px;
+                /* 移动设备上允许换行 */
+                white-space: normal;
+                text-overflow: unset;
+            }
         }
 
-        /* 底部浮动操作按钮（iPad mini 使用） */
-        .ipadmini-fab {
-            position: fixed;
-            right: 16px;
-            bottom: 22px;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: #007aff;
-            color: #fff;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1200;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-            cursor: pointer;
-            font-size: 22px;
+        /* 平板设备优化 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .toast {
+                max-width: 70%;
+            }
         }
-
-        body.ipadmini-portrait .ipadmini-fab {
-            display: flex;
-        }
-
-        .ipadmini-fab-menu {
-            position: fixed;
-            right: 16px;
-            bottom: 82px;
-            background: rgba(30,30,30,0.95);
-            color: #fff;
-            padding: 8px;
-            border-radius: 8px;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 1200;
-            min-width: 140px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-        }
-
     </style>
 </head>
 <body>
@@ -971,200 +465,41 @@
         const htmlEditor = document.getElementById('htmlEditor');
         const previewFrame = document.getElementById('previewFrame');
         const charCount = document.getElementById('charCount');
-        const pasteBtn = document.getElementById('pasteBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
 
-        // 默认HTML模板 - 针对移动设备优化
-        const defaultHTML = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的HTML5页面</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f7;
-            color: #1d1d1f;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            padding: 30px 20px;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        }
-        
-        h1 {
-            color: #1d1d1f;
-            margin-bottom: 20px;
-            font-size: 28px;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        p {
-            color: #86868b;
-            font-size: 16px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .feature {
-            background: #f5f5f7;
-            padding: 15px;
-            border-radius: 12px;
-            margin: 15px 0;
-            text-align: center;
-        }
-        
-        .feature h3 {
-            color: #1d1d1f;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .feature p {
-            color: #86868b;
-            font-size: 14px;
-            margin: 0;
-        }
-        
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            
-            .container {
-                padding: 20px 15px;
-                border-radius: 12px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-            
-            p {
-                font-size: 14px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎉 欢迎使用HTML5编辑器</h1>
-        <p>这是一个响应式的HTML5页面模板，完美适配iOS、Android、macOS和Windows设备。</p>
-        
-        <div class="feature">
-            <h3>📱 移动优先</h3>
-            <p>在各种移动设备上都有出色的显示效果</p>
-        </div>
-        
-        <div class="feature">
-            <h3>💻 跨平台兼容</h3>
-            <p>支持iOS、Android、macOS、Windows等主流平台</p>
-        </div>
-        
-        <div class="feature">
-            <h3>🚀 性能优化</h3>
-            <p>快速加载，流畅的用户体验</p>
-        </div>
-    </div>
-</body>
-</html>`;
-
-        // 初始化编辑器 - 修改为清空状态
+        // 初始化编辑器
         htmlEditor.value = '';
         updateCharCount();
-        
-        // IE浏览器兼容性：确保iframe正确初始化
-        if (document.documentMode || /Edge/.test(navigator.userAgent)) {
-            previewFrame.style.display = 'block';
-            previewFrame.style.width = '100%';
-            previewFrame.style.height = 'calc(100% - 60px)';
-        }
         
         // 延迟初始化预览，确保DOM完全加载
         setTimeout(function() {
             updatePreview();
         }, 100);
 
-        // 实时预览功能 - 优化触摸设备体验
+        // 实时预览功能
         let updateTimeout;
         htmlEditor.addEventListener('input', function() {
             clearTimeout(updateTimeout);
             updateTimeout = setTimeout(updatePreview, 100);
             updateCharCount();
         });
-        
-        // iOS Edge浏览器兼容性：监听change事件
-        htmlEditor.addEventListener('change', function() {
-            clearTimeout(updateTimeout);
-            updateTimeout = setTimeout(updatePreview, 100);
-            updateCharCount();
-        });
-        
-        // IE浏览器兼容性：监听propertychange事件
-        if (document.documentMode || /Edge/.test(navigator.userAgent)) {
-            htmlEditor.addEventListener('propertychange', function(e) {
-                if (e.propertyName === 'value') {
-                    clearTimeout(updateTimeout);
-                    updateTimeout = setTimeout(updatePreview, 100);
-                    updateCharCount();
-                }
-            });
-        }
-        
-        // 监听keyup事件以确保IE兼容性
-        htmlEditor.addEventListener('keyup', function() {
-            clearTimeout(updateTimeout);
-            updateTimeout = setTimeout(updatePreview, 100);
-            updateCharCount();
-        });
-        
-        // 触摸设备优化 - 防止键盘遮挡
-        htmlEditor.addEventListener('focus', function() {
-            // 延迟滚动确保编辑器可见
-            setTimeout(() => {
-                htmlEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
-        });
 
         function updatePreview() {
             const code = htmlEditor.value;
             const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
             try {
-                // 使用srcdoc属性避免重复声明问题（现代浏览器）
                 if ('srcdoc' in previewFrame) {
                     previewFrame.srcdoc = code;
                 } else {
-                    // IE浏览器兼容性处理
                     if (previewDoc.open && previewDoc.write && previewDoc.close) {
                         previewDoc.open();
                         previewDoc.write(code);
                         previewDoc.close();
                     } else {
-                        // 对于IE的备用方案
                         previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
                     }
                 }
             } catch (error) {
                 console.log('Preview update error:', error);
-                // IE浏览器备用方案
                 try {
                     previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
                 } catch (ieError) {
@@ -1179,28 +514,10 @@
 
         function clearEditor() {
             if (confirm('确定要清空编辑器吗？')) {
-                // iOS Safari/Edge浏览器兼容性处理
-                // 初始化编辑器 - 修改为清空状态
                 htmlEditor.value = '';
                 updateCharCount();
-                
-                // 确保预览区域也是空的
                 updatePreview();
-                
-                // 延迟再次清空确保完全初始化
-                setTimeout(function() {
-                    updatePreview();
-                    updateCharCount();
-                }, 100);
-                
-                setTimeout(function() {
-                    updatePreview();
-                    updateCharCount();
-                }, 200);
-                
-                // 清除本地存储
                 localStorage.removeItem('htmlEditorContent');
-                
                 showToast('编辑器已清空', 'success');
             }
         }
@@ -1216,34 +533,19 @@
                 htmlEditor.value = text;
                 htmlEditor.focus();
                 updatePreview();
+                updateCharCount();
                 showToast('已从剪贴板粘贴', 'success');
-                
-                // 添加按钮动画效果
-                pasteBtn.classList.add('pasting');
-                setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
             } catch (err) {
                 showToast('无法访问剪贴板，请手动粘贴', 'error');
             }
         }
 
-        // Toast 消息提示
+        // Toast 消息提示 - 已修复
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            
-            // 确保通知条宽度自适应内容 - iPad mini优化
-            toast.style.width = 'auto';
-            toast.style.maxWidth = 'none';
-            toast.style.whiteSpace = 'nowrap';
-            toast.style.display = 'inline-block';
-            toast.style.boxSizing = 'content-box';
-            toast.style.lineHeight = '1.4';
-            
             document.body.appendChild(toast);
-            
-            // iPad设备调整通知位置
-            adjustToastPositionForiPad();
             
             // 触发显示动画
             setTimeout(() => {
@@ -1254,7 +556,9 @@
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
-                    document.body.removeChild(toast);
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
                 }, 300);
             }, 3000);
         }
@@ -1266,166 +570,44 @@
                 return;
             }
 
-            const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'index.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showToast('HTML文件下载成功', 'success');
+            try {
+                const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'index.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('HTML文件下载成功', 'success');
+            } catch (error) {
+                console.error('下载失败:', error);
+                showToast('下载失败，请重试', 'error');
+            }
         }
 
-        // 添加动画样式
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-
-        // 快捷键支持
-        htmlEditor.addEventListener('keydown', function(e) {
-            // Ctrl+S 保存
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                downloadHTML();
-            }
-            // Ctrl+R 刷新预览
-            if (e.ctrlKey && e.key === 'r') {
-                e.preventDefault();
-                refreshPreview();
-            }
-            // Ctrl+V 粘贴（增强功能） - 兼容各种设备
-            if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-                // 让浏览器默认粘贴行为发生，然后更新预览
-                setTimeout(() => {
-                    updatePreview();
-                    updateCharCount();
-                }, 100);
-            }
-        });
-
-        // 自动保存功能 - 优化移动设备体验
+        // 自动保存功能
         let autoSaveTimeout;
         htmlEditor.addEventListener('input', function() {
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                try {
+                    localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                } catch (error) {
+                    console.warn('自动保存失败:', error);
+                }
             }, 1000);
         });
         
-        // iOS Edge浏览器：监听change事件用于自动保存
-        htmlEditor.addEventListener('change', function() {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(function() {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
-            }, 1000);
-        });
-        
-        // 页面可见性变化时保存 - 移动设备优化
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
-            }
-        });
-        
-        // 页面卸载前保存
-        window.addEventListener('beforeunload', function() {
-            localStorage.setItem('htmlEditorContent', htmlEditor.value);
-        });
-        
-        // 移动设备优化：处理页面切换和后台运行
-        window.addEventListener('blur', function() {
-            localStorage.setItem('htmlEditorContent', htmlEditor.value);
-        });
-        
-        // 处理设备旋转
-        window.addEventListener('orientationchange', function() {
-            setTimeout(() => {
-                htmlEditor.style.height = 'auto';
-                htmlEditor.style.height = htmlEditor.scrollHeight + 'px';
-                
-                // iPad横屏时动态调整通知位置
-                if (isIOS() && window.orientation === 90 || window.orientation === -90) {
-                    // 横屏模式，增加顶部距离
-                    const toast = document.querySelector('.toast');
-                    if (toast) {
-                        toast.style.top = '85px';
-                    }
-                }
-            }, 300);
-        });
-        
-        // iPad检测函数
-        function isIOS() {
-            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        }
-        
-        // 动态调整iPad通知位置
-        function adjustToastPositionForiPad() {
-            if (isIOS()) {
-                const toast = document.querySelector('.toast');
-                if (toast) {
-                    // 检测是否为横屏
-                    const isLandscape = window.innerWidth > window.innerHeight;
-                    const screenWidth = window.innerWidth;
-                    const screenHeight = window.innerHeight;
-                    
-                    if (isLandscape) {
-                        // 横屏模式增加顶部距离
-                        if (screenWidth >= 1366) {
-                            // iPad Pro
-                            toast.style.top = '90px';
-                        } else if (screenWidth >= 1024) {
-                            // 标准iPad
-                            toast.style.top = '80px';
-                        } else {
-                            // 较小iPad
-                            toast.style.top = '75px';
-                        }
-                    } else {
-                        // 竖屏模式 - iPad mini特殊处理
-                        if (screenWidth >= 768 && screenWidth <= 1024 && screenHeight >= 1024) {
-                            // iPad mini 竖屏
-                            toast.style.top = '10px';
-                        } else {
-                            // 其他iPad竖屏
-                            toast.style.top = '15px';
-                        }
-                    }
-                    
-                    // 确保通知条宽度自适应内容
-                    toast.style.width = 'auto';
-                    toast.style.maxWidth = 'none';
-                    toast.style.whiteSpace = 'nowrap';
-                    toast.style.display = 'inline-block';
-                }
-            }
-        }
-        
-        // 监听窗口大小变化
-        window.addEventListener('resize', adjustToastPositionForiPad);
-
-        function loadFromLocalStorage() {
-            // 修改为不自动加载之前的内容，保持清空状态
-            // 可以在这里添加欢迎信息或其他初始化逻辑
+        // 页面加载时尝试恢复保存的内容
+        window.addEventListener('load', function() {
             showToast('HTML编辑器已准备就绪', 'success');
-        }
+        });
         
         // 功能简介显示函数
         function showHelp() {
-            // 创建模态框
             const modal = document.createElement('div');
             modal.style.cssText = `
                 position: fixed;
@@ -1485,9 +667,7 @@
                 </div>
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
-                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">📱 版本信息</h3>
-                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.915</p>
-                    <h3 style="color: #1d1d1f; margin: 8px 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
                 
@@ -1518,78 +698,30 @@
             document.body.appendChild(modal);
         }
 
-        // 打印预览函数 - 优化安卓兼容性
+        // 打印预览函数
         function printPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                 const previewContent = previewDoc.documentElement.outerHTML;
                 
-                // 检测是否为安卓设备
-                const isAndroid = /Android/.test(navigator.userAgent);
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
                 
-                if (isAndroid) {
-                    // 安卓设备使用iframe方式打印
-                    const printIframe = document.createElement('iframe');
-                    printIframe.style.position = 'absolute';
-                    printIframe.style.top = '-9999px';
-                    printIframe.style.left = '-9999px';
-                    printIframe.style.width = '0';
-                    printIframe.style.height = '0';
-                    printIframe.style.border = 'none';
+                if (printWindow) {
+                    printWindow.document.write(previewContent);
+                    printWindow.document.close();
                     
-                    document.body.appendChild(printIframe);
-                    
-                    const printDoc = printIframe.contentDocument || printIframe.contentWindow.document;
-                    printDoc.open();
-                    printDoc.write(previewContent);
-                    printDoc.close();
-                    
-                    // 等待内容加载完成后打印
                     setTimeout(() => {
-                        try {
-                            printIframe.contentWindow.focus();
-                            printIframe.contentWindow.print();
-                        } catch (printError) {
-                            console.warn('安卓打印出错，尝试备用方案:', printError);
-                            // 备用方案：使用当前窗口打印
-                            const originalContent = document.body.innerHTML;
-                            document.body.innerHTML = previewContent;
-                            window.print();
-                            document.body.innerHTML = originalContent;
-                            location.reload(); // 重新加载以恢复状态
-                        }
-                        
-                        // 清理iframe
+                        printWindow.print();
                         setTimeout(() => {
-                            if (printIframe.parentNode) {
-                                printIframe.parentNode.removeChild(printIframe);
-                            }
+                            printWindow.close();
                         }, 1000);
-                    }, 500);
+                    }, 300);
                 } else {
-                    // 非安卓设备使用新窗口打印
-                    const printWindow = window.open('', '_blank', 'width=800,height=600');
-                    
-                    if (printWindow) {
-                        printWindow.document.write(previewContent);
-                        printWindow.document.close();
-                        
-                        // 延迟打印以确保内容完全加载
-                        setTimeout(() => {
-                            printWindow.print();
-                            // 打印完成后关闭窗口
-                            setTimeout(() => {
-                                printWindow.close();
-                            }, 1000);
-                        }, 300);
-                    } else {
-                        // 如果弹窗被阻止，使用当前窗口打印
-                        const originalContent = document.body.innerHTML;
-                        document.body.innerHTML = previewContent;
-                        window.print();
-                        document.body.innerHTML = originalContent;
-                        location.reload(); // 重新加载以恢复状态
-                    }
+                    const originalContent = document.body.innerHTML;
+                    document.body.innerHTML = previewContent;
+                    window.print();
+                    document.body.innerHTML = originalContent;
+                    location.reload();
                 }
             } catch (error) {
                 console.error('打印功能出错:', error);
@@ -1605,119 +737,37 @@
             const text = fullscreenBtn.childNodes[2];
             
             if (previewPanel.classList.contains('fullscreen-preview')) {
-                // 退出全屏
                 previewPanel.classList.remove('fullscreen-preview');
                 icon.textContent = '⛶';
                 text.textContent = ' 全屏';
                 showToast('已退出全屏预览', 'info');
             } else {
-                // 进入全屏
                 previewPanel.classList.add('fullscreen-preview');
                 icon.textContent = '⤡';
                 text.textContent = ' 退出全屏';
                 showToast('已进入全屏预览模式', 'success');
             }
             
-            // 延迟刷新预览以确保正确渲染
             setTimeout(() => {
                 refreshPreview();
             }, 100);
         }
 
-        // iOS兼容性检测和错误处理
-        function isIOS() {
-            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        // 测试通知功能
+        function testNotifications() {
+            showToast('这是一个短通知', 'success');
+            setTimeout(() => {
+                showToast('这是一个中等长度的通知消息', 'success');
+            }, 3500);
+            setTimeout(() => {
+                showToast('这是一个非常长的通知消息，用于测试绿色背景框是否能够正确适应文字长度', 'success');
+            }, 7000);
         }
-        
-        function isIOSSafari() {
-            return isIOS() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && !/CriOS/.test(navigator.userAgent);
-        }
-        
-        function isIOSEdge() {
-            return isIOS() && /EdgiOS|Edge/.test(navigator.userAgent);
-        }
-        
-        // 增强的iOS错误处理
-        function handleIOSError(operation, error) {
-            console.warn(`iOS ${operation} 错误:`, error);
-            
-            if (isIOSSafari()) {
-                showToast('iOS Safari兼容性提示：如遇到问题，请尝试双击输入区域', 'warning');
-            } else if (isIOSEdge()) {
-                showToast('iOS Edge兼容性提示：功能可能受限，建议使用Safari', 'warning');
-            }
-        }
-        
-        // 页面加载时尝试恢复保存的内容
+
+        // 页面加载完成后测试通知
         window.addEventListener('load', function() {
-            try {
-                loadFromLocalStorage();
-                
-                // iOS设备特殊处理
-                if (isIOS()) {
-                    // 延迟初始化确保iOS完全加载
-                    setTimeout(function() {
-                        htmlEditor.focus();
-                        htmlEditor.blur();
-                    }, 500);
-                    
-                    console.log('检测到iOS设备，已应用兼容性优化');
-                }
-            } catch (error) {
-                handleIOSError('页面加载', error);
-            }
+            setTimeout(testNotifications, 1000);
         });
-        
-        // iOS Safari/Edge 兼容性：增强触摸事件处理
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-            // 为所有按钮添加触摸事件支持
-            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn].forEach(function(btn) {
-                btn.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    this.style.opacity = '0.7';
-                    this.style.transform = 'scale(0.98)';
-                });
-                
-                btn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    this.style.opacity = '';
-                    this.style.transform = '';
-                    
-                    // 延迟执行点击功能，确保触摸事件完全处理
-                    setTimeout(() => {
-                        if (this.id === 'clearBtn') {
-                            clearEditor();
-                        } else if (this.id === 'pasteBtn') {
-                            pasteFromClipboard();
-                        } else if (this.id === 'downloadBtn') {
-                            downloadHTML();
-                        } else if (this.id === 'fullscreenBtn') {
-                            toggleFullscreenPreview();
-                        } else if (this.id === 'printBtn') {
-                            printPreview();
-                        }
-                    }, 50);
-                });
-                
-                btn.addEventListener('touchcancel', function(e) {
-                    this.style.opacity = '';
-                    this.style.transform = '';
-                });
-            });
-            
-            // 防止双击缩放
-            document.addEventListener('touchstart', function(e) {
-                if (e.touches.length > 1) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            // 防止页面缩放
-            document.addEventListener('gesturestart', function(e) {
-                e.preventDefault();
-            });
-        }
     </script>
 </body>
 </html>
