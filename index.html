@@ -1369,17 +1369,65 @@
             document.body.appendChild(modal);
         }
 
-        // 打印预览函数 - 优化安卓兼容性
+        // 打印预览函数 - 优化安卓和小米设备兼容性
         function printPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                 const previewContent = previewDoc.documentElement.outerHTML;
                 
-                // 检测是否为安卓设备
+                // 检测设备类型
                 const isAndroid = /Android/.test(navigator.userAgent);
+                const isMiui = /MiuiBrowser/.test(navigator.userAgent);
                 
+                // 针对小米浏览器的特殊处理
+                if (isMiui) {
+                    // 创建新窗口用于打印
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) {
+                        showToast('请允许打开新窗口以便打印', 'error');
+                        return;
+                    }
+                    
+                    // 添加必要的样式
+                    const printContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>打印预览</title>
+                            <style>
+                                @media print {
+                                    body { margin: 0; padding: 15px; }
+                                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                                }
+                            </style>
+                        </head>
+                        <body>${previewContent}</body>
+                        </html>
+                    `;
+                    
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    
+                    // 等待内容加载完成
+                    setTimeout(() => {
+                        try {
+                            printWindow.focus();
+                            printWindow.print();
+                            setTimeout(() => printWindow.close(), 1000);
+                        } catch (e) {
+                            console.warn('小米浏览器打印失败:', e);
+                            showToast('打印失败，请尝试使用系统浏览器', 'error');
+                            printWindow.close();
+                        }
+                    }, 500);
+                    return;
+                }
+                
+                // 其他安卓设备的处理
                 if (isAndroid) {
-                    // 安卓设备使用iframe方式打印
+                    // 使用iframe方式打印
                     const printIframe = document.createElement('iframe');
                     printIframe.style.position = 'absolute';
                     printIframe.style.top = '-9999px';
@@ -1392,7 +1440,22 @@
                     
                     const printDoc = printIframe.contentDocument || printIframe.contentWindow.document;
                     printDoc.open();
-                    printDoc.write(previewContent);
+                    printDoc.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                @media print {
+                                    body { margin: 0; padding: 15px; }
+                                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                                }
+                            </style>
+                        </head>
+                        <body>${previewContent}</body>
+                        </html>
+                    `);
                     printDoc.close();
                     
                     // 等待内容加载完成后打印
@@ -1402,12 +1465,36 @@
                             printIframe.contentWindow.print();
                         } catch (printError) {
                             console.warn('安卓打印出错，尝试备用方案:', printError);
-                            // 备用方案：使用当前窗口打印
-                            const originalContent = document.body.innerHTML;
-                            document.body.innerHTML = previewContent;
-                            window.print();
-                            document.body.innerHTML = originalContent;
-                            location.reload(); // 重新加载以恢复状态
+                            showToast('正在使用备用打印方案', 'success');
+                            
+                            // 备用方案：使用新窗口打印
+                            const printWindow = window.open('', '_blank');
+                            if (printWindow) {
+                                printWindow.document.write(`
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                        <style>
+                                            @media print {
+                                                body { margin: 0; padding: 15px; }
+                                                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>${previewContent}</body>
+                                    </html>
+                                `);
+                                printWindow.document.close();
+                                setTimeout(() => {
+                                    printWindow.focus();
+                                    printWindow.print();
+                                    setTimeout(() => printWindow.close(), 1000);
+                                }, 500);
+                            } else {
+                                showToast('打印失败，请检查浏览器设置', 'error');
+                            }
                         }
                         
                         // 清理iframe
