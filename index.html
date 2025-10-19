@@ -724,17 +724,16 @@
             position: fixed;
             top: 80px; /* 位于按钮下方 */
             right: 20px;
-            background: rgba(0, 0, 0, 0.85); /* 深黑色透明 */
+            background: #2a2a2a;
             color: #ffffff;
             padding: 12px 20px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #3a3a3a;
             font-size: 14px;
             z-index: 1000;
             transform: translateX(100%);
             transition: transform 0.3s ease;
             backdrop-filter: blur(10px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             max-width: 300px;
             width: auto;
         }
@@ -744,13 +743,13 @@
         }
 
         .toast.success {
-            border-color: rgba(0, 168, 107, 0.3);
-            background: rgba(0, 0, 0, 0.85);
+            border-color: #00a86b;
+            background: rgba(0, 168, 107, 0.1);
         }
 
         .toast.error {
-            border-color: rgba(255, 71, 87, 0.3);
-            background: rgba(0, 0, 0, 0.85);
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
         }
     </style>
 </head>
