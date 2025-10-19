@@ -1399,200 +1399,37 @@
             document.body.appendChild(modal);
         }
 
-        // 打印预览函数 - 优化各设备兼容性
-        async function printPreview() {
+        // 打印预览函数 - 优化 iOS 和安卓设备兼容性
+        function printPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                 const previewContent = previewDoc.documentElement.outerHTML;
                 
                 // 检测设备类型
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 const isAndroid = /Android/.test(navigator.userAgent);
                 const isMiui = /MiuiBrowser/.test(navigator.userAgent);
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
                 
-                // iOS 设备特殊处理
+                // iOS 设备的特殊处理
                 if (isIOS) {
-                    // 直接使用当前预览框架进行打印
-                    try {
-                        previewFrame.contentWindow.focus();
-                        const printStyles = document.createElement('style');
-                        printStyles.textContent = `
-                            @media print {
-                                body { margin: 0; padding: 15px; }
-                                * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
-                                @page { margin: 0.5cm; }
-                            }
-                        `;
-                        previewFrame.contentDocument.head.appendChild(printStyles);
-                        previewFrame.contentWindow.print();
-                    } catch (e) {
-                        console.warn('iOS 打印尝试失败:', e);
-                        // 尝试备用方案
-                        showToast('正在准备打印...', 'info');
-                        setTimeout(() => {
-                            try {
-                                window.print();
-                            } catch (e2) {
-                                console.error('备用打印方案失败:', e2);
-                                showToast('建议使用系统分享功能保存为 PDF', 'info');
-                            }
-                        }, 100);
-                    }
-                    return;
-                }
-                
-                // 针对小米浏览器的特殊处理
-                if (isMiui) {
-                    try {
-                        // 使用内联框架打印，避免弹出新窗口
-                        const printFrame = document.createElement('iframe');
-                        printFrame.style.cssText = 'position:fixed;width:100%;height:100%;top:-9999px;left:-9999px;border:none;';
-                        document.body.appendChild(printFrame);
-                        
-                        const printDoc = printFrame.contentDocument || printFrame.contentWindow.document;
-                        printDoc.write(`
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                    @media print {
-                                        body { margin: 0; padding: 15px; }
-                                        * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
-                                        @page { margin: 0.5cm; }
-                                    }
-                                </style>
-                            </head>
-                            <body>${previewContent}</body>
-                            </html>
-                        `);
-                        printDoc.close();
-                        
-                        setTimeout(() => {
-                            try {
-                                printFrame.contentWindow.focus();
-                                printFrame.contentWindow.print();
-                            } catch (e) {
-                                console.warn('小米浏览器打印失败:', e);
-                                showToast('请尝试使用系统浏览器', 'error');
-                            }
-                            setTimeout(() => printFrame.remove(), 1000);
-                        }, 500);
-                        return;
-                    } catch (e) {
-                        console.warn('小米浏览器打印准备失败:', e);
-                        showToast('请尝试使用系统浏览器', 'error');
-                        return;
-                    }
-                }
-                
-                // 其他安卓设备处理
-                if (isAndroid) {
-                    try {
-                        const printFrame = document.createElement('iframe');
-                        printFrame.style.cssText = 'position:fixed;width:100%;height:100%;top:-9999px;left:-9999px;border:none;';
-                        document.body.appendChild(printFrame);
-                        
-                        const printDoc = printFrame.contentDocument || printFrame.contentWindow.document;
-                        printDoc.write(`
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                    @media print {
-                                        body { margin: 0; padding: 15px; }
-                                        * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
-                                        @page { margin: 0.5cm; }
-                                    }
-                                </style>
-                            </head>
-                            <body>${previewContent}</body>
-                            </html>
-                        `);
-                        printDoc.close();
-                        
-                        setTimeout(() => {
-                            try {
-                                printFrame.contentWindow.focus();
-                                printFrame.contentWindow.print();
-                            } catch (e) {
-                                console.warn('安卓打印失败:', e);
-                                showToast('请尝试使用系统浏览器', 'error');
-                            }
-                            setTimeout(() => printFrame.remove(), 1000);
-                        }, 500);
-                        return;
-                    } catch (e) {
-                        console.warn('安卓打印准备失败:', e);
-                        showToast('请尝试使用系统浏览器', 'error');
-                        return;
-                    }
-                }
-                
-                // 其他设备（桌面浏览器等）
-                try {
-                    window.print();
-                } catch (e) {
-                    console.error('打印失败:', e);
-                    showToast('打印失败，请稍后重试', 'error');
-                }
+                    // 直接使用当前预览框内容进行打印
+                    showToast('准备打印，请在弹出的系统打印对话框中操作', 'info');
                     
-                    document.body.appendChild(printFrame);
+                    // 保存当前滚动位置
+                    const scrollPos = {
+                        x: window.pageXOffset,
+                        y: window.pageYOffset
+                    };
+
+                    // 临时移除其他元素，只保留预览内容
+                    const container = document.querySelector('.container');
+                    const originalDisplay = container.style.display;
+                    const originalOverflow = document.body.style.overflow;
+                    const tempDiv = document.createElement('div');
                     
-                    const printDoc = printFrame.contentDocument || printFrame.contentWindow.document;
-                    printDoc.open();
-                    printDoc.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <style>
-                                @media print {
-                                    body { margin: 0; padding: 15px; }
-                                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                                    @page { size: auto; margin: 10mm; }
-                                }
-                            </style>
-                        </head>
-                        <body>${previewContent}</body>
-                        </html>
-                    `);
-                    printDoc.close();
-                    
-                    setTimeout(() => {
-                        try {
-                            window.frames[window.frames.length - 1].focus();
-                            window.frames[window.frames.length - 1].print();
-                            
-                            // 打印对话框关闭后移除 iframe
-                            setTimeout(() => {
-                                document.body.removeChild(printFrame);
-                            }, 1000);
-                        } catch (e) {
-                            console.warn('iOS打印异常:', e);
-                            showToast('请尝试使用系统分享功能保存为PDF', 'info');
-                            document.body.removeChild(printFrame);
-                        }
-                    }, 500);
-                    return;
-                }
-                
-                // 针对小米浏览器的特殊处理
-                if (isMiui) {
-                    // 创建新窗口用于打印
-                    const printWindow = window.open('', '_blank');
-                    if (!printWindow) {
-                        showToast('请允许打开新窗口以便打印', 'error');
-                        return;
-                    }
-                    
-                    // 添加必要的样式
-                    const printContent = `
+                    // 创建打印专用视图
+                    tempDiv.innerHTML = `
                         <!DOCTYPE html>
                         <html>
                         <head>
@@ -1604,109 +1441,116 @@
                                     body { margin: 0; padding: 15px; }
                                     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                                 }
+                                @page {
+                                    margin: 0.5cm;
+                                }
                             </style>
                         </head>
                         <body>${previewContent}</body>
                         </html>
                     `;
                     
-                    printWindow.document.write(printContent);
-                    printWindow.document.close();
+                    // 替换当前视图
+                    document.body.style.overflow = 'visible';
+                    container.style.display = 'none';
+                    document.body.appendChild(tempDiv);
                     
-                    // 等待内容加载完成
+                    // 触发打印
+                    window.print();
+                    
+                    // 恢复原始视图
+                    document.body.removeChild(tempDiv);
+                    container.style.display = originalDisplay;
+                    document.body.style.overflow = originalOverflow;
+                    
+                    // 恢复滚动位置
+                    window.scrollTo(scrollPos.x, scrollPos.y);
+                    
+                    return;
+                }
+                
+                // 小米浏览器的特殊处理
+                if (isMiui) {
+                    showToast('正在准备打印...', 'info');
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.position = 'fixed';
+                    tempDiv.style.top = '0';
+                    tempDiv.style.left = '0';
+                    tempDiv.style.width = '100%';
+                    tempDiv.style.height = '100%';
+                    tempDiv.style.background = '#fff';
+                    tempDiv.style.zIndex = '999999';
+                    tempDiv.style.overflow = 'auto';
+                    tempDiv.innerHTML = previewContent;
+                    
+                    document.body.appendChild(tempDiv);
+                    
                     setTimeout(() => {
                         try {
-                            printWindow.focus();
-                            printWindow.print();
-                            setTimeout(() => printWindow.close(), 1000);
+                            window.print();
+                            document.body.removeChild(tempDiv);
                         } catch (e) {
                             console.warn('小米浏览器打印失败:', e);
+                            document.body.removeChild(tempDiv);
                             showToast('打印失败，请尝试使用系统浏览器', 'error');
-                            printWindow.close();
                         }
-                    }, 500);
+                    }, 100);
                     return;
                 }
                 
                 // 其他安卓设备的处理
                 if (isAndroid) {
-                    // 使用iframe方式打印
-                    const printIframe = document.createElement('iframe');
-                    printIframe.style.position = 'absolute';
-                    printIframe.style.top = '-9999px';
-                    printIframe.style.left = '-9999px';
-                    printIframe.style.width = '0';
-                    printIframe.style.height = '0';
-                    printIframe.style.border = 'none';
+                    // 使用临时div方式打印
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.position = 'fixed';
+                    tempDiv.style.top = '0';
+                    tempDiv.style.left = '0';
+                    tempDiv.style.width = '100%';
+                    tempDiv.style.height = '100%';
+                    tempDiv.style.background = '#fff';
+                    tempDiv.style.zIndex = '999999';
+                    tempDiv.style.overflow = 'auto';
                     
-                    document.body.appendChild(printIframe);
+                    document.body.appendChild(tempDiv);
                     
-                    const printDoc = printIframe.contentDocument || printIframe.contentWindow.document;
-                    printDoc.open();
-                    printDoc.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <style>
-                                @media print {
-                                    body { margin: 0; padding: 15px; }
-                                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                                }
-                            </style>
-                        </head>
-                        <body>${previewContent}</body>
-                        </html>
-                    `);
-                    printDoc.close();
-                    
-                    // 等待内容加载完成后打印
                     setTimeout(() => {
                         try {
-                            printIframe.contentWindow.focus();
-                            printIframe.contentWindow.print();
+                            window.print();
+                            document.body.removeChild(tempDiv);
                         } catch (printError) {
                             console.warn('安卓打印出错，尝试备用方案:', printError);
-                            showToast('正在使用备用打印方案', 'success');
+                            document.body.removeChild(tempDiv);
                             
-                            // 备用方案：使用新窗口打印
-                            const printWindow = window.open('', '_blank');
-                            if (printWindow) {
-                                printWindow.document.write(`
-                                    <!DOCTYPE html>
-                                    <html>
-                                    <head>
-                                        <meta charset="UTF-8">
-                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                        <style>
-                                            @media print {
-                                                body { margin: 0; padding: 15px; }
-                                                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                                            }
-                                        </style>
-                                    </head>
-                                    <body>${previewContent}</body>
-                                    </html>
-                                `);
-                                printWindow.document.close();
-                                setTimeout(() => {
-                                    printWindow.focus();
-                                    printWindow.print();
-                                    setTimeout(() => printWindow.close(), 1000);
-                                }, 500);
-                            } else {
-                                showToast('打印失败，请检查浏览器设置', 'error');
-                            }
+                            // 备用方案：直接打印预览框内容
+                            showToast('正在使用备用打印方案', 'info');
+                            const originalContent = document.body.innerHTML;
+                            document.body.innerHTML = `
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <style>
+                                        @media print {
+                                            body { margin: 0; padding: 15px; }
+                                            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                                        }
+                                        @page {
+                                            margin: 0.5cm;
+                                        }
+                                    </style>
+                                </head>
+                                <body>${previewContent}</body>
+                                </html>
+                            `;
+                            
+                            setTimeout(() => {
+                                window.print();
+                                document.body.innerHTML = originalContent;
+                                location.reload();
+                            }, 100);
                         }
-                        
-                        // 清理iframe
-                        setTimeout(() => {
-                            if (printIframe.parentNode) {
-                                printIframe.parentNode.removeChild(printIframe);
-                            }
-                        }, 1000);
-                    }, 500);
+                    }, 100);
                 } else {
                     // 非安卓设备使用新窗口打印
                     const printWindow = window.open('', '_blank', 'width=800,height=600');
