@@ -621,44 +621,6 @@
             }
         }
 
-        /* iPad mini竖屏优化 - 解决通知条对齐和按钮遮挡问题 */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            /* 调整编辑器高度，避免标签页按钮遮挡 */
-            .editor-panel {
-                height: calc(100vh - 140px);
-            }
-            
-            .code-editor {
-                height: calc(100vh - 220px);
-                min-height: 300px;
-            }
-            
-            /* 优化按钮尺寸，避免遮挡 */
-            .btn {
-                padding: 6px 10px;
-                font-size: 11px;
-                min-height: 36px;
-            }
-            
-            .btn-group {
-                gap: 6px;
-            }
-            
-            /* iPad mini竖屏通知条优化 - 确保背景与文字完美对齐 */
-            .toast {
-                top: 15px;
-                left: 15px;
-                white-space: nowrap !important;
-                width: auto !important;
-                max-width: none !important;
-                display: inline-block !important;
-                box-sizing: content-box !important;
-                line-height: 1.4 !important;
-                padding: 12px 18px !important;
-                font-size: 13px !important;
-            }
-        }
-
         /* 平板横屏优化 */
         @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
             .container {
@@ -741,19 +703,16 @@
             position: fixed;
             top: 20px;
             left: 20px;
-            background: #0d0d0d;
+            background: #2a2a2a;
             color: #ffffff;
             padding: 12px 20px;
             border-radius: 8px;
             border: 1px solid #3a3a3a;
             font-size: 14px;
             z-index: 1000;
-            transform: translateX(100%);
+            transform: translateX(-100%);
             transition: transform 0.3s ease;
             backdrop-filter: blur(10px);
-            max-width: 320px;
-            word-wrap: break-word;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .toast.show {
@@ -927,7 +886,7 @@
             p {
                 font-size: 14px;
             }
-        }
+}
     </style>
 </head>
 <body>
@@ -1236,11 +1195,9 @@
                 if (toast) {
                     // 检测是否为横屏
                     const isLandscape = window.innerWidth > window.innerHeight;
-                    const screenWidth = window.innerWidth;
-                    const screenHeight = window.innerHeight;
-                    
                     if (isLandscape) {
                         // 横屏模式增加顶部距离
+                        const screenWidth = window.innerWidth;
                         if (screenWidth >= 1366) {
                             // iPad Pro
                             toast.style.top = '90px';
@@ -1252,21 +1209,9 @@
                             toast.style.top = '75px';
                         }
                     } else {
-                        // 竖屏模式 - iPad mini特殊处理
-                        if (screenWidth >= 768 && screenWidth <= 1024 && screenHeight >= 1024) {
-                            // iPad mini 竖屏
-                            toast.style.top = '15px';
-                        } else {
-                            // 其他iPad竖屏使用CSS中定义的位置
-                            toast.style.top = '';
-                        }
+                        // 竖屏模式使用CSS中定义的位置
+                        toast.style.top = '';
                     }
-                    
-                    // 确保通知条宽度自适应内容
-                    toast.style.width = 'auto';
-                    toast.style.maxWidth = 'none';
-                    toast.style.whiteSpace = 'nowrap';
-                    toast.style.display = 'inline-block';
                 }
             }
         }
@@ -1342,9 +1287,7 @@
                 </div>
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
-                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">📱 版本信息</h3>
-                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.919</p>
-                    <h3 style="color: #1d1d1f; margin: 8px 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
                 
