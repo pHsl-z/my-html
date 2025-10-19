@@ -8,6 +8,29 @@
     <meta name="format-detection" content="telephone=no">
     <meta name="mobile-web-app-capable" content="yes">
     <title>在线HTML5编辑器</title>
+    <script>
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        window.addEventListener('scroll', function(e) {
+            if (window.scrollY !== 0) {
+                window.scrollTo(0, 0);
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            
+            // 防止橡皮筋效果
+            document.body.addEventListener('touchstart', function(e) {
+                if (e.targetTouches.length === 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        });
+    </script>
     <style>
         * {
             margin: 0;
@@ -25,15 +48,34 @@
             user-select: text;
         }
 
-        html, body {
+        html {
             height: 100%;
             width: 100%;
             overflow: hidden;
             position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             -webkit-text-size-adjust: 100%;
-            overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: none;
+            -webkit-overflow-scrolling: none;
             touch-action: none;
+        }
+        
+        body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            overscroll-behavior-y: none;
+            -webkit-overflow-scrolling: none;
+            touch-action: none;
+            transform: translate3d(0,0,0);
+            -webkit-transform: translate3d(0,0,0);
         }
 
         body {
