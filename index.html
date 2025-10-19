@@ -473,12 +473,18 @@
             
             /* iPad竖屏通知优化 */
             @media (orientation: portrait) {
-                .toast {
-                    top: 75px; /* 避免遮挡面板标题 */
-                    left: 20px;
-                    max-width: 280px;
-                    font-size: 13px;
-                }
+                    .toast {
+                        top: 75px; /* 避免遮挡面板标题 */
+                        left: 50%;
+                        transform: translateX(-50%);
+                        max-width: 90vw;
+                        min-width: 120px;
+                        font-size: 13px;
+                        text-align: center;
+                        word-break: break-all;
+                        white-space: pre-line;
+                        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+                    }
             }
         }
 
@@ -1316,7 +1322,7 @@
                 </div>
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
-                    <div style="color: #007aff; font-size: 15px; font-weight: bold; margin-bottom: 4px;">版本号 0.91</div>
+                    <div style="color: #007aff; font-size: 15px; font-weight: bold; margin-bottom: 4px;">版本号 0.911</div>
                     <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
