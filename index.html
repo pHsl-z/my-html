@@ -61,7 +61,8 @@
             min-width: 0;
             position: relative;
         }
-.preview-panel {
+
+        .preview-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -391,8 +392,8 @@
             .editor-panel {
                 border-right: none;
                 border-bottom: 1px solid #2a2a2a;
-                flex: 0 0 40%; /* 进一步减小编辑器面板高度 */
-                min-height: 150px;
+                flex: 0 0 50%;
+                min-height: 200px;
             }
             
             .preview-panel {
@@ -617,90 +618,44 @@
                 font-size: 12px;
                 padding: 8px 12px;
                 border-radius: 6px;
-                white-space: nowrap;
-                width: auto;
-                max-width: none;
-                display: inline-block;
-                box-sizing: content-box;
-                line-height: 1.4;
             }
         }
 
-        /* iPad mini 竖屏优化 */
+        /* iPad mini竖屏优化 - 解决通知条对齐和按钮遮挡问题 */
         @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            /* 减小编辑器高度，避免标签页遮挡按钮 */
+            /* 调整编辑器高度，避免标签页按钮遮挡 */
             .editor-panel {
-                height: calc(100vh - 120px); /* 为iPad Safari标签页留出空间 */
+                height: calc(100vh - 140px);
             }
             
             .code-editor {
-                height: calc(100vh - 200px); /* 减小编辑器高度 */
-                font-size: 13px; /* 稍小字体 */
+                height: calc(100vh - 220px);
+                min-height: 300px;
             }
             
-            /* 按钮优化 - 更小尺寸 */
+            /* 优化按钮尺寸，避免遮挡 */
             .btn {
-                padding: 4px 8px;
-                font-size: 10px;
-                min-height: 32px;
-            }
-            
-            .btn-group {
-                gap: 3px;
-            }
-            
-            .panel-header {
-                padding: 8px 12px;
-            }
-            
-            .icon {
-                width: 12px;
-                height: 12px;
-            }
-            
-            /* iPad mini 竖屏通知优化 - 确保文字和背景对齐 */
-            .toast {
-                top: 10px; /* 更靠下，避免顶部标签 */
-                left: 10px;
-                max-width: 280px;
-                font-size: 12px;
-                padding: 8px 12px;
-                white-space: nowrap !important;
-                width: auto !important;
-                max-width: none !important;
-                display: inline-block !important;
-                box-sizing: content-box !important;
-                line-height: 1.4;
-            }
-        }
-
-        /* iPad Pro横屏优化 */
-        @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-            /* iPad Pro横屏按钮优化 */
-            .btn {
-                padding: 6px 12px;
-                font-size: 12px;
-                min-height: 38px;
+                padding: 6px 10px;
+                font-size: 11px;
+                min-height: 36px;
             }
             
             .btn-group {
                 gap: 6px;
             }
             
-            .panel-header {
-                padding: 12px 16px;
-            }
-            
-            .icon {
-                width: 15px;
-                height: 15px;
-            }
-            
-            /* iPad Pro横屏通知优化 */
+            /* iPad mini竖屏通知条优化 - 确保背景与文字完美对齐 */
             .toast {
-                top: 80px;
-                max-width: 350px;
-                font-size: 14px;
+                top: 15px;
+                left: 15px;
+                white-space: nowrap !important;
+                width: auto !important;
+                max-width: none !important;
+                display: inline-block !important;
+                box-sizing: content-box !important;
+                line-height: 1.4 !important;
+                padding: 12px 18px !important;
+                font-size: 13px !important;
             }
         }
 
@@ -714,13 +669,6 @@
                 flex: 0 0 45%;
                 border-right: 1px solid #2a2a2a;
                 border-bottom: none;
-.toast {
-    white-space: nowrap;
-    width: auto;
-    max-width: none;
-    display: inline-block;
-}
-
             }
             
             .preview-panel {
@@ -733,26 +681,6 @@
                 left: 20px;
                 max-width: 300px;
                 font-size: 13px;
-            }
-            
-            /* iPad横屏按钮优化 - 缩小尺寸避免遮挡 */
-            .btn {
-                padding: 5px 10px;
-                font-size: 11px;
-                min-height: 36px;
-            }
-            
-            .btn-group {
-                gap: 5px;
-            }
-            
-            .panel-header {
-                padding: 10px 14px;
-            }
-            
-            .icon {
-                width: 14px;
-                height: 14px;
             }
         }
 
@@ -823,10 +751,6 @@
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             backdrop-filter: blur(10px);
-            white-space: nowrap;
-            width: auto;
-            max-width: none;
-            display: inline-block;
         }
 
         .toast.show {
@@ -842,67 +766,6 @@
             border-color: #ff4757;
             background: rgba(255, 71, 87, 0.1);
         }
-        
-        /* iPad mini 竖屏定制：隐藏顶部按钮行，调整 toast 为文本宽度 */
-        body.ipadmini-portrait .editor-panel .panel-header .btn-group {
-            display: none !important;
-        }
-
-        body.ipadmini-portrait .toast {
-            left: 50%;
-            top: 80px;
-            transform: translateX(-50%);
-            display: inline-block;
-            padding: 8px 12px;
-            max-width: 85%;
-            white-space: normal;
-            text-align: center;
-            border-radius: 6px;
-            word-break: break-word;
-            background: rgba(0,168,107,0.12); /* 更窄的绿色条 */
-            border-color: rgba(0,168,107,0.3);
-            width: fit-content; /* 使宽度适应内容 */
-        }
-
-        /* 底部浮动操作按钮（iPad mini 使用） */
-        .ipadmini-fab {
-            position: fixed;
-            right: 16px;
-            bottom: 22px;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: #007aff;
-            color: #fff;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1200;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-            cursor: pointer;
-            font-size: 22px;
-        }
-
-        body.ipadmini-portrait .ipadmini-fab {
-            display: flex;
-        }
-
-        .ipadmini-fab-menu {
-            position: fixed;
-            right: 16px;
-            bottom: 82px;
-            background: rgba(30,30,30,0.95);
-            color: #fff;
-            padding: 8px;
-            border-radius: 8px;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 1200;
-            min-width: 140px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-        }
-
     </style>
 </head>
 <body>
@@ -1231,15 +1094,6 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            
-            // 确保通知条宽度自适应内容 - iPad mini优化
-            toast.style.width = 'auto';
-            toast.style.maxWidth = 'none';
-            toast.style.whiteSpace = 'nowrap';
-            toast.style.display = 'inline-block';
-            toast.style.boxSizing = 'content-box';
-            toast.style.lineHeight = '1.4';
-            
             document.body.appendChild(toast);
             
             // iPad设备调整通知位置
@@ -1398,10 +1252,10 @@
                         // 竖屏模式 - iPad mini特殊处理
                         if (screenWidth >= 768 && screenWidth <= 1024 && screenHeight >= 1024) {
                             // iPad mini 竖屏
-                            toast.style.top = '10px';
-                        } else {
-                            // 其他iPad竖屏
                             toast.style.top = '15px';
+                        } else {
+                            // 其他iPad竖屏使用CSS中定义的位置
+                            toast.style.top = '';
                         }
                     }
                     
@@ -1486,7 +1340,7 @@
                 
                 <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
                     <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">📱 版本信息</h3>
-                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.916</p>
+                    <p style="color: #86868b; margin: 0 0 8px 0; font-size: 14px;">版本号：0.919</p>
                     <h3 style="color: #1d1d1f; margin: 8px 0 8px 0; font-size: 16px;">👨‍💻 作者信息</h3>
                     <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
                 </div>
