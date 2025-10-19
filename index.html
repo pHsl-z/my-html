@@ -306,18 +306,7 @@
         }
 
         .fullscreen-preview .panel-header {
-            position: absolute !important;
-            top: 16px !important;
-            right: 16px !important;
-            background: transparent !important;
-            z-index: 10000 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            width: 32px !important;
-            height: 32px !important;
-            padding: 0 !important;
-            cursor: pointer !important;
+            display: none !important;
         }
 
         .fullscreen-preview .panel-title,
@@ -332,39 +321,47 @@
         }
 
         /* 自定义关闭按钮 */
-        .fullscreen-preview .close-btn {
+        .fullscreen-close {
+            position: fixed !important;
+            top: 16px !important;
+            right: 16px !important;
             width: 32px !important;
             height: 32px !important;
-            position: relative !important;
-            opacity: 0.5 !important;
-            transition: opacity 0.2s !important;
-            background: none !important;
+            z-index: 10000 !important;
+            background: rgba(0, 0, 0, 0.2) !important;
             border: none !important;
-            padding: 0 !important;
+            border-radius: 50% !important;
             cursor: pointer !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            opacity: 0.3 !important;
+            transition: all 0.2s ease !important;
+            padding: 0 !important;
+            outline: none !important;
         }
 
-        .fullscreen-preview .close-btn:hover {
-            opacity: 0.8 !important;
+        .fullscreen-close:hover {
+            opacity: 0.6 !important;
+            background: rgba(0, 0, 0, 0.3) !important;
         }
 
-        .fullscreen-preview .close-btn::before,
-        .fullscreen-preview .close-btn::after {
+        .fullscreen-close::before,
+        .fullscreen-close::after {
             content: '' !important;
             position: absolute !important;
-            width: 20px !important;
-            height: 2px !important;
-            background-color: #666 !important;
-            top: 50% !important;
-            left: 50% !important;
+            width: 16px !important;
+            height: 1.5px !important;
+            background: white !important;
+            transform-origin: center !important;
         }
 
-        .fullscreen-preview .close-btn::before {
-            transform: translate(-50%, -50%) rotate(45deg) !important;
+        .fullscreen-close::before {
+            transform: rotate(45deg) !important;
         }
 
-        .fullscreen-preview .close-btn::after {
-            transform: translate(-50%, -50%) rotate(-45deg) !important;
+        .fullscreen-close::after {
+            transform: rotate(-45deg) !important;
         }
 
         .btn-group {
@@ -1564,39 +1561,29 @@
         // 全屏预览切换函数
         function toggleFullscreenPreview() {
             const previewPanel = document.querySelector('.preview-panel');
-            const fullscreenBtn = document.getElementById('fullscreenBtn');
-            const panelHeader = previewPanel.querySelector('.panel-header');
             
             if (previewPanel.classList.contains('fullscreen-preview')) {
                 // 退出全屏
                 previewPanel.classList.remove('fullscreen-preview');
-                // 恢复原始的面板头部内容
-                panelHeader.innerHTML = `
-                    <div class="panel-title">
-                        <span>👁️</span>
-                        <span>PREVIEW</span>
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary" onclick="refreshPreview()">
-                            <span class="icon">🔄</span>
-                            刷新
-                        </button>
-                        <button class="btn btn-secondary" onclick="printPreview()" id="printBtn">
-                            <span class="icon">🖨️</span>
-                            打印
-                        </button>
-                        <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
-                            <span class="icon">⛶</span>
-                            全屏
-                        </button>
-                    </div>`;
+                // 移除关闭按钮
+                const closeBtn = document.querySelector('.fullscreen-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('transitionend', function() {
+                        document.body.removeChild(closeBtn);
+                    });
+                    closeBtn.style.opacity = '0';
+                }
             } else {
                 // 进入全屏
                 previewPanel.classList.add('fullscreen-preview');
-                // 替换为简单的关闭按钮
-                panelHeader.innerHTML = `
-                    <button class="close-btn" onclick="toggleFullscreenPreview()" title="退出全屏"></button>
-                `;
+                // 添加关闭按钮
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'fullscreen-close';
+                closeBtn.onclick = toggleFullscreenPreview;
+                closeBtn.title = '退出全屏';
+                document.body.appendChild(closeBtn);
+                // 延迟显示关闭按钮以实现淡入效果
+                requestAnimationFrame(() => closeBtn.style.opacity = '0.3');
             }
             
             // 延迟刷新预览以确保正确渲染
