@@ -158,6 +158,14 @@
             border: none;
             background: #ffffff;
             -webkit-overflow-scrolling: touch;
+            overflow-scrolling: touch;
+            /* iOS Safari滚动优化 */
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            /* 确保内容可以滚动 */
+            overflow: auto;
+            /* 支持触摸滚动 */
+            touch-action: pan-x pan-y;
         }
 
         /* 按钮触摸优化 - 针对iOS Edge */
@@ -368,6 +376,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .status-bar {
@@ -457,6 +466,7 @@
                 gap: 6px;
                 margin-left: auto;
                 flex-shrink: 0;
+                justify-content: flex-end;
             }
 
             .code-editor {
@@ -791,17 +801,17 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
-                        <span class="icon">📋</span>
-                        粘贴
-                    </button>
                     <button class="btn btn-secondary" onclick="clearEditor()" id="clearBtn" type="button">
                         <span class="icon">🗑️</span>
                         清空
                     </button>
-                    <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn" type="button">
-                        <span class="icon">💾</span>
-                        下载
+                    <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
+                        <span class="icon">📁</span>
+                        打开
+                    </button>
+                    <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
+                        <span class="icon">📋</span>
+                        粘贴
                     </button>
                 </div>
             </div>
@@ -824,23 +834,26 @@
                     <span>PREVIEW</span>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="refreshPreview()">
-                        <span class="icon">🔄</span>
-                        刷新
+                    <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
+                        <span class="icon">⛶</span>
+                        全屏
                     </button>
                     <button class="btn btn-secondary" onclick="printPreview()" id="printBtn">
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-                    <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
-                        <span class="icon">⛶</span>
-                        全屏
+                    <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn">
+                        <span class="icon">💾</span>
+                        下载
                     </button>
                 </div>
             </div>
             <iframe id="previewFrame" class="preview-frame"></iframe>
         </div>
     </div>
+
+    <!-- 隐藏的文件输入元素 -->
+    <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
 
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
@@ -849,6 +862,8 @@
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const openBtn = document.getElementById('openBtn');
+        const fileInput = document.getElementById('fileInput');
 
         // 默认HTML模板 - 针对移动设备优化
         const defaultHTML = `<!DOCTYPE html>
@@ -1049,6 +1064,11 @@
                         previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
                     }
                 }
+                
+                // 延迟应用滚动优化，确保内容完全加载
+                setTimeout(() => {
+                    enhancePreviewScrolling();
+                }, 50);
             } catch (error) {
                 console.log('Preview update error:', error);
                 // IE浏览器备用方案
@@ -1062,6 +1082,170 @@
 
         function refreshPreview() {
             updatePreview();
+        }
+
+        // 打开本地HTML文件
+        function openLocalFile() {
+            // 触发文件选择对话框
+            fileInput.click();
+        }
+
+        // 处理文件选择
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // 检查文件类型
+            if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
+                showToast('请选择HTML文件', 'error');
+                return;
+            }
+
+            // 读取文件内容
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    
+                    // 将文件内容显示在预览窗口中
+                    displayFileInPreview(content);
+                    
+                    // 可选：将内容也加载到编辑器中
+                    if (confirm('是否将文件内容加载到编辑器中？')) {
+                        htmlEditor.value = content;
+                        updateCharCount();
+                    }
+                    
+                    showToast(`已打开文件: ${file.name}`, 'success');
+                } catch (error) {
+                    console.error('文件读取错误:', error);
+                    showToast('文件读取失败，请重试', 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('文件读取失败，请重试', 'error');
+            };
+            
+            // 以文本形式读取文件
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        // 在预览窗口中显示文件内容
+        function displayFileInPreview(content) {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                // 使用srcdoc属性避免重复声明问题（现代浏览器）
+                if ('srcdoc' in previewFrame) {
+                    previewFrame.srcdoc = content;
+                } else {
+                    // IE浏览器兼容性处理
+                    if (previewDoc.open && previewDoc.write && previewDoc.close) {
+                        previewDoc.open();
+                        previewDoc.write(content);
+                        previewDoc.close();
+                    } else {
+                        // 对于IE的备用方案
+                        previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
+                    }
+                }
+                
+                // iOS Safari滚动优化
+                enhancePreviewScrolling();
+            } catch (error) {
+                console.error('预览更新错误:', error);
+                // IE浏览器备用方案
+                try {
+                    previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
+                } catch (ieError) {
+                    console.error('IE预览备用方案错误:', ieError);
+                    showToast('预览显示失败', 'error');
+                }
+            }
+        }
+
+        // 增强预览窗口的滚动体验
+        function enhancePreviewScrolling() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                if (!previewDoc || !previewDoc.body) {
+                    return;
+                }
+
+                // 为预览文档添加iOS Safari滚动优化样式
+                const style = previewDoc.createElement('style');
+                style.textContent = `
+                    /* iOS Safari滚动优化 */
+                    html, body {
+                        -webkit-overflow-scrolling: touch !important;
+                        overflow-scrolling: touch !important;
+                        overscroll-behavior: contain !important;
+                        touch-action: pan-x pan-y !important;
+                        /* 确保内容可以滚动 */
+                        overflow: auto !important;
+                        /* 防止iOS Safari的橡皮筋效果影响滚动 */
+                        position: relative !important;
+                    }
+                    
+                    /* 针对A4版面内容的滚动优化 */
+                    body {
+                        min-height: 100vh !important;
+                        /* 允许内容超出视口 */
+                        overflow-x: auto !important;
+                        overflow-y: auto !important;
+                    }
+                    
+                    /* 确保所有容器都支持滚动 */
+                    * {
+                        -webkit-overflow-scrolling: touch !important;
+                    }
+                `;
+                
+                // 将样式添加到预览文档的头部
+                if (previewDoc.head) {
+                    previewDoc.head.appendChild(style);
+                } else {
+                    // 如果没有head标签，创建一个
+                    const head = previewDoc.createElement('head');
+                    head.appendChild(style);
+                    previewDoc.documentElement.insertBefore(head, previewDoc.body);
+                }
+                
+                // iOS Safari特殊处理：确保iframe内容可以滚动
+                if (isIOS()) {
+                    // 延迟执行以确保内容完全加载
+                    setTimeout(() => {
+                        try {
+                            const previewBody = previewDoc.body;
+                            if (previewBody) {
+                                // 添加触摸事件监听器
+                                previewBody.addEventListener('touchstart', function(e) {
+                                    // 允许触摸滚动
+                                    e.stopPropagation();
+                                }, { passive: true });
+                                
+                                previewBody.addEventListener('touchmove', function(e) {
+                                    // 允许触摸滚动
+                                    e.stopPropagation();
+                                }, { passive: true });
+                                
+                                // 确保内容可以滚动
+                                previewBody.style.overflow = 'auto';
+                                previewBody.style.webkitOverflowScrolling = 'touch';
+                            }
+                        } catch (error) {
+                            console.log('iOS滚动优化错误:', error);
+                        }
+                    }, 100);
+                }
+                
+            } catch (error) {
+                console.log('预览滚动优化错误:', error);
+            }
         }
 
         function clearEditor() {
@@ -1396,7 +1580,7 @@
             document.body.appendChild(modal);
         }
 
-        // 打印预览函数 - 优化所有设备兼容性
+        // 打印预览函数 - 优化iOS Safari兼容性
         function printPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
@@ -1404,6 +1588,13 @@
                 // 检查预览内容是否为空
                 if (!previewDoc.body || !previewDoc.body.innerHTML.trim()) {
                     showToast('预览内容为空，请先输入一些内容', 'error');
+                    return;
+                }
+
+                // iOS Safari特殊处理
+                if (isIOS()) {
+                    // 在iOS Safari中，直接在当前窗口打印预览内容
+                    printCurrentPreview();
                     return;
                 }
 
@@ -1480,6 +1671,48 @@
             } catch (error) {
                 console.error('打印出错:', error);
                 showToast('打印功能出错，请重试', 'error');
+            }
+        }
+
+        // iOS Safari专用打印函数
+        function printCurrentPreview() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                // 创建临时打印样式
+                const printStyle = document.createElement('style');
+                printStyle.textContent = `
+                    @media print {
+                        @page { margin: 1cm; }
+                        body { 
+                            margin: 0;
+                            padding: 0;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                        }
+                        * { 
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
+                `;
+                
+                // 将打印样式添加到预览文档
+                previewDoc.head.appendChild(printStyle);
+                
+                // 直接打印预览框架
+                previewFrame.contentWindow.print();
+                
+                // 延迟移除打印样式
+                setTimeout(() => {
+                    if (printStyle.parentNode) {
+                        printStyle.parentNode.removeChild(printStyle);
+                    }
+                }, 1000);
+                
+                showToast('正在打印预览内容...', 'success');
+            } catch (error) {
+                console.error('iOS打印出错:', error);
+                showToast('iOS打印功能出错，请重试', 'error');
             }
         }
 
@@ -1565,7 +1798,7 @@
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
-            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn].forEach(function(btn) {
+            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     this.style.opacity = '0.7';
@@ -1589,6 +1822,8 @@
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
                             printPreview();
+                        } else if (this.id === 'openBtn') {
+                            openLocalFile();
                         }
                     }, 50);
                 });
