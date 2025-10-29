@@ -137,7 +137,6 @@
             white-space: pre;
             tab-size: 4;
             -webkit-overflow-scrolling: touch;
-            overflow-scrolling: touch;
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
@@ -158,7 +157,6 @@
             border: none;
             background: #ffffff;
             -webkit-overflow-scrolling: touch;
-            overflow-scrolling: touch;
             /* iOS Safari滚动优化 */
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
@@ -801,13 +799,13 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="clearEditor()" id="clearBtn" type="button">
-                        <span class="icon">🗑️</span>
-                        清空
-                    </button>
                     <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
                         <span class="icon">📁</span>
                         打开
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearEditor()" id="clearBtn" type="button">
+                        <span class="icon">🗑️</span>
+                        清空
                     </button>
                     <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
                         <span class="icon">📋</span>
@@ -1182,7 +1180,6 @@
                     /* iOS Safari滚动优化 */
                     html, body {
                         -webkit-overflow-scrolling: touch !important;
-                        overflow-scrolling: touch !important;
                         overscroll-behavior: contain !important;
                         touch-action: pan-x pan-y !important;
                         /* 确保内容可以滚动 */
