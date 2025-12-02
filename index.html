@@ -296,6 +296,77 @@
             border-color: #138496;
         }
 
+        /* 下拉菜单样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-toggle {
+            background: transparent !important;
+            border: none !important;
+            color: #ffffff !important;
+            padding: 8px 12px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .dropdown-toggle:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 4px !important;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 120px;
+            display: none;
+            margin-top: 4px;
+            padding: 4px 0;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            background: transparent !important;
+            border: none !important;
+            color: #ffffff !important;
+            padding: 8px 16px !important;
+            font-size: 13px !important;
+            font-weight: 400 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            width: 100% !important;
+            text-align: left !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            border-radius: 0 !important;
+            min-height: auto !important;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .dropdown-item .icon {
+            font-size: 14px !important;
+            width: 16px !important;
+            text-align: center !important;
+        }
+
         /* 全屏预览样式 */
         .fullscreen-preview {
             position: fixed !important;
@@ -1200,18 +1271,7 @@
                         <span class="icon">📋</span>
                         粘贴
                     </button>
-                    <button class="btn btn-secondary" onclick="toggleHistoryPanel()" id="historyBtn" type="button">
-                        <span class="icon">🕒</span>
-                        历史
-                    </button>
-                    <button class="btn btn-primary" onclick="toggleSharePanel()" id="shareBtn" type="button">
-                        <span class="icon">🔗</span>
-                        分享
-                    </button>
-                    <button class="btn btn-info" onclick="toggleSettingsPanel()" id="settingsBtn" type="button">
-                        <span class="icon">⚙️</span>
-                        设置
-                    </button>
+                    <!-- 历史、分享、设置按钮已移动到预览面板的下拉菜单中 -->
                 </div>
             </div>
             <textarea id="htmlEditor" class="code-editor" placeholder="在这里输入你的HTML代码，或者点击粘贴按钮从剪贴板导入..."></textarea>
@@ -1319,8 +1379,27 @@
         <div class="preview-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <span>👁️</span>
-                    <span>预览</span>
+                    <div class="dropdown">
+                        <button class="btn btn-link dropdown-toggle" onclick="togglePreviewDropdown()" id="previewDropdownBtn" type="button">
+                            <span>👁️</span>
+                            <span style="margin-left: 8px;">预览</span>
+                            <span style="margin-left: 4px;">▼</span>
+                        </button>
+                        <div class="dropdown-menu" id="previewDropdownMenu">
+                            <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel()" id="historyBtn">
+                                <span class="icon">🕒</span>
+                                历史
+                            </button>
+                            <button class="btn btn-primary dropdown-item" onclick="toggleSharePanel()" id="shareBtn">
+                                <span class="icon">🔗</span>
+                                分享
+                            </button>
+                            <button class="btn btn-info dropdown-item" onclick="toggleSettingsPanel()" id="settingsBtn">
+                                <span class="icon">⚙️</span>
+                                设置
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
@@ -1846,6 +1925,81 @@
 
         function updateCharCount() {
             charCount.textContent = htmlEditor.value.length;
+        }
+
+        // 预览下拉菜单功能
+        function togglePreviewDropdown() {
+            const dropdownMenu = document.getElementById('previewDropdownMenu');
+            const dropdownBtn = document.getElementById('previewDropdownBtn');
+            
+            dropdownMenu.classList.toggle('show');
+            
+            // 更新下拉箭头方向
+            const arrowSpan = dropdownBtn.querySelector('span:last-child');
+            if (dropdownMenu.classList.contains('show')) {
+                arrowSpan.textContent = '▲';
+                // 点击外部关闭下拉菜单
+                document.addEventListener('click', closePreviewDropdownOnClickOutside);
+            } else {
+                arrowSpan.textContent = '▼';
+                document.removeEventListener('click', closePreviewDropdownOnClickOutside);
+            }
+        }
+        
+        // 点击外部关闭下拉菜单
+        function closePreviewDropdownOnClickOutside(event) {
+            const dropdownMenu = document.getElementById('previewDropdownMenu');
+            const dropdownBtn = document.getElementById('previewDropdownBtn');
+            
+            if (!dropdownBtn.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.remove('show');
+                dropdownBtn.querySelector('span:last-child').textContent = '▼';
+                document.removeEventListener('click', closePreviewDropdownOnClickOutside);
+            }
+        }
+        
+        // 面板切换函数（从编辑器面板移动过来）
+        function toggleHistoryPanel() {
+            const isVisible = historyPanel.style.display === 'block';
+            hideAllPanels();
+            if (!isVisible) {
+                historyPanel.style.display = 'block';
+                renderHistory();
+            }
+            // 关闭下拉菜单
+            closePreviewDropdown();
+        }
+        
+        function toggleSharePanel() {
+            const isVisible = sharePanel.style.display === 'block';
+            hideAllPanels();
+            if (!isVisible) {
+                sharePanel.style.display = 'block';
+                generateShareLink();
+            }
+            // 关闭下拉菜单
+            closePreviewDropdown();
+        }
+        
+        function toggleSettingsPanel() {
+            const isVisible = settingsPanel.style.display === 'block';
+            hideAllPanels();
+            if (!isVisible) {
+                settingsPanel.style.display = 'block';
+                loadSettings();
+            }
+            // 关闭下拉菜单
+            closePreviewDropdown();
+        }
+        
+        // 关闭下拉菜单
+        function closePreviewDropdown() {
+            const dropdownMenu = document.getElementById('previewDropdownMenu');
+            const dropdownBtn = document.getElementById('previewDropdownBtn');
+            
+            dropdownMenu.classList.remove('show');
+            dropdownBtn.querySelector('span:last-child').textContent = '▼';
+            document.removeEventListener('click', closePreviewDropdownOnClickOutside);
         }
 
         // 从剪贴板粘贴
@@ -2812,19 +2966,19 @@
         async function generateOnlineLink() {
             const content = htmlEditor.value;
             if (!content.trim()) {
-                showToast('请先输入内容再生成在线链接', 'error');
+                showToast('请输入内容', 'error');
                 return;
             }
             
             try {
-                showToast('正在生成在线链接...', 'success');
+                showToast('生成中...', 'success');
                 
                 // 生成唯一文件名
                 const fileName = `html-editor-${Date.now()}.html`;
                 
                 // 尝试使用GitHub Gist API
                 try {
-                    console.log('尝试使用GitHub Gist API生成在线链接...');
+                    console.log('生成在线链接...');
                     const gistResponse = await fetch('https://api.github.com/gists', {
                         method: 'POST',
                         headers: {
@@ -2843,7 +2997,7 @@
                     });
                     
                     if (!gistResponse.ok) {
-                        throw new Error('GitHub Gist API错误: ' + gistResponse.status + ' ' + gistResponse.statusText);
+                        throw new Error('GitHub Gist API错误');
                     }
                     
                     const gistData = await gistResponse.json();
@@ -2854,97 +3008,53 @@
                     
                     // 更新分享链接输入框
                     shareLink.value = onlineLink;
-                    showToast('在线链接已生成', 'success');
                     
                     // 自动复制链接到剪贴板
                     await navigator.clipboard.writeText(onlineLink);
-                    showToast('在线链接已复制到剪贴板', 'success');
+                    showToast('链接已生成并复制', 'success');
                     
-                    console.log('生成的在线链接:', onlineLink);
-                    console.log('GitHub Gist URL:', gistData.html_url);
-                    console.log('Raw file URL:', rawUrl);
+                    console.log('在线链接:', onlineLink);
                     return;
                     
                 } catch (gistError) {
-                    console.error('GitHub Gist API失败:', gistError);
-                    showToast('GitHub Gist生成失败，尝试备选方案...', 'warning');
+                    console.error('GitHub Gist失败:', gistError);
+                    // 静默尝试备选方案，不显示警告
                 }
                 
                 // 如果GitHub Gist失败，尝试使用其他服务
                 await generateAlternativeOnlineLink(content);
                 
             } catch (error) {
-                console.error('生成在线链接失败:', error);
-                showToast('生成在线链接失败: ' + error.message, 'error');
+                console.error('生成失败:', error);
+                showToast('生成失败', 'error');
             }
         }
         
-        // 备选在线链接生成（使用另一个服务）
+        // 备选在线链接生成（简化版）
         async function generateAlternativeOnlineLink(content) {
             try {
-                console.log('尝试使用备选方案生成在线链接...');
+                console.log('生成备选链接...');
                 
-                // 方案1：生成可直接访问的HTML数据URL
-                try {
-                    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(content)}`;
-                    
-                    // 检查数据URL长度是否超过浏览器限制
-                    if (dataUrl.length < 1000000) { // 限制在1MB以内
-                        shareLink.value = dataUrl;
-                        showToast('已生成数据URL链接', 'success');
-                        
-                        // 自动复制链接到剪贴板
-                        await navigator.clipboard.writeText(dataUrl);
-                        showToast('数据URL已复制到剪贴板', 'success');
-                        return;
-                    }
-                    console.log('数据URL太长，尝试其他方案...');
-                } catch (dataUrlError) {
-                    console.error('数据URL生成失败:', dataUrlError);
-                }
-                
-                // 方案2：生成基于Base64的自包含链接（增强版）
-                try {
-                    const encodedContent = btoa(encodeURIComponent(content));
-                    
-                    // 提供不同的访问方式
-                    const selfContainedLink = `${window.location.origin}${window.location.pathname}?${SHARE_PARAM_NAME}=${encodedContent}`;
-                    
-                    shareLink.value = selfContainedLink;
-                    showToast('已生成自包含在线链接', 'success');
-                    
-                    // 自动复制链接到剪贴板
-                    await navigator.clipboard.writeText(selfContainedLink);
-                    showToast('自包含链接已复制到剪贴板', 'success');
-                    
-                    // 显示提示信息
-                    setTimeout(() => {
-                        showToast('提示：如果链接无法访问，请确保编辑器页面已在公网部署', 'info');
-                    }, 2000);
-                    
+                // 方案1：数据URL（小文件）
+                const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(content)}`;
+                if (dataUrl.length < 1000000) {
+                    shareLink.value = dataUrl;
+                    await navigator.clipboard.writeText(dataUrl);
+                    showToast('链接已生成并复制', 'success');
                     return;
-                } catch (selfContainedError) {
-                    console.error('自包含链接生成失败:', selfContainedError);
                 }
                 
-                // 所有方案都失败时
-                throw new Error('所有在线链接生成方案均失败');
+                // 方案2：Base64自包含链接
+                const encodedContent = btoa(encodeURIComponent(content));
+                const selfContainedLink = `${window.location.origin}${window.location.pathname}?${SHARE_PARAM_NAME}=${encodedContent}`;
+                
+                shareLink.value = selfContainedLink;
+                await navigator.clipboard.writeText(selfContainedLink);
+                showToast('链接已生成并复制', 'success');
                 
             } catch (error) {
-                console.error('备选在线链接生成失败:', error);
-                
-                // 显示详细的错误提示和解决方案
-                showToast('生成在线链接失败', 'error');
-                
-                // 显示手动解决方案
-                setTimeout(() => {
-                    showToast('建议：1. 手动部署编辑器到公网 2. 使用设置面板配置分享基础URL', 'info');
-                }, 2000);
-                
-                // 显示本地服务器启动提示
-                setTimeout(() => {
-                    showToast('本地测试：可使用 python -m http.server 8000 启动本地服务器', 'info');
-                }, 4000);
+                console.error('备选方案失败:', error);
+                showToast('生成失败', 'error');
             }
         }
         
