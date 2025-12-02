@@ -848,6 +848,10 @@
                         <span class="icon">💾</span>
                         下载
                     </button>
+                    <button class="btn btn-info" onclick="shareCode()" id="shareBtn">
+                        <span class="icon">🔗</span>
+                        分享
+                    </button>
                 </div>
             </div>
             <iframe id="previewFrame" class="preview-frame" title="HTML预览"></iframe>
@@ -866,6 +870,7 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const openBtn = document.getElementById('openBtn');
         const fileInput = document.getElementById('fileInput');
+        const shareBtn = document.getElementById('shareBtn');
 
         // 默认HTML模板 - 针对移动设备优化
         const defaultHTML = `<!DOCTYPE html>
@@ -1333,6 +1338,82 @@
 
         function updateCharCount() {
             charCount.textContent = htmlEditor.value.length;
+        }
+
+        // 分享代码功能
+        function shareCode() {
+            const code = htmlEditor.value;
+            if (!code.trim()) {
+                showToast('请先输入HTML代码', 'warning');
+                return;
+            }
+
+            // 创建分享数据
+            const shareData = {
+                html: code,
+                timestamp: new Date().toISOString()
+            };
+
+            // 将数据编码到URL中
+            const encodedData = encodeURIComponent(btoa(JSON.stringify(shareData)));
+            const shareUrl = window.location.origin + window.location.pathname + '?share=' + encodedData;
+
+            // 复制到剪贴板
+            copyToClipboard(shareUrl);
+        }
+
+        // 复制到剪贴板功能
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('分享链接已复制到剪贴板！', 'success');
+                }).catch(() => {
+                    fallbackCopyToClipboard(text);
+                });
+            } else {
+                fallbackCopyToClipboard(text);
+            }
+        }
+
+        // 备用复制方法
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('分享链接已复制到剪贴板！', 'success');
+            } catch (err) {
+                showToast('复制失败，请手动复制分享链接', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // 从URL加载分享数据
+        function loadSharedCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shareData = urlParams.get('share');
+            
+            if (shareData) {
+                try {
+                    const decodedData = JSON.parse(atob(decodeURIComponent(shareData)));
+                    if (decodedData.html) {
+                        htmlEditor.value = decodedData.html;
+                        updateCharCount();
+                        updatePreview();
+                        showToast('已加载分享的代码！', 'success');
+                    }
+                } catch (error) {
+                    showToast('分享链接无效或已损坏', 'error');
+                }
+            }
         }
 
         // 从剪贴板粘贴
@@ -1836,7 +1917,13 @@
         // 页面加载时尝试恢复保存的内容
         window.addEventListener('load', function() {
             try {
-                loadFromLocalStorage();
+                // 首先尝试加载分享的数据
+                loadSharedCode();
+                
+                // 如果没有分享数据，再加载本地存储
+                if (!htmlEditor.value.trim()) {
+                    loadFromLocalStorage();
+                }
                 
                 // iOS设备特殊处理
                 if (isIOS()) {
