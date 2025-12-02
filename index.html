@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
@@ -31,6 +31,7 @@
             overflow: hidden;
             position: fixed;
             -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
             /* 防止 iOS Safari 地址栏收起时的跳动 */
             min-height: -webkit-fill-available;
         }
@@ -59,7 +60,7 @@
             position: relative;
             /* 防止 iOS 橡皮筋效果 */
             overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
+            /* iOS滚动优化 - 已移除不支持的属性 */
         }
 
         .editor-panel {
@@ -136,7 +137,7 @@
             overflow-x: auto;
             white-space: pre;
             tab-size: 4;
-            -webkit-overflow-scrolling: touch;
+            /* iOS滚动优化 - 已移除不支持的属性 */
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
@@ -156,10 +157,10 @@
             flex: 1;
             border: none;
             background: #ffffff;
-            -webkit-overflow-scrolling: touch;
+            /* iOS滚动优化 - 已移除不支持的属性 */
             /* iOS Safari滚动优化 */
             overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
+            /* -webkit-overflow-scrolling: touch; 已废弃 */
             /* 确保内容可以滚动 */
             overflow: auto;
             /* 支持触摸滚动 */
@@ -227,11 +228,12 @@
             * {
                 -webkit-touch-callout: none;
                 -webkit-text-size-adjust: none;
+            text-size-adjust: none;
             }
             
-            /* iOS滚动优化 */
+            /* iOS滚动优化 - 已移除不支持的属性 */
             .code-editor {
-                -webkit-overflow-scrolling: touch;
+                /* -webkit-overflow-scrolling: touch; 已废弃 */
 
             }
         }
@@ -283,7 +285,7 @@
         .btn-sm {
             padding: 4px 8px;
             font-size: 12px;
-            min-height: auto;
+            min-height: 32px;
         }
 
         .btn-info {
@@ -411,6 +413,14 @@
             width: 16px;
             height: 16px;
             display: inline-block;
+        }
+
+        .title-text {
+            margin-left: 8px;
+        }
+
+        .hidden-input {
+            display: none;
         }
 
         /* 滚动条样式 */
@@ -787,9 +797,9 @@
         <div class="editor-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <button class="btn btn-link" onclick="showHelp()" style="background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" type="button">
+                    <button class="btn btn-link" onclick="showHelp()" type="button">
                         <span>⚡</span>
-                        <span style="margin-left: 8px;">HTML EDITOR</span>
+                        <span class="title-text">HTML EDITOR</span>
                     </button>
                 </div>
                 <div class="btn-group">
@@ -840,12 +850,12 @@
                     </button>
                 </div>
             </div>
-            <iframe id="previewFrame" class="preview-frame"></iframe>
+            <iframe id="previewFrame" class="preview-frame" title="HTML预览"></iframe>
         </div>
     </div>
 
     <!-- 隐藏的文件输入元素 -->
-    <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
+    <input type="file" id="fileInput" accept=".html,.htm" class="hidden-input">
 
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
@@ -862,7 +872,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的HTML5页面</title>
     <style>
         * {
@@ -1173,7 +1183,7 @@
                 style.textContent = `
                     /* iOS Safari滚动优化 */
                     html, body {
-                        -webkit-overflow-scrolling: touch !important;
+                        /* -webkit-overflow-scrolling: touch !important; 已废弃 */
                         overscroll-behavior: contain !important;
                         touch-action: pan-x pan-y !important;
                         /* 确保内容可以滚动 */
@@ -1226,7 +1236,7 @@
                                 
                                 // 确保内容可以滚动
                                 previewBody.style.overflow = 'auto';
-                                previewBody.style.webkitOverflowScrolling = 'touch';
+                                /* previewBody.style.webkitOverflowScrolling = 'touch'; 已废弃 */
                             }
                         } catch (error) {
                             console.log('iOS滚动优化错误:', error);
