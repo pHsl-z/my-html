@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
@@ -31,7 +31,6 @@
             overflow: hidden;
             position: fixed;
             -webkit-text-size-adjust: 100%;
-            text-size-adjust: 100%;
             /* 防止 iOS Safari 地址栏收起时的跳动 */
             min-height: -webkit-fill-available;
         }
@@ -137,7 +136,7 @@
             overflow-x: auto;
             white-space: pre;
             tab-size: 4;
-            /* iOS滚动优化 - 已移除不支持的属性 */
+            -webkit-overflow-scrolling: touch;
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
@@ -160,6 +159,7 @@
             -webkit-overflow-scrolling: touch;
             /* iOS Safari滚动优化 */
             overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
             /* 确保内容可以滚动 */
             overflow: auto;
             /* 支持触摸滚动 */
@@ -227,16 +227,11 @@
             * {
                 -webkit-touch-callout: none;
                 -webkit-text-size-adjust: none;
-            text-size-adjust: none;
             }
             
-            /* iOS滚动优化 - 已移除不支持的属性 */
+            /* iOS滚动优化 */
             .code-editor {
-<<<<<<< HEAD
-                /* -webkit-overflow-scrolling: touch; 已废弃 */
-=======
                 -webkit-overflow-scrolling: touch;
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
 
             }
         }
@@ -288,7 +283,7 @@
         .btn-sm {
             padding: 4px 8px;
             font-size: 12px;
-            min-height: 32px;
+            min-height: auto;
         }
 
         .btn-info {
@@ -416,14 +411,6 @@
             width: 16px;
             height: 16px;
             display: inline-block;
-        }
-
-        .title-text {
-            margin-left: 8px;
-        }
-
-        .hidden-input {
-            display: none;
         }
 
         /* 滚动条样式 */
@@ -793,6 +780,401 @@
             border-color: #ff4757;
             background: rgba(255, 71, 87, 0.1);
         }
+
+        /* 历史记录面板样式 */
+        .history-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 300px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .history-panel.show {
+            display: flex;
+        }
+
+        .history-header {
+            padding: 12px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .history-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 13px;
+        }
+
+        .history-item:hover {
+            background: #2a2a2a;
+        }
+
+        .history-item:active {
+            background: #1a1a1a;
+        }
+
+        .history-item-content {
+            color: #e6e6e6;
+            margin-bottom: 8px;
+            word-break: break-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item-info {
+            color: #888888;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-delete {
+            background: none;
+            border: none;
+            color: #888888;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .history-item-delete:hover {
+            background: #3a3a3a;
+            color: #ff4757;
+        }
+
+        /* 历史记录面板滚动条样式 */
+        .history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .history-list::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+
+        /* 空历史记录提示 */
+        .history-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #888888;
+            font-size: 14px;
+        }
+
+        /* 分享面板样式 */
+        .share-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 400px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: none;
+            flex-direction: column;
+            z-index: 101;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .share-panel.show {
+            display: flex;
+        }
+
+        .share-header {
+            padding: 12px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .share-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .share-description {
+            color: #e6e6e6;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .share-link-container {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .share-link-input {
+            flex: 1;
+            padding: 10px 12px;
+            background: #0d0d0d;
+            border: 1px solid #2a2a2a;
+            color: #e6e6e6;
+            font-size: 13px;
+            border-radius: 4px;
+            outline: none;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        .share-link-input:focus {
+            border-color: #0066ff;
+        }
+
+        .share-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .share-tips {
+            background: #2a2a2a;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #0066ff;
+        }
+
+        .share-tips h4 {
+            color: #e6e6e6;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .share-tips ul {
+            list-style-type: disc;
+            list-style-position: inside;
+            color: #888888;
+            font-size: 13px;
+        }
+
+        .share-tips li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        /* 分享面板滚动条样式 */
+        .share-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .share-content::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .share-content::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+
+        .share-content::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+
+        /* 移动设备适配 */
+        @media (max-width: 768px) {
+            .share-content {
+                padding: 12px;
+            }
+            
+            .share-link-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .share-actions {
+                flex-direction: column;
+            }
+            
+            .share-tips {
+                padding: 12px;
+            }
+        }
+
+        /* 设置面板样式 */
+        .settings-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 450px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: none;
+            flex-direction: column;
+            z-index: 102;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .settings-panel.show {
+            display: flex;
+        }
+
+        .settings-header {
+            padding: 12px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 20px;
+            padding-bottom: 0;
+        }
+
+        .settings-section h4 {
+            color: #e6e6e6;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-item {
+            margin-bottom: 16px;
+        }
+
+        .setting-label {
+            display: block;
+            color: #e6e6e6;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .setting-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .setting-input {
+            padding: 8px 12px;
+            background: #0d0d0d;
+            border: 1px solid #2a2a2a;
+            color: #e6e6e6;
+            font-size: 13px;
+            border-radius: 4px;
+            outline: none;
+            min-width: 200px;
+        }
+
+        .setting-input:focus {
+            border-color: #0066ff;
+        }
+
+        .setting-input[type="number"] {
+            min-width: 80px;
+            width: 80px;
+        }
+
+        .setting-description {
+            color: #888888;
+            font-size: 11px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* 设置面板滚动条样式 */
+        .settings-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .settings-content::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .settings-content::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+
+        .settings-content::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+
+        /* 移动设备适配 */
+        @media (max-width: 768px) {
+            .settings-content {
+                padding: 12px;
+            }
+            
+            .settings-control {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .setting-input {
+                min-width: auto;
+            }
+            
+            .settings-actions {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -800,9 +1182,9 @@
         <div class="editor-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <button class="btn btn-link" onclick="showHelp()" type="button">
+                    <button class="btn btn-link" onclick="showHelp()" style="background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" type="button">
                         <span>⚡</span>
-                        <span class="title-text">HTML EDITOR</span>
+                        <span style="margin-left: 8px;">HTML EDITOR</span>
                     </button>
                 </div>
                 <div class="btn-group">
@@ -818,6 +1200,18 @@
                         <span class="icon">📋</span>
                         粘贴
                     </button>
+                    <button class="btn btn-secondary" onclick="toggleHistoryPanel()" id="historyBtn" type="button">
+                        <span class="icon">🕒</span>
+                        历史
+                    </button>
+                    <button class="btn btn-primary" onclick="toggleSharePanel()" id="shareBtn" type="button">
+                        <span class="icon">🔗</span>
+                        分享
+                    </button>
+                    <button class="btn btn-info" onclick="toggleSettingsPanel()" id="settingsBtn" type="button">
+                        <span class="icon">⚙️</span>
+                        设置
+                    </button>
                 </div>
             </div>
             <textarea id="htmlEditor" class="code-editor" placeholder="在这里输入你的HTML代码，或者点击粘贴按钮从剪贴板导入..."></textarea>
@@ -828,6 +1222,96 @@
                 </div>
                 <div>
                     <span id="charCount">0</span> 字符
+                </div>
+            </div>
+            
+            <!-- 历史记录面板 -->
+            <div id="historyPanel" class="history-panel">
+                <div class="history-header">
+                    <span>📋 历史记录</span>
+                    <button class="btn btn-sm btn-secondary" onclick="clearHistory()">清空历史</button>
+                </div>
+                <div id="historyList" class="history-list"></div>
+            </div>
+            
+            <!-- 分享面板 -->
+            <div id="sharePanel" class="share-panel">
+                <div class="share-header">
+                    <span>🔗 分享链接</span>
+                    <button class="btn btn-sm btn-secondary" onclick="toggleSharePanel()">关闭</button>
+                </div>
+                <div class="share-content">
+                    <p class="share-description">生成一个可分享的链接，其他人可以通过该链接查看和编辑当前内容：</p>
+                    <div class="share-link-container">
+                        <input type="text" id="shareLink" class="share-link-input" readonly>
+                        <button class="btn btn-sm btn-primary" onclick="copyShareLink()">复制链接</button>
+                    </div>
+                    <div class="share-actions">
+                        <button class="btn btn-secondary" onclick="generateShareLink()">重新生成</button>
+                        <button class="btn btn-success" onclick="openShareLink()">在新窗口打开</button>
+                        <button class="btn btn-primary" onclick="generateOnlineLink()">自动生成在线链接</button>
+                    </div>
+                    <div class="share-tips">
+                        <h4>💡 分享提示：</h4>
+                        <ul>
+                            <li>链接包含了当前编辑器的所有内容</li>
+                            <li>链接可以被任何人访问和修改</li>
+                            <li>链接较长，建议使用链接缩短工具</li>
+                            <li>刷新页面后链接仍然有效</li>
+                            <li>可在设置中自定义分享链接的基础URL</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 设置面板 -->
+            <div id="settingsPanel" class="settings-panel">
+                <div class="settings-header">
+                    <span>⚙️ 编辑器设置</span>
+                    <button class="btn btn-sm btn-secondary" onclick="toggleSettingsPanel()">关闭</button>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h4>🔗 分享设置</h4>
+                        <div class="setting-item">
+                            <label for="shareBaseUrl" class="setting-label">分享链接基础URL：</label>
+                            <div class="setting-control">
+                                <input type="text" id="shareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html">
+                                <button class="btn btn-sm btn-primary" onclick="saveShareBaseUrl()">保存</button>
+                                <button class="btn btn-sm btn-secondary" onclick="resetShareBaseUrl()">重置</button>
+                            </div>
+                            <p class="setting-description">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>💾 自动保存</h4>
+                        <div class="setting-item">
+                            <label for="autoSaveInterval" class="setting-label">自动保存间隔（秒）：</label>
+                            <div class="setting-control">
+                                <input type="number" id="autoSaveInterval" class="setting-input" min="1" max="600" value="10">
+                                <button class="btn btn-sm btn-primary" onclick="saveAutoSaveInterval()">保存</button>
+                            </div>
+                            <p class="setting-description">设置编辑器自动保存内容的时间间隔。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>📝 历史记录</h4>
+                        <div class="setting-item">
+                            <label for="maxHistoryRecords" class="setting-label">最大历史记录数：</label>
+                            <div class="setting-control">
+                                <input type="number" id="maxHistoryRecords" class="setting-input" min="1" max="50" value="10">
+                                <button class="btn btn-sm btn-primary" onclick="saveMaxHistoryRecords()">保存</button>
+                            </div>
+                            <p class="setting-description">设置编辑器保存的最大历史记录数量。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-actions">
+                        <button class="btn btn-primary" onclick="applyAllSettings()">应用所有设置</button>
+                        <button class="btn btn-secondary" onclick="loadSettings()">重新加载设置</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -847,29 +1331,18 @@
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-<<<<<<< HEAD
-                    <button class="btn btn-secondary" onclick="shareHTML()" id="shareBtn">
-                        <span class="icon">🔗</span>
-                        分享
-                    </button>
-=======
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                     <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn">
                         <span class="icon">💾</span>
                         下载
                     </button>
                 </div>
             </div>
-            <iframe id="previewFrame" class="preview-frame" title="HTML预览"></iframe>
+            <iframe id="previewFrame" class="preview-frame"></iframe>
         </div>
     </div>
 
     <!-- 隐藏的文件输入元素 -->
-<<<<<<< HEAD
-    <input type="file" id="fileInput" accept=".html,.htm" class="hidden-input">
-=======
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
 
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
@@ -878,19 +1351,41 @@
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
-<<<<<<< HEAD
-        const shareBtn = document.getElementById('shareBtn');
-=======
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
         const openBtn = document.getElementById('openBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const printBtn = document.getElementById('printBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
         const fileInput = document.getElementById('fileInput');
+        const historyPanel = document.getElementById('historyPanel');
+        const historyList = document.getElementById('historyList');
+        const sharePanel = document.getElementById('sharePanel');
+        const shareLink = document.getElementById('shareLink');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const shareBaseUrlInput = document.getElementById('shareBaseUrl');
+        const autoSaveIntervalInput = document.getElementById('autoSaveInterval');
+        const maxHistoryRecordsInput = document.getElementById('maxHistoryRecords');
+        
+        // 历史记录相关变量
+        let historyRecords = [];
+        let MAX_HISTORY_RECORDS = 10;
+        const HISTORY_STORAGE_KEY = 'htmlEditorHistory';
+        
+        // 分享相关变量
+        const SHARE_PARAM_NAME = 'content';
+        let shareBaseUrl = '';
+        
+        // 自动保存相关变量
+        let autoSaveInterval = 10;
+        const SETTINGS_STORAGE_KEY = 'htmlEditorSettings';
 
         // 默认HTML模板 - 针对移动设备优化
         const defaultHTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的HTML5页面</title>
     <style>
         * {
@@ -1201,11 +1696,7 @@
                 style.textContent = `
                     /* iOS Safari滚动优化 */
                     html, body {
-<<<<<<< HEAD
-                        /* -webkit-overflow-scrolling: touch !important; 已废弃 */
-=======
                         -webkit-overflow-scrolling: touch !important;
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                         overscroll-behavior: contain !important;
                         touch-action: pan-x pan-y !important;
                         /* 确保内容可以滚动 */
@@ -1258,11 +1749,7 @@
                                 
                                 // 确保内容可以滚动
                                 previewBody.style.overflow = 'auto';
-<<<<<<< HEAD
-                                /* previewBody.style.webkitOverflowScrolling = 'touch'; 已废弃 */
-=======
                                 previewBody.style.webkitOverflowScrolling = 'touch';
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                             }
                         } catch (error) {
                             console.log('iOS滚动优化错误:', error);
@@ -1467,6 +1954,11 @@
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                // 每10秒自动添加到历史记录
+                if (Date.now() - lastHistoryAddTime > 10000) {
+                    addToHistory();
+                    lastHistoryAddTime = Date.now();
+                }
             }, 1000);
         });
         
@@ -1475,8 +1967,84 @@
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                addToHistory();
             }, 1000);
         });
+        
+        // 历史记录添加时间戳
+        let lastHistoryAddTime = Date.now();
+        
+        // 页面卸载时添加到历史记录
+        window.addEventListener('beforeunload', function() {
+            localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            addToHistory();
+        });
+        
+        // 切换历史记录面板显示/隐藏
+        function toggleHistoryPanel() {
+            historyPanel.classList.toggle('show');
+            if (historyPanel.classList.contains('show')) {
+                displayHistory();
+            }
+        }
+        
+        // 显示历史记录列表
+        function displayHistory() {
+            if (historyRecords.length === 0) {
+                historyList.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+                return;
+            }
+            
+            historyList.innerHTML = historyRecords.map(record => {
+                const date = new Date(record.timestamp).toLocaleString('zh-CN');
+                return `
+                    <div class="history-item" onclick="restoreFromHistory(${record.id})">
+                        <div class="history-item-content">${escapeHtml(record.preview)}</div>
+                        <div class="history-item-info">
+                            <span>${date}</span>
+                            <button class="history-item-delete" onclick="event.stopPropagation(); deleteHistoryItem(${record.id})">×</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 从历史记录恢复代码
+        function restoreFromHistory(id) {
+            const record = historyRecords.find(r => r.id === id);
+            if (record) {
+                htmlEditor.value = record.content;
+                updatePreview();
+                updateCharCount();
+                historyPanel.classList.remove('show');
+                showToast('已从历史记录恢复', 'success');
+            }
+        }
+        
+        // 删除单条历史记录
+        function deleteHistoryItem(id) {
+            historyRecords = historyRecords.filter(r => r.id !== id);
+            saveHistory();
+            displayHistory();
+            showToast('历史记录已删除', 'success');
+        }
+        
+        // 清空所有历史记录
+        function clearHistory() {
+            if (confirm('确定要清空所有历史记录吗？')) {
+                historyRecords = [];
+                localStorage.removeItem(HISTORY_STORAGE_KEY);
+                displayHistory();
+                showToast('历史记录已清空', 'success');
+            }
+        }
+        
+        // HTML转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
         // 页面可见性变化时保存 - 移动设备优化
         document.addEventListener('visibilitychange', function() {
@@ -1638,7 +2206,7 @@
                 </div>
                 
                 <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="this.closest('.modal').remove()" style="
+                    <button onclick="document.querySelector('.modal').remove()" style="
                         background: #007aff;
                         color: white;
                         border: none;
@@ -1859,10 +2427,78 @@
             }
         }
         
+        // 加载历史记录
+        function loadHistory() {
+            try {
+                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+                if (stored) {
+                    historyRecords = JSON.parse(stored);
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                historyRecords = [];
+            }
+        }
+        
+        // 保存历史记录到localStorage
+        function saveHistory() {
+            try {
+                localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyRecords));
+            } catch (error) {
+                console.error('保存历史记录失败:', error);
+            }
+        }
+        
+        // 添加当前代码到历史记录
+        function addToHistory() {
+            const code = htmlEditor.value.trim();
+            if (!code) return;
+            
+            // 检查是否与最近一条记录相同
+            if (historyRecords.length > 0 && historyRecords[0].content === code) {
+                return;
+            }
+            
+            // 创建新的历史记录
+            const record = {
+                id: Date.now(),
+                content: code,
+                timestamp: new Date().toISOString(),
+                preview: code.substring(0, 100) + (code.length > 100 ? '...' : '')
+            };
+            
+            // 添加到历史记录开头
+            historyRecords.unshift(record);
+            
+            // 限制历史记录数量
+            if (historyRecords.length > MAX_HISTORY_RECORDS) {
+                historyRecords = historyRecords.slice(0, MAX_HISTORY_RECORDS);
+            }
+            
+            // 保存到localStorage
+            saveHistory();
+            
+            // 如果历史面板已打开，更新显示
+            if (historyPanel.classList.contains('show')) {
+                displayHistory();
+            }
+        }
+        
         // 页面加载时尝试恢复保存的内容
         window.addEventListener('load', function() {
             try {
-                loadFromLocalStorage();
+                // 加载设置
+                loadSettings();
+                
+                // 首先检查是否有分享链接参数
+                loadFromShareUrl();
+                
+                // 如果没有分享内容，再从localStorage加载
+                if (!htmlEditor.value.trim()) {
+                    loadFromLocalStorage();
+                }
+                
+                loadHistory();
                 
                 // iOS设备特殊处理
                 if (isIOS()) {
@@ -1874,19 +2510,448 @@
                     
                     console.log('检测到iOS设备，已应用兼容性优化');
                 }
+                
+                console.log('HTML编辑器已加载，历史记录功能已初始化');
+                console.log('当前历史记录数量:', historyRecords.length);
+                console.log('分享基础URL:', shareBaseUrl || '使用当前页面URL');
             } catch (error) {
                 handleIOSError('页面加载', error);
             }
         });
         
+        // 测试历史记录功能（可选）
+        function testHistory() {
+            console.log('=== 测试历史记录功能 ===');
+            
+            // 测试添加到历史记录
+            htmlEditor.value = '<h1>测试历史记录 1</h1>';
+            addToHistory();
+            console.log('添加第一条历史记录后数量:', historyRecords.length);
+            
+            htmlEditor.value = '<h1>测试历史记录 2</h1>';
+            addToHistory();
+            console.log('添加第二条历史记录后数量:', historyRecords.length);
+            
+            // 测试显示历史记录
+            displayHistory();
+            
+            console.log('=== 历史记录测试完成 ===');
+        }
+        
+        // 测试分享功能（可选）
+        function testShare() {
+            console.log('=== 测试分享功能 ===');
+            
+            // 测试1：生成分享链接
+            htmlEditor.value = '<h1>测试分享功能</h1><p>这是一个测试分享的内容</p>';
+            generateShareLink();
+            console.log('分享链接已生成:', shareLink.value);
+            
+            // 测试2：验证链接是否包含内容
+            const hasContent = shareLink.value.includes(SHARE_PARAM_NAME);
+            console.log('分享链接包含内容参数:', hasContent);
+            
+            // 测试3：模拟从分享链接加载
+            const testUrl = new URL(shareLink.value);
+            const encodedContent = testUrl.searchParams.get(SHARE_PARAM_NAME);
+            const decodedContent = decodeURIComponent(atob(encodedContent));
+            console.log('解码后的内容:', decodedContent);
+            console.log('解码内容与原内容匹配:', decodedContent === htmlEditor.value);
+            
+            console.log('=== 分享功能测试完成 ===');
+        }
+        
+        // 快捷键支持：Ctrl+H 打开历史记录
+        htmlEditor.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+                e.preventDefault();
+                toggleHistoryPanel();
+            }
+            // Ctrl+Shift+S 打开分享面板
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's') {
+                e.preventDefault();
+                toggleSharePanel();
+            }
+        });
+        
+        // 切换分享面板显示/隐藏
+        function toggleSharePanel() {
+            sharePanel.classList.toggle('show');
+            if (sharePanel.classList.contains('show')) {
+                generateShareLink();
+            }
+        }
+        
+        // 生成分享链接
+        function generateShareLink() {
+            const content = htmlEditor.value;
+            if (!content.trim()) {
+                showToast('请先输入内容再生成分享链接', 'error');
+                return;
+            }
+            
+            try {
+                // 将内容编码为Base64
+                const encodedContent = btoa(encodeURIComponent(content));
+                let url;
+                
+                // 使用自定义分享基础URL或当前页面URL
+                if (shareBaseUrl) {
+                    url = new URL(shareBaseUrl);
+                } else {
+                    url = new URL(window.location.href);
+                }
+                
+                // 移除可能存在的旧内容参数
+                url.searchParams.delete(SHARE_PARAM_NAME);
+                // 添加新的内容参数
+                url.searchParams.append(SHARE_PARAM_NAME, encodedContent);
+                
+                // 更新分享链接输入框
+                shareLink.value = url.toString();
+                showToast('分享链接已生成', 'success');
+            } catch (error) {
+                console.error('生成分享链接失败:', error);
+                showToast('生成分享链接失败，请检查URL格式', 'error');
+            }
+        }
+        
+        // 复制分享链接到剪贴板
+        function copyShareLink() {
+            const link = shareLink.value;
+            if (!link) {
+                showToast('请先生成分享链接', 'error');
+                return;
+            }
+            
+            try {
+                // 使用Clipboard API复制链接
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(link).then(() => {
+                        showToast('链接已复制到剪贴板', 'success');
+                    }).catch(() => {
+                        fallbackCopyShareLink(link);
+                    });
+                } else {
+                    fallbackCopyShareLink(link);
+                }
+            } catch (error) {
+                console.error('复制链接失败:', error);
+                fallbackCopyShareLink(link);
+            }
+        }
+        
+        // 复制链接的降级方案
+        function fallbackCopyShareLink(link) {
+            try {
+                // 创建临时textarea元素
+                const textArea = document.createElement('textarea');
+                textArea.value = link;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                // 执行复制命令
+                const success = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (success) {
+                    showToast('链接已复制到剪贴板', 'success');
+                } else {
+                    showToast('复制失败，请手动复制', 'error');
+                }
+            } catch (error) {
+                console.error('降级复制方案失败:', error);
+                showToast('复制失败，请手动复制', 'error');
+            }
+        }
+        
+        // 在新窗口打开分享链接
+        function openShareLink() {
+            const link = shareLink.value;
+            if (!link) {
+                showToast('请先生成分享链接', 'error');
+                return;
+            }
+            
+            try {
+                window.open(link, '_blank');
+                showToast('分享链接已在新窗口打开', 'success');
+            } catch (error) {
+                console.error('打开分享链接失败:', error);
+                showToast('打开分享链接失败，请手动打开', 'error');
+            }
+        }
+        
+        // 从URL参数加载分享内容
+        function loadFromShareUrl() {
+            try {
+                const url = new URL(window.location.href);
+                const encodedContent = url.searchParams.get(SHARE_PARAM_NAME);
+                
+                if (encodedContent) {
+                    // 解码内容
+                    const content = decodeURIComponent(atob(encodedContent));
+                    htmlEditor.value = content;
+                    updatePreview();
+                    updateCharCount();
+                    showToast('已加载分享内容', 'success');
+                    console.log('从分享链接加载内容成功');
+                }
+            } catch (error) {
+                console.error('从分享链接加载内容失败:', error);
+                showToast('分享链接无效或已损坏', 'error');
+            }
+        }
+        
+        // 切换设置面板显示/隐藏
+        function toggleSettingsPanel() {
+            settingsPanel.classList.toggle('show');
+            if (settingsPanel.classList.contains('show')) {
+                loadSettings();
+            }
+        }
+        
+        // 加载设置
+        function loadSettings() {
+            try {
+                const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    
+                    // 应用设置
+                    if (settings.shareBaseUrl) {
+                        shareBaseUrl = settings.shareBaseUrl;
+                        shareBaseUrlInput.value = settings.shareBaseUrl;
+                    }
+                    
+                    if (settings.autoSaveInterval) {
+                        autoSaveInterval = settings.autoSaveInterval;
+                        autoSaveIntervalInput.value = settings.autoSaveInterval;
+                    }
+                    
+                    if (settings.maxHistoryRecords) {
+                        MAX_HISTORY_RECORDS = settings.maxHistoryRecords;
+                        maxHistoryRecordsInput.value = settings.maxHistoryRecords;
+                    }
+                }
+            } catch (error) {
+                console.error('加载设置失败:', error);
+                showToast('加载设置失败', 'error');
+            }
+        }
+        
+        // 保存设置到localStorage
+        function saveSettings(settings) {
+            try {
+                const currentSettings = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || '{}');
+                const updatedSettings = { ...currentSettings, ...settings };
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
+                showToast('设置已保存', 'success');
+                return true;
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                showToast('保存设置失败', 'error');
+                return false;
+            }
+        }
+        
+        // 保存分享基础URL
+        function saveShareBaseUrl() {
+            const url = shareBaseUrlInput.value.trim();
+            shareBaseUrl = url;
+            saveSettings({ shareBaseUrl: url });
+        }
+        
+        // 重置分享基础URL
+        function resetShareBaseUrl() {
+            shareBaseUrl = '';
+            shareBaseUrlInput.value = '';
+            saveSettings({ shareBaseUrl: '' });
+        }
+        
+        // 保存自动保存间隔
+        function saveAutoSaveInterval() {
+            const interval = parseInt(autoSaveIntervalInput.value);
+            if (isNaN(interval) || interval < 1 || interval > 600) {
+                showToast('请输入1-600之间的数值', 'error');
+                return;
+            }
+            autoSaveInterval = interval;
+            saveSettings({ autoSaveInterval: interval });
+        }
+        
+        // 保存最大历史记录数
+        function saveMaxHistoryRecords() {
+            const maxRecords = parseInt(maxHistoryRecordsInput.value);
+            if (isNaN(maxRecords) || maxRecords < 1 || maxRecords > 50) {
+                showToast('请输入1-50之间的数值', 'error');
+                return;
+            }
+            MAX_HISTORY_RECORDS = maxRecords;
+            saveSettings({ maxHistoryRecords: maxRecords });
+            // 如果当前历史记录超过新的最大值，裁剪历史记录
+            if (historyRecords.length > MAX_HISTORY_RECORDS) {
+                historyRecords = historyRecords.slice(0, MAX_HISTORY_RECORDS);
+                saveHistory();
+            }
+        }
+        
+        // 应用所有设置
+        function applyAllSettings() {
+            saveShareBaseUrl();
+            saveAutoSaveInterval();
+            saveMaxHistoryRecords();
+            showToast('所有设置已应用', 'success');
+        }
+        
+        // 自动生成在线可访问链接
+        async function generateOnlineLink() {
+            const content = htmlEditor.value;
+            if (!content.trim()) {
+                showToast('请先输入内容再生成在线链接', 'error');
+                return;
+            }
+            
+            try {
+                showToast('正在生成在线链接...', 'success');
+                
+                // 生成唯一文件名
+                const fileName = `html-editor-${Date.now()}.html`;
+                
+                // 尝试使用GitHub Gist API
+                try {
+                    console.log('尝试使用GitHub Gist API生成在线链接...');
+                    const gistResponse = await fetch('https://api.github.com/gists', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify({
+                            description: 'HTML Editor Online Share',
+                            public: true,
+                            files: {
+                                [fileName]: {
+                                    content: content
+                                }
+                            }
+                        })
+                    });
+                    
+                    if (!gistResponse.ok) {
+                        throw new Error('GitHub Gist API错误: ' + gistResponse.status + ' ' + gistResponse.statusText);
+                    }
+                    
+                    const gistData = await gistResponse.json();
+                    
+                    // 生成可访问的HTML链接
+                    const rawUrl = gistData.files[fileName].raw_url;
+                    const onlineLink = `https://htmlpreview.github.io/?${rawUrl}`;
+                    
+                    // 更新分享链接输入框
+                    shareLink.value = onlineLink;
+                    showToast('在线链接已生成', 'success');
+                    
+                    // 自动复制链接到剪贴板
+                    await navigator.clipboard.writeText(onlineLink);
+                    showToast('在线链接已复制到剪贴板', 'success');
+                    
+                    console.log('生成的在线链接:', onlineLink);
+                    console.log('GitHub Gist URL:', gistData.html_url);
+                    console.log('Raw file URL:', rawUrl);
+                    return;
+                    
+                } catch (gistError) {
+                    console.error('GitHub Gist API失败:', gistError);
+                    showToast('GitHub Gist生成失败，尝试备选方案...', 'warning');
+                }
+                
+                // 如果GitHub Gist失败，尝试使用其他服务
+                await generateAlternativeOnlineLink(content);
+                
+            } catch (error) {
+                console.error('生成在线链接失败:', error);
+                showToast('生成在线链接失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 备选在线链接生成（使用另一个服务）
+        async function generateAlternativeOnlineLink(content) {
+            try {
+                console.log('尝试使用备选方案生成在线链接...');
+                
+                // 方案1：生成可直接访问的HTML数据URL
+                try {
+                    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(content)}`;
+                    
+                    // 检查数据URL长度是否超过浏览器限制
+                    if (dataUrl.length < 1000000) { // 限制在1MB以内
+                        shareLink.value = dataUrl;
+                        showToast('已生成数据URL链接', 'success');
+                        
+                        // 自动复制链接到剪贴板
+                        await navigator.clipboard.writeText(dataUrl);
+                        showToast('数据URL已复制到剪贴板', 'success');
+                        return;
+                    }
+                    console.log('数据URL太长，尝试其他方案...');
+                } catch (dataUrlError) {
+                    console.error('数据URL生成失败:', dataUrlError);
+                }
+                
+                // 方案2：生成基于Base64的自包含链接（增强版）
+                try {
+                    const encodedContent = btoa(encodeURIComponent(content));
+                    
+                    // 提供不同的访问方式
+                    const selfContainedLink = `${window.location.origin}${window.location.pathname}?${SHARE_PARAM_NAME}=${encodedContent}`;
+                    
+                    shareLink.value = selfContainedLink;
+                    showToast('已生成自包含在线链接', 'success');
+                    
+                    // 自动复制链接到剪贴板
+                    await navigator.clipboard.writeText(selfContainedLink);
+                    showToast('自包含链接已复制到剪贴板', 'success');
+                    
+                    // 显示提示信息
+                    setTimeout(() => {
+                        showToast('提示：如果链接无法访问，请确保编辑器页面已在公网部署', 'info');
+                    }, 2000);
+                    
+                    return;
+                } catch (selfContainedError) {
+                    console.error('自包含链接生成失败:', selfContainedError);
+                }
+                
+                // 所有方案都失败时
+                throw new Error('所有在线链接生成方案均失败');
+                
+            } catch (error) {
+                console.error('备选在线链接生成失败:', error);
+                
+                // 显示详细的错误提示和解决方案
+                showToast('生成在线链接失败', 'error');
+                
+                // 显示手动解决方案
+                setTimeout(() => {
+                    showToast('建议：1. 手动部署编辑器到公网 2. 使用设置面板配置分享基础URL', 'info');
+                }, 2000);
+                
+                // 显示本地服务器启动提示
+                setTimeout(() => {
+                    showToast('本地测试：可使用 python -m http.server 8000 启动本地服务器', 'info');
+                }, 4000);
+            }
+        }
+        
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
-<<<<<<< HEAD
-            [clearBtn, pasteBtn, downloadBtn, shareBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
-=======
             [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     this.style.opacity = '0.7';
@@ -1910,11 +2975,6 @@
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
                             printPreview();
-<<<<<<< HEAD
-                        } else if (this.id === 'shareBtn') {
-                            shareHTML();
-=======
->>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                         } else if (this.id === 'openBtn') {
                             openLocalFile();
                         }
@@ -1939,235 +2999,6 @@
                 e.preventDefault();
             });
         }
-        // 在线分享功能
-        function shareHTML() {
-            const code = htmlEditor.value;
-            
-            // 检查是否有内容
-            if (!code.trim()) {
-                showToast('没有内容可以分享', 'error');
-                return;
-            }
-            
-            // 显示加载状态
-            showToast('正在生成分享链接...', 'info');
-            
-            // 生成随机文件名
-            const fileName = `index-${Date.now()}.html`;
-            
-            // 创建Gist数据
-            const gistData = {
-                description: "HTML编辑器分享的代码",
-                public: true,
-                files: {
-                    [fileName]: {
-                        content: code
-                    }
-                }
-            };
-            
-            // 调用GitHub Gist API
-            fetch('https://api.github.com/gists', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 注意：在实际生产环境中，应该使用OAuth令牌而不是公开API
-                    // 这里使用公开API，但会有速率限制
-                },
-                body: JSON.stringify(gistData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // 获取Gist ID
-                const gistId = data.id;
-                const shareUrl = `https://htmlpreview.github.io/?${data.files[fileName].raw_url}`;
-                
-                // 显示分享对话框
-                showShareDialog(shareUrl, gistId);
-            })
-            .catch(error => {
-                console.error('分享失败:', error);
-                
-                // 如果API调用失败，使用备用方案
-                shareWithAlternative(code);
-            });
-        }
-        
-        // 备用分享方案
-        function shareWithAlternative(code) {
-            try {
-                // 使用Base64编码代码
-                const encodedCode = btoa(unescape(encodeURIComponent(code)));
-                const shareUrl = `${window.location.origin}${window.location.pathname}#shared=${encodedCode}`;
-                
-                // 显示分享对话框
-                showShareDialog(shareUrl, null);
-            } catch (error) {
-                console.error('备用分享方案失败:', error);
-                showToast('分享失败，请重试', 'error');
-            }
-        }
-        
-        // 显示分享对话框
-        function showShareDialog(shareUrl, gistId) {
-            // 创建模态框
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            `;
-            
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: white;
-                padding: 30px;
-                border-radius: 16px;
-                max-width: 500px;
-                max-height: 80vh;
-                overflow-y: auto;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-                margin: 20px;
-            `;
-            
-            // 生成二维码URL (使用第三方服务)
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
-            
-            content.innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #1d1d1f; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">🎉 分享成功</h2>
-                    <p style="color: #86868b; margin: 0; font-size: 16px;">您的HTML代码已生成分享链接</p>
-                </div>
-                
-                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
-                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">📱 分享链接</h3>
-                    <div style="display: flex; margin-top: 10px;">
-                        <input id="shareUrlInput" type="text" value="${shareUrl}" readonly style="
-                            flex: 1;
-                            padding: 8px 12px;
-                            border: 1px solid #d2d2d7;
-                            border-radius: 8px 0 0 8px;
-                            font-size: 14px;
-                            background: #ffffff;
-                            outline: none;
-                        ">
-                        <button id="copyUrlBtn" style="
-                            padding: 8px 16px;
-                            background: #007aff;
-                            color: white;
-                            border: none;
-                            border-radius: 0 8px 8px 0;
-                            cursor: pointer;
-                            font-weight: 500;
-                        ">复制</button>
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: center; margin: 20px 0;">
-                    <img src="${qrCodeUrl}" alt="分享二维码" style="border-radius: 8px; border: 1px solid #d2d2d7;">
-                </div>
-                
-                <div style="text-align: center; margin-top: 20px;">
-                    <button id="closeShareBtn" style="
-                        background: #007aff;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 500;
-                        margin-right: 10px;
-                    ">关闭</button>
-                    <button id="openShareBtn" style="
-                        background: #34c759;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 500;
-                    ">打开链接</button>
-                </div>
-            `;
-            
-            modal.appendChild(content);
-            modal.className = 'share-modal';
-            
-            // 添加事件监听器
-            document.getElementById('copyUrlBtn').addEventListener('click', function() {
-                const input = document.getElementById('shareUrlInput');
-                input.select();
-                document.execCommand('copy');
-                showToast('链接已复制到剪贴板', 'success');
-            });
-            
-            document.getElementById('closeShareBtn').addEventListener('click', function() {
-                modal.remove();
-            });
-            
-            document.getElementById('openShareBtn').addEventListener('click', function() {
-                window.open(shareUrl, '_blank');
-            });
-            
-            // 点击背景关闭
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-            
-            document.body.appendChild(modal);
-            
-            // 更新分享按钮状态
-            shareBtn.classList.add('btn-success');
-            shareBtn.innerHTML = '<span class="icon">✅</span> 已分享';
-            
-            // 5秒后恢复按钮状态
-            setTimeout(() => {
-                shareBtn.classList.remove('btn-success');
-                shareBtn.innerHTML = '<span class="icon">🔗</span> 分享';
-            }, 5000);
-        }
-        
-        // 检查URL中是否有分享的代码
-        function checkSharedCode() {
-            const hash = window.location.hash.substring(1);
-            if (hash.startsWith('shared=')) {
-                try {
-                    const encodedCode = hash.substring(7);
-                    const code = decodeURIComponent(escape(atob(encodedCode)));
-                    htmlEditor.value = code;
-                    updateCharCount();
-                    updatePreview();
-                    showToast('已加载分享的代码', 'success');
-                    
-                    // 清除URL中的分享参数
-                    history.replaceState(null, null, window.location.pathname);
-                } catch (error) {
-                    console.error('加载分享代码失败:', error);
-                }
-            }
-        }
-        
-        // 页面加载时检查是否有分享的代码
-        window.addEventListener('load', function() {
-            checkSharedCode();
-        });
     </script>
 </body>
 </html>
