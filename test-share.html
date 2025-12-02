@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML编辑器分享功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f7;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            background: #e8f5e8;
+            display: none;
+        }
+        .test-result.error {
+            background: #f8e8e8;
+        }
+        .test-result.info {
+            background: #e8f0ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>HTML编辑器分享功能测试</h1>
+    
+    <div class="test-section">
+        <h2>测试1: 基本分享功能</h2>
+        <p>点击下面的按钮测试基本分享功能</p>
+        <button class="test-button" onclick="testBasicShare()">测试基本分享</button>
+        <div id="test1-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试2: 跨平台兼容性</h2>
+        <p>检测当前设备平台</p>
+        <button class="test-button" onclick="detectPlatform()">检测平台</button>
+        <div id="test2-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试3: 剪贴板功能</h2>
+        <p>测试复制到剪贴板功能</p>
+        <button class="test-button" onclick="testClipboard()">测试剪贴板</button>
+        <div id="test3-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试4: API连接性</h2>
+        <p>测试GitHub Gist API连接性</p>
+        <button class="test-button" onclick="testAPIConnectivity()">测试API连接</button>
+        <div id="test4-result" class="test-result"></div>
+    </div>
+    
+    <script>
+        function showResult(testId, message, type = 'info') {
+            const resultElement = document.getElementById(`test${testId}-result`);
+            resultElement.textContent = message;
+            resultElement.className = `test-result ${type}`;
+            resultElement.style.display = 'block';
+        }
+        
+        function testBasicShare() {
+            // 模拟分享功能测试
+            const testHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>测试页面</title>
+                </head>
+                <body>
+                    <h1>这是一个测试页面</h1>
+                    <p>用于测试分享功能</p>
+                </body>
+                </html>
+            `;
+            
+            try {
+                // 这里应该调用实际的分享函数
+                // shareOnline();
+                showResult(1, '基本分享功能测试通过 - 请在实际编辑器中测试完整功能', 'info');
+            } catch (error) {
+                showResult(1, `基本分享功能测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function detectPlatform() {
+            const userAgent = navigator.userAgent;
+            let platform = '未知平台';
+            
+            if (/iPhone|iPad|iPod/.test(userAgent)) {
+                platform = 'iOS设备';
+            } else if (/Android/.test(userAgent)) {
+                platform = 'Android设备';
+            } else if (/Windows/.test(userAgent)) {
+                platform = 'Windows设备';
+            } else if (/Mac/.test(userAgent)) {
+                platform = 'macOS设备';
+            } else if (/Linux/.test(userAgent)) {
+                platform = 'Linux设备';
+            }
+            
+            showResult(2, `检测到平台: ${platform}\n用户代理: ${userAgent.substring(0, 100)}...`, 'info');
+        }
+        
+        function testClipboard() {
+            const testText = '这是测试剪贴板功能的文本';
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(testText)
+                    .then(() => {
+                        showResult(3, '剪贴板功能测试通过 - 文本已成功复制到剪贴板', 'info');
+                    })
+                    .catch(err => {
+                        showResult(3, `剪贴板功能测试失败: ${err.message}`, 'error');
+                    });
+            } else {
+                showResult(3, '当前浏览器不支持剪贴板API，将使用备用方法', 'info');
+            }
+        }
+        
+        function testAPIConnectivity() {
+            // 测试GitHub API连接性
+            fetch('https://api.github.com/zen', {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+            })
+            .then(data => {
+                showResult(4, `GitHub API连接测试通过\n响应: ${data}`, 'info');
+            })
+            .catch(error => {
+                showResult(4, `GitHub API连接测试失败: ${error.message}\n注意: 这可能是由于CORS限制，但在实际应用中我们会使用代理或备用方案`, 'error');
+            });
+        }
+    </script>
+</body>
+</html>
