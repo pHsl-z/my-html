@@ -60,7 +60,7 @@
             position: relative;
             /* 防止 iOS 橡皮筋效果 */
             overscroll-behavior: none;
-            /* iOS滚动优化 - 已移除不支持的属性 */
+            -webkit-overflow-scrolling: touch;
         }
 
         .editor-panel {
@@ -157,10 +157,9 @@
             flex: 1;
             border: none;
             background: #ffffff;
-            /* iOS滚动优化 - 已移除不支持的属性 */
+            -webkit-overflow-scrolling: touch;
             /* iOS Safari滚动优化 */
             overscroll-behavior: contain;
-            /* -webkit-overflow-scrolling: touch; 已废弃 */
             /* 确保内容可以滚动 */
             overflow: auto;
             /* 支持触摸滚动 */
@@ -233,7 +232,11 @@
             
             /* iOS滚动优化 - 已移除不支持的属性 */
             .code-editor {
+<<<<<<< HEAD
                 /* -webkit-overflow-scrolling: touch; 已废弃 */
+=======
+                -webkit-overflow-scrolling: touch;
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
 
             }
         }
@@ -844,10 +847,13 @@
                         <span class="icon">🖨️</span>
                         打印
                     </button>
+<<<<<<< HEAD
                     <button class="btn btn-secondary" onclick="shareHTML()" id="shareBtn">
                         <span class="icon">🔗</span>
                         分享
                     </button>
+=======
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                     <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn">
                         <span class="icon">💾</span>
                         下载
@@ -859,7 +865,11 @@
     </div>
 
     <!-- 隐藏的文件输入元素 -->
+<<<<<<< HEAD
     <input type="file" id="fileInput" accept=".html,.htm" class="hidden-input">
+=======
+    <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
 
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
@@ -868,7 +878,10 @@
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+<<<<<<< HEAD
         const shareBtn = document.getElementById('shareBtn');
+=======
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
         const openBtn = document.getElementById('openBtn');
         const fileInput = document.getElementById('fileInput');
 
@@ -1188,7 +1201,11 @@
                 style.textContent = `
                     /* iOS Safari滚动优化 */
                     html, body {
+<<<<<<< HEAD
                         /* -webkit-overflow-scrolling: touch !important; 已废弃 */
+=======
+                        -webkit-overflow-scrolling: touch !important;
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                         overscroll-behavior: contain !important;
                         touch-action: pan-x pan-y !important;
                         /* 确保内容可以滚动 */
@@ -1241,7 +1258,11 @@
                                 
                                 // 确保内容可以滚动
                                 previewBody.style.overflow = 'auto';
+<<<<<<< HEAD
                                 /* previewBody.style.webkitOverflowScrolling = 'touch'; 已废弃 */
+=======
+                                previewBody.style.webkitOverflowScrolling = 'touch';
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                             }
                         } catch (error) {
                             console.log('iOS滚动优化错误:', error);
@@ -1861,7 +1882,11 @@
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
+<<<<<<< HEAD
             [clearBtn, pasteBtn, downloadBtn, shareBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
+=======
+            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     this.style.opacity = '0.7';
@@ -1885,8 +1910,11 @@
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
                             printPreview();
+<<<<<<< HEAD
                         } else if (this.id === 'shareBtn') {
                             shareHTML();
+=======
+>>>>>>> 1bccf0d3fa20b17a1992d2250e73cc21ec59b197
                         } else if (this.id === 'openBtn') {
                             openLocalFile();
                         }
