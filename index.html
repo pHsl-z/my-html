@@ -500,28 +500,7 @@
             }
         }
         
-        /* iPhone手势提示 */
-        @media (max-width: 414px) {
-            .gesture-hint {
-                position: fixed !important;
-                bottom: 20px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                background: rgba(0, 0, 0, 0.8) !important;
-                color: white !important;
-                padding: 8px 16px !important;
-                border-radius: 20px !important;
-                font-size: 14px !important;
-                z-index: 1000 !important;
-                opacity: 0 !important;
-                transition: opacity 0.3s ease !important;
-                pointer-events: none !important;
-            }
-            
-            .gesture-hint.show {
-                opacity: 1 !important;
-            }
-        }
+
 
         .btn-group {
             display: flex;
@@ -709,20 +688,7 @@
                     -webkit-overflow-scrolling: touch !important;
                 }
                 
-                /* 添加滑动手势提示 */
-                .history-header::after,
-                .share-header::after,
-                .settings-header::after {
-                    content: '' !important;
-                    position: absolute !important;
-                    bottom: 8px !important;
-                    left: 50% !important;
-                    transform: translateX(-50%) !important;
-                    width: 40px !important;
-                    height: 4px !important;
-                    background: rgba(255, 255, 255, 0.3) !important;
-                    border-radius: 2px !important;
-                }
+
             }
         }
 
@@ -2484,83 +2450,12 @@
             settingsPanel.classList.remove('show');
         }
         
-        // iPhone手势关闭支持
-        let touchStartY = 0;
-        let touchStartX = 0;
-        let gestureHintTimeout = null;
-        
-        // 创建手势提示元素
-        const gestureHint = document.createElement('div');
-        gestureHint.className = 'gesture-hint';
-        gestureHint.textContent = '向下滑动关闭面板';
-        document.body.appendChild(gestureHint);
-        
-        // 显示手势提示
-        function showGestureHint() {
-            gestureHint.classList.add('show');
-            if (gestureHintTimeout) {
-                clearTimeout(gestureHintTimeout);
-            }
-            gestureHintTimeout = setTimeout(() => {
-                gestureHint.classList.remove('show');
-            }, 3000);
+        // 关闭所有面板
+        function closeAllPanels() {
+            historyPanel.classList.remove('show');
+            sharePanel.classList.remove('show');
+            settingsPanel.classList.remove('show');
         }
-        
-        document.addEventListener('touchstart', function(e) {
-            touchStartY = e.touches[0].clientY;
-            touchStartX = e.touches[0].clientX;
-        });
-        
-        document.addEventListener('touchend', function(e) {
-            if (!touchStartY || !touchStartX) return;
-            
-            const touchEndY = e.changedTouches[0].clientY;
-            const touchEndX = e.changedTouches[0].clientX;
-            
-            const deltaY = touchStartY - touchEndY;
-            const deltaX = touchStartX - touchEndX;
-            
-            // 检测下滑手势（至少50px）
-            if (deltaY < -50 && Math.abs(deltaX) < 50) {
-                // 检查是否有打开的面板
-                if (historyPanel.classList.contains('show') || 
-                    sharePanel.classList.contains('show') || 
-                    settingsPanel.classList.contains('show')) {
-                    closeAllPanels();
-                    e.preventDefault();
-                    showToast('手势关闭成功', 'success');
-                }
-            }
-            
-            touchStartY = 0;
-            touchStartX = 0;
-        });
-        
-        // 面板打开时显示手势提示
-        const originalToggleHistory = toggleHistoryPanel;
-        const originalToggleShare = toggleSharePanel;
-        const originalToggleSettings = toggleSettingsPanel;
-        
-        toggleHistoryPanel = function() {
-            originalToggleHistory();
-            if (historyPanel.classList.contains('show')) {
-                setTimeout(showGestureHint, 500);
-            }
-        };
-        
-        toggleSharePanel = function() {
-            originalToggleShare();
-            if (sharePanel.classList.contains('show')) {
-                setTimeout(showGestureHint, 500);
-            }
-        };
-        
-        toggleSettingsPanel = function() {
-            originalToggleSettings();
-            if (settingsPanel.classList.contains('show')) {
-                setTimeout(showGestureHint, 500);
-            }
-        };
         
         // 显示历史记录列表
         function displayHistory() {
