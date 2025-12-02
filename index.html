@@ -298,17 +298,6 @@
             border-color: #138496;
         }
 
-        /* 分享按钮样式 */
-        .btn-share {
-            background: #6f42c1;
-            border-color: #6f42c1;
-        }
-
-        .btn-share:hover {
-            background: #5a32a3;
-            border-color: #5a32a3;
-        }
-
         /* 全屏预览样式 */
         .fullscreen-preview {
             position: fixed !important;
@@ -855,7 +844,7 @@
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-                    <button class="btn btn-share" onclick="shareHTML()" id="shareBtn">
+                    <button class="btn btn-secondary" onclick="shareHTML()" id="shareBtn">
                         <span class="icon">🔗</span>
                         分享
                     </button>
@@ -879,8 +868,8 @@
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
-        const openBtn = document.getElementById('openBtn');
         const shareBtn = document.getElementById('shareBtn');
+        const openBtn = document.getElementById('openBtn');
         const fileInput = document.getElementById('fileInput');
 
         // 默认HTML模板 - 针对移动设备优化
@@ -1790,171 +1779,6 @@
             }
         }
 
-        // 分享HTML功能
-        function shareHTML() {
-            try {
-                // 获取当前编辑器内容
-                const htmlContent = htmlEditor.value || defaultHTML;
-                
-                // 创建一个唯一的分享ID
-                const shareId = 'share_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                
-                // 将HTML内容存储到localStorage
-                localStorage.setItem(shareId, htmlContent);
-                
-                // 创建分享URL - 指向share.html页面
-                const shareUrl = window.location.origin + window.location.pathname.replace('index.html', 'share.html') + '?share=' + shareId;
-                
-                // 复制到剪贴板
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    showToast('分享链接已复制到剪贴板！', 'success');
-                    
-                    // 显示分享对话框
-                    showShareDialog(shareUrl);
-                }).catch(err => {
-                    console.error('复制失败:', err);
-                    showToast('复制失败，请手动复制链接', 'error');
-                    showShareDialog(shareUrl);
-                });
-            } catch (error) {
-                console.error('分享出错:', error);
-                showToast('分享功能出错，请重试', 'error');
-            }
-        }
-        
-        // 显示分享对话框
-        function showShareDialog(shareUrl) {
-            // 创建模态框
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            `;
-            
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: white;
-                padding: 30px;
-                border-radius: 16px;
-                max-width: 500px;
-                max-height: 80vh;
-                overflow-y: auto;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-                margin: 20px;
-            `;
-            
-            content.innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #1d1d1f; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">🔗 分享链接</h2>
-                    <p style="color: #86868b; margin: 0; font-size: 16px;">复制以下链接分享给他人</p>
-                </div>
-                
-                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
-                    <input type="text" readonly value="${shareUrl}" style="
-                        width: 100%;
-                        border: none;
-                        background: transparent;
-                        font-family: monospace;
-                        font-size: 14px;
-                        color: #1d1d1f;
-                        word-break: break-all;
-                        outline: none;
-                    " id="shareUrlInput">
-                </div>
-                
-                <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="copyShareUrl('${shareUrl}')" style="
-                        background: #007aff;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 500;
-                        margin-right: 10px;
-                    ">复制链接</button>
-                    <button onclick="this.closest('.modal').remove()" style="
-                        background: #f5f5f7;
-                        color: #1d1d1f;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 500;
-                    ">关闭</button>
-                </div>
-            `;
-            
-            modal.appendChild(content);
-            modal.className = 'modal';
-            
-            // 点击背景关闭
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-            
-            document.body.appendChild(modal);
-            
-            // 自动选中文本
-            setTimeout(() => {
-                const input = document.getElementById('shareUrlInput');
-                if (input) {
-                    input.select();
-                    input.setSelectionRange(0, 99999); // 移动设备兼容
-                }
-            }, 100);
-        }
-        
-        // 复制分享URL
-        function copyShareUrl(url) {
-            navigator.clipboard.writeText(url).then(() => {
-                showToast('链接已复制到剪贴板！', 'success');
-            }).catch(err => {
-                console.error('复制失败:', err);
-                showToast('复制失败，请手动复制链接', 'error');
-            });
-        }
-        
-        // 检查并加载分享的内容
-        function loadSharedContent() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const shareId = urlParams.get('share');
-            
-            if (shareId && localStorage.getItem(shareId)) {
-                const sharedContent = localStorage.getItem(shareId);
-                
-                // 显示分享内容提示
-                showToast('正在加载分享的内容...', 'info');
-                
-                // 设置编辑器内容
-                htmlEditor.value = sharedContent;
-                updateCharCount();
-                updatePreview();
-                
-                // 从URL中移除share参数，避免重复加载
-                const newUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, newUrl);
-            }
-        }
-        
-        // 页面加载时检查分享内容
-        window.addEventListener('load', function() {
-            loadSharedContent();
-        });
-
         // 全屏预览切换函数
         function toggleFullscreenPreview() {
             const previewPanel = document.querySelector('.preview-panel');
@@ -2037,7 +1861,7 @@
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
-            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
+            [clearBtn, pasteBtn, downloadBtn, shareBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     this.style.opacity = '0.7';
@@ -2061,6 +1885,8 @@
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
                             printPreview();
+                        } else if (this.id === 'shareBtn') {
+                            shareHTML();
                         } else if (this.id === 'openBtn') {
                             openLocalFile();
                         }
@@ -2085,6 +1911,235 @@
                 e.preventDefault();
             });
         }
+        // 在线分享功能
+        function shareHTML() {
+            const code = htmlEditor.value;
+            
+            // 检查是否有内容
+            if (!code.trim()) {
+                showToast('没有内容可以分享', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            showToast('正在生成分享链接...', 'info');
+            
+            // 生成随机文件名
+            const fileName = `index-${Date.now()}.html`;
+            
+            // 创建Gist数据
+            const gistData = {
+                description: "HTML编辑器分享的代码",
+                public: true,
+                files: {
+                    [fileName]: {
+                        content: code
+                    }
+                }
+            };
+            
+            // 调用GitHub Gist API
+            fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 注意：在实际生产环境中，应该使用OAuth令牌而不是公开API
+                    // 这里使用公开API，但会有速率限制
+                },
+                body: JSON.stringify(gistData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 获取Gist ID
+                const gistId = data.id;
+                const shareUrl = `https://htmlpreview.github.io/?${data.files[fileName].raw_url}`;
+                
+                // 显示分享对话框
+                showShareDialog(shareUrl, gistId);
+            })
+            .catch(error => {
+                console.error('分享失败:', error);
+                
+                // 如果API调用失败，使用备用方案
+                shareWithAlternative(code);
+            });
+        }
+        
+        // 备用分享方案
+        function shareWithAlternative(code) {
+            try {
+                // 使用Base64编码代码
+                const encodedCode = btoa(unescape(encodeURIComponent(code)));
+                const shareUrl = `${window.location.origin}${window.location.pathname}#shared=${encodedCode}`;
+                
+                // 显示分享对话框
+                showShareDialog(shareUrl, null);
+            } catch (error) {
+                console.error('备用分享方案失败:', error);
+                showToast('分享失败，请重试', 'error');
+            }
+        }
+        
+        // 显示分享对话框
+        function showShareDialog(shareUrl, gistId) {
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                margin: 20px;
+            `;
+            
+            // 生成二维码URL (使用第三方服务)
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
+            
+            content.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #1d1d1f; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">🎉 分享成功</h2>
+                    <p style="color: #86868b; margin: 0; font-size: 16px;">您的HTML代码已生成分享链接</p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">📱 分享链接</h3>
+                    <div style="display: flex; margin-top: 10px;">
+                        <input id="shareUrlInput" type="text" value="${shareUrl}" readonly style="
+                            flex: 1;
+                            padding: 8px 12px;
+                            border: 1px solid #d2d2d7;
+                            border-radius: 8px 0 0 8px;
+                            font-size: 14px;
+                            background: #ffffff;
+                            outline: none;
+                        ">
+                        <button id="copyUrlBtn" style="
+                            padding: 8px 16px;
+                            background: #007aff;
+                            color: white;
+                            border: none;
+                            border-radius: 0 8px 8px 0;
+                            cursor: pointer;
+                            font-weight: 500;
+                        ">复制</button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: center; margin: 20px 0;">
+                    <img src="${qrCodeUrl}" alt="分享二维码" style="border-radius: 8px; border: 1px solid #d2d2d7;">
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="closeShareBtn" style="
+                        background: #007aff;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        font-weight: 500;
+                        margin-right: 10px;
+                    ">关闭</button>
+                    <button id="openShareBtn" style="
+                        background: #34c759;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        font-weight: 500;
+                    ">打开链接</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'share-modal';
+            
+            // 添加事件监听器
+            document.getElementById('copyUrlBtn').addEventListener('click', function() {
+                const input = document.getElementById('shareUrlInput');
+                input.select();
+                document.execCommand('copy');
+                showToast('链接已复制到剪贴板', 'success');
+            });
+            
+            document.getElementById('closeShareBtn').addEventListener('click', function() {
+                modal.remove();
+            });
+            
+            document.getElementById('openShareBtn').addEventListener('click', function() {
+                window.open(shareUrl, '_blank');
+            });
+            
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            document.body.appendChild(modal);
+            
+            // 更新分享按钮状态
+            shareBtn.classList.add('btn-success');
+            shareBtn.innerHTML = '<span class="icon">✅</span> 已分享';
+            
+            // 5秒后恢复按钮状态
+            setTimeout(() => {
+                shareBtn.classList.remove('btn-success');
+                shareBtn.innerHTML = '<span class="icon">🔗</span> 分享';
+            }, 5000);
+        }
+        
+        // 检查URL中是否有分享的代码
+        function checkSharedCode() {
+            const hash = window.location.hash.substring(1);
+            if (hash.startsWith('shared=')) {
+                try {
+                    const encodedCode = hash.substring(7);
+                    const code = decodeURIComponent(escape(atob(encodedCode)));
+                    htmlEditor.value = code;
+                    updateCharCount();
+                    updatePreview();
+                    showToast('已加载分享的代码', 'success');
+                    
+                    // 清除URL中的分享参数
+                    history.replaceState(null, null, window.location.pathname);
+                } catch (error) {
+                    console.error('加载分享代码失败:', error);
+                }
+            }
+        }
+        
+        // 页面加载时检查是否有分享的代码
+        window.addEventListener('load', function() {
+            checkSharedCode();
+        });
     </script>
 </body>
 </html>
