@@ -137,6 +137,7 @@
             white-space: pre;
             tab-size: 4;
             -webkit-overflow-scrolling: touch;
+            overflow-scrolling: touch;
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
@@ -157,6 +158,7 @@
             border: none;
             background: #ffffff;
             -webkit-overflow-scrolling: touch;
+            overflow-scrolling: touch;
             /* iOS Safari滚动优化 */
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
@@ -488,14 +490,20 @@
                 font-size: 11px;
             }
             
-            /* 移动设备通知位置（代码面板内，靠左上，下滑） */
-            .editor-panel .toast {
-                top: 56px;
-                left: 50%; /* 强制居中 */
-                transform: translate(-50%, -10px);
-                max-width: calc(100% - 20px);
+            /* 移动设备通知位置优化 */
+            .toast {
+                top: 70px; /* 位于按钮下方 */
+                left: auto;
+                right: 10px;
+                max-width: calc(100vw - 20px);
+                width: auto;
+                transform: translateX(100%);
                 font-size: 13px;
                 padding: 10px 15px;
+            }
+            
+            .toast.show {
+                transform: translateX(0);
             }
         }
 
@@ -515,14 +523,15 @@
                 padding: 14px 18px;
             }
             
-            /* iPad竖屏通知优化（代码面板内） */
+            /* iPad竖屏通知优化 */
             @media (orientation: portrait) {
-                .editor-panel .toast {
-                    top: 64px;
-                    left: 50%; /* 竖屏也保持居中 */
-                    transform: translate(-50%, -10px);
-                    max-width: min(280px, calc(100% - 32px));
+                .toast {
+                    top: 80px; /* 位于按钮下方 */
+                    left: auto;
+                    right: 20px;
+                    max-width: 280px;
                     font-size: 13px;
+                    transform: translateX(100%);
                 }
             }
         }
@@ -537,24 +546,24 @@
 
         /* iPad横屏特殊优化 */
         @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-            /* iPad Pro横屏通知（代码面板内） */
-            .editor-panel .toast {
-                top: 64px;
-                left: 50%; /* 横屏保持居中 */
-                transform: translate(-50%, -10px);
-                max-width: min(350px, calc(100% - 48px));
+            /* iPad Pro横屏通知优化 */
+            .toast {
+                top: 80px; /* 更大的顶部距离 */
+                left: 30px;
+                max-width: 350px;
                 font-size: 14px;
             }
         }
         
         @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
-            /* iPad横屏通知（代码面板内） */
-            .editor-panel .toast {
-                top: 64px;
-                left: 50%; /* 横屏保持居中 */
-                transform: translate(-50%, -10px);
-                max-width: min(320px, calc(100% - 40px));
+            /* iPad横屏通知优化 */
+            .toast {
+                top: 80px; /* 位于按钮下方 */
+                left: auto;
+                right: 25px;
+                max-width: 320px;
                 font-size: 13px;
+                transform: translateX(100%);
             }
         }
 
@@ -656,16 +665,17 @@
                 font-size: 12px;
             }
             
-            /* 超小屏幕通知（代码面板内） */
-            .editor-panel .toast {
-                top: 52px; /* 更贴近顶部 */
-                left: 50%; /* 居中 */
-                transform: translate(-50%, -10px);
-                max-width: calc(100% - 16px);
+            /* 超小屏幕通知优化 */
+            .toast {
+                top: 60px; /* 位于按钮下方，考虑到小屏幕高度 */
+                left: auto;
+                right: 5px;
+                max-width: calc(100vw - 10px);
                 width: auto;
                 font-size: 12px;
                 padding: 8px 12px;
                 border-radius: 6px;
+                transform: translateX(100%);
             }
         }
 
@@ -685,12 +695,12 @@
                 flex: 1;
             }
             
-            /* iPad横屏通知优化 - 避免遮挡顶部按钮（代码面板内） */
-            .editor-panel .toast {
+            /* iPad横屏通知优化 - 避免遮挡顶部按钮 */
+            .toast {
                 top: 70px; /* 增加顶部距离，避免遮挡面板标题 */
-                left: 50%;
-                transform: translate(-50%, -10px);
+                left: 20px;
                 max-width: 300px;
+                font-size: 13px;
             }
         }
 
@@ -746,29 +756,27 @@
             100% { transform: scale(1); }
         }
 
-        /* 消息提示样式：放在代码面板内，从上向下滑入 */
-        .editor-panel .toast {
-            position: absolute;
-            top: 64px; /* 位于编辑器面板标题下方，紧贴代码框顶部 */
-            left: 50%; /* 顶部居中 */
-            transform: translate(-50%, -12px); /* 初始比代码框顶部略高一些 */
-            background: rgba(30, 30, 30, 0.95);
+        /* 消息提示样式 */
+        .toast {
+            position: fixed;
+            top: 80px; /* 位于按钮下方 */
+            right: 20px;
+            background: #2a2a2a;
             color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
             border: 1px solid #3a3a3a;
-            border-radius: 10px;
-            padding: 12px 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-            z-index: 10;
-            pointer-events: none;
-            opacity: 0;
-            transition: transform 0.25s ease, opacity 0.25s ease;
-            max-width: min(360px, calc(100% - 32px));
+            font-size: 14px;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
             width: auto;
         }
 
-        .editor-panel .toast.show {
-            transform: translate(-50%, 20px); /* 下移更多，完全进入代码框内 */
-            opacity: 1;
+        .toast.show {
+            transform: translateX(0);
         }
 
         .toast.success {
@@ -1174,6 +1182,7 @@
                     /* iOS Safari滚动优化 */
                     html, body {
                         -webkit-overflow-scrolling: touch !important;
+                        overflow-scrolling: touch !important;
                         overscroll-behavior: contain !important;
                         touch-action: pan-x pan-y !important;
                         /* 确保内容可以滚动 */
@@ -1347,10 +1356,9 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            const editorPanel = document.querySelector('.editor-panel');
-            (editorPanel || document.body).appendChild(toast);
+            document.body.appendChild(toast);
             
-            // iPad设备调整通知位置（针对代码面板内的toast）
+            // iPad设备调整通知位置
             adjustToastPositionForiPad();
             
             // 触发显示动画
@@ -1358,15 +1366,13 @@
                 toast.classList.add('show');
             }, 100);
             
-            // 1秒后移除（原为3秒）
+            // 3秒后移除
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
+                    document.body.removeChild(toast);
                 }, 300);
-            }, 1000);
+            }, 3000);
         }
 
         function downloadHTML() {
@@ -1471,7 +1477,7 @@
             htmlEditor.style.height = htmlEditor.scrollHeight + 'px';
             
             // 处理通知位置
-            const toast = document.querySelector('.editor-panel .toast');
+            const toast = document.querySelector('.toast');
             if (toast) {
                 const isLandscape = window.innerWidth > window.innerHeight;
                 toast.style.top = isLandscape ? '85px' : '80px';
@@ -1501,7 +1507,7 @@
         // 动态调整iPad通知位置
         function adjustToastPositionForiPad() {
             if (isIOS()) {
-                const toast = document.querySelector('.editor-panel .toast');
+                const toast = document.querySelector('.toast');
                 if (toast) {
                     // 检测是否为横屏
                     const isLandscape = window.innerWidth > window.innerHeight;

@@ -1,0 +1,1001 @@
+﻿    <script>
+        const htmlEditor = document.getElementById('htmlEditor');
+        const previewFrame = document.getElementById('previewFrame');
+        const charCount = document.getElementById('charCount');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const openBtn = document.getElementById('openBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // 榛樿HTML妯℃澘 - 閽堝绉诲姩璁惧浼樺寲
+        const defaultHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>鎴戠殑HTML5椤甸潰</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        
+        h1 {
+            color: #1d1d1f;
+            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        p {
+            color: #86868b;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature {
+            background: #f5f5f7;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .feature h3 {
+            color: #1d1d1f;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        
+        .feature p {
+            color: #86868b;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 20px 15px;
+                border-radius: 12px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            p {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>馃帀 娆㈣繋浣跨敤HTML5缂栬緫鍣?/h1>
+        <p>杩欐槸涓€涓搷搴斿紡鐨凥TML5椤甸潰妯℃澘锛屽畬缇庨€傞厤iOS銆丄ndroid銆乵acOS鍜學indows璁惧銆?/p>
+        
+        <div class="feature">
+            <h3>馃摫 绉诲姩浼樺厛</h3>
+            <p>鍦ㄥ悇绉嶇Щ鍔ㄨ澶囦笂閮芥湁鍑鸿壊鐨勬樉绀烘晥鏋?/p>
+        </div>
+        
+        <div class="feature">
+            <h3>馃捇 璺ㄥ钩鍙板吋瀹?/h3>
+            <p>鏀寔iOS銆丄ndroid銆乵acOS銆乄indows绛変富娴佸钩鍙?/p>
+        </div>
+        
+        <div class="feature">
+            <h3>馃殌 鎬ц兘浼樺寲</h3>
+            <p>蹇€熷姞杞斤紝娴佺晠鐨勭敤鎴蜂綋楠?/p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        // 鍒濆鍖栫紪杈戝櫒 - 淇敼涓烘竻绌虹姸鎬?        htmlEditor.value = '';
+        updateCharCount();
+        
+        // IE娴忚鍣ㄥ吋瀹规€э細纭繚iframe姝ｇ‘鍒濆鍖?        if (document.documentMode || /Edge/.test(navigator.userAgent)) {
+            previewFrame.style.display = 'block';
+            previewFrame.style.width = '100%';
+            previewFrame.style.height = 'calc(100% - 60px)';
+        }
+        
+        // 寤惰繜鍒濆鍖栭瑙堬紝纭繚DOM瀹屽叏鍔犺浇
+        setTimeout(function() {
+            updatePreview();
+        }, 100);
+
+        // 瀹炴椂棰勮鍔熻兘 - 浼樺寲瑙︽懜璁惧浣撻獙
+        let updateTimeout;
+        htmlEditor.addEventListener('input', function() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updatePreview, 100);
+            updateCharCount();
+        });
+        
+        // iOS Edge娴忚鍣ㄥ吋瀹规€э細鐩戝惉change浜嬩欢
+        htmlEditor.addEventListener('change', function() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updatePreview, 100);
+            updateCharCount();
+        });
+        
+        // IE娴忚鍣ㄥ吋瀹规€э細鐩戝惉propertychange浜嬩欢
+        if (document.documentMode || /Edge/.test(navigator.userAgent)) {
+            htmlEditor.addEventListener('propertychange', function(e) {
+                if (e.propertyName === 'value') {
+                    clearTimeout(updateTimeout);
+                    updateTimeout = setTimeout(updatePreview, 100);
+                    updateCharCount();
+                }
+            });
+        }
+        
+        // 鐩戝惉keyup浜嬩欢浠ョ‘淇滻E鍏煎鎬?        htmlEditor.addEventListener('keyup', function() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updatePreview, 100);
+            updateCharCount();
+        });
+        
+        // 瑙︽懜璁惧浼樺寲 - 闃叉閿洏閬尅
+        let initialLoad = true;
+        htmlEditor.addEventListener('focus', function() {
+            // 棣栨鍔犺浇鏃朵笉鎵ц婊氬姩
+            if (initialLoad) {
+                initialLoad = false;
+                return;
+            }
+            // 寤惰繜婊氬姩纭繚缂栬緫鍣ㄥ彲瑙侊紝浠呭湪闇€瑕佹椂鎵ц
+            if (document.activeElement === htmlEditor) {
+                setTimeout(() => {
+                    const rect = htmlEditor.getBoundingClientRect();
+                    const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+                    if (!isVisible) {
+                        htmlEditor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            }
+        });
+
+        function updatePreview() {
+            const code = htmlEditor.value;
+            const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            try {
+                // 浣跨敤srcdoc灞炴€ч伩鍏嶉噸澶嶅０鏄庨棶棰橈紙鐜颁唬娴忚鍣級
+                if ('srcdoc' in previewFrame) {
+                    previewFrame.srcdoc = code;
+                } else {
+                    // IE娴忚鍣ㄥ吋瀹规€у鐞?                    if (previewDoc.open && previewDoc.write && previewDoc.close) {
+                        previewDoc.open();
+                        previewDoc.write(code);
+                        previewDoc.close();
+                    } else {
+                        // 瀵逛簬IE鐨勫鐢ㄦ柟妗?                        previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
+                    }
+                }
+                
+                // 寤惰繜搴旂敤婊氬姩浼樺寲锛岀‘淇濆唴瀹瑰畬鍏ㄥ姞杞?                setTimeout(() => {
+                    enhancePreviewScrolling();
+                }, 50);
+            } catch (error) {
+                console.log('Preview update error:', error);
+                // IE娴忚鍣ㄥ鐢ㄦ柟妗?                try {
+                    previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
+                } catch (ieError) {
+                    console.log('IE preview fallback error:', ieError);
+                }
+            }
+        }
+
+        function refreshPreview() {
+            updatePreview();
+        }
+
+        // 鎵撳紑鏈湴HTML鏂囦欢
+        function openLocalFile() {
+            // 瑙﹀彂鏂囦欢閫夋嫨瀵硅瘽妗?            fileInput.click();
+        }
+
+        // 澶勭悊鏂囦欢閫夋嫨
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // 妫€鏌ユ枃浠剁被鍨?            if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
+                showToast('璇烽€夋嫨HTML鏂囦欢', 'error');
+                return;
+            }
+
+            // 璇诲彇鏂囦欢鍐呭
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    
+                    // 灏嗘枃浠跺唴瀹规樉绀哄湪棰勮绐楀彛涓?                    displayFileInPreview(content);
+                    
+                    // 鍙€夛細灏嗗唴瀹逛篃鍔犺浇鍒扮紪杈戝櫒涓?                    if (confirm('鏄惁灏嗘枃浠跺唴瀹瑰姞杞藉埌缂栬緫鍣ㄤ腑锛?)) {
+                        htmlEditor.value = content;
+                        updateCharCount();
+                    }
+                    
+                    showToast(`宸叉墦寮€鏂囦欢: ${file.name}`, 'success');
+                } catch (error) {
+                    console.error('鏂囦欢璇诲彇閿欒:', error);
+                    showToast('鏂囦欢璇诲彇澶辫触锛岃閲嶈瘯', 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('鏂囦欢璇诲彇澶辫触锛岃閲嶈瘯', 'error');
+            };
+            
+            // 浠ユ枃鏈舰寮忚鍙栨枃浠?            reader.readAsText(file, 'UTF-8');
+        });
+
+        // 鍦ㄩ瑙堢獥鍙ｄ腑鏄剧ず鏂囦欢鍐呭
+        function displayFileInPreview(content) {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                // 浣跨敤srcdoc灞炴€ч伩鍏嶉噸澶嶅０鏄庨棶棰橈紙鐜颁唬娴忚鍣級
+                if ('srcdoc' in previewFrame) {
+                    previewFrame.srcdoc = content;
+                } else {
+                    // IE娴忚鍣ㄥ吋瀹规€у鐞?                    if (previewDoc.open && previewDoc.write && previewDoc.close) {
+                        previewDoc.open();
+                        previewDoc.write(content);
+                        previewDoc.close();
+                    } else {
+                        // 瀵逛簬IE鐨勫鐢ㄦ柟妗?                        previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
+                    }
+                }
+                
+                // iOS Safari婊氬姩浼樺寲
+                enhancePreviewScrolling();
+            } catch (error) {
+                console.error('棰勮鏇存柊閿欒:', error);
+                // IE娴忚鍣ㄥ鐢ㄦ柟妗?                try {
+                    previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
+                } catch (ieError) {
+                    console.error('IE棰勮澶囩敤鏂规閿欒:', ieError);
+                    showToast('棰勮鏄剧ず澶辫触', 'error');
+                }
+            }
+        }
+
+        // 澧炲己棰勮绐楀彛鐨勬粴鍔ㄤ綋楠?        function enhancePreviewScrolling() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                if (!previewDoc || !previewDoc.body) {
+                    return;
+                }
+
+                // 涓洪瑙堟枃妗ｆ坊鍔爄OS Safari婊氬姩浼樺寲鏍峰紡
+                const style = previewDoc.createElement('style');
+                style.textContent = `
+                    /* iOS Safari婊氬姩浼樺寲 */
+                    html, body {
+                        -webkit-overflow-scrolling: touch !important;
+                        overscroll-behavior: contain !important;
+                        touch-action: pan-x pan-y !important;
+                        /* 纭繚鍐呭鍙互婊氬姩 */
+                        overflow: auto !important;
+                        /* 闃叉iOS Safari鐨勬鐨瓔鏁堟灉褰卞搷婊氬姩 */
+                        position: relative !important;
+                    }
+                    
+                    /* 閽堝A4鐗堥潰鍐呭鐨勬粴鍔ㄤ紭鍖?*/
+                    body {
+                        min-height: 100vh !important;
+                        /* 鍏佽鍐呭瓒呭嚭瑙嗗彛 */
+                        overflow-x: auto !important;
+                        overflow-y: auto !important;
+                    }
+                    
+                    /* 纭繚鎵€鏈夊鍣ㄩ兘鏀寔婊氬姩 */
+                    * {
+                        -webkit-overflow-scrolling: touch !important;
+                    }
+                `;
+                
+                // 灏嗘牱寮忔坊鍔犲埌棰勮鏂囨。鐨勫ご閮?                if (previewDoc.head) {
+                    previewDoc.head.appendChild(style);
+                } else {
+                    // 濡傛灉娌℃湁head鏍囩锛屽垱寤轰竴涓?                    const head = previewDoc.createElement('head');
+                    head.appendChild(style);
+                    previewDoc.documentElement.insertBefore(head, previewDoc.body);
+                }
+                
+                // iOS Safari鐗规畩澶勭悊锛氱‘淇漣frame鍐呭鍙互婊氬姩
+                if (isIOS()) {
+                    // 寤惰繜鎵ц浠ョ‘淇濆唴瀹瑰畬鍏ㄥ姞杞?                    setTimeout(() => {
+                        try {
+                            const previewBody = previewDoc.body;
+                            if (previewBody) {
+                                // 娣诲姞瑙︽懜浜嬩欢鐩戝惉鍣?                                previewBody.addEventListener('touchstart', function(e) {
+                                    // 鍏佽瑙︽懜婊氬姩
+                                    e.stopPropagation();
+                                }, { passive: true });
+                                
+                                previewBody.addEventListener('touchmove', function(e) {
+                                    // 鍏佽瑙︽懜婊氬姩
+                                    e.stopPropagation();
+                                }, { passive: true });
+                                
+                                // 纭繚鍐呭鍙互婊氬姩
+                                previewBody.style.overflow = 'auto';
+                                previewBody.style.webkitOverflowScrolling = 'touch';
+                            }
+                        } catch (error) {
+                            console.log('iOS婊氬姩浼樺寲閿欒:', error);
+                        }
+                    }, 100);
+                }
+                
+                // Android 璁惧锛氬崟鎸囨嫋鍔ㄦ粴鍔ㄥ洖閫€鏂规锛堥€傞厤鍥哄畾鐗堥潰/A4鍐呭锛?                try {
+                    const isAndroid = /Android/i.test(navigator.userAgent);
+                    if (isAndroid) {
+                        const scrollEl = previewDoc.scrollingElement || previewDoc.documentElement || previewDoc.body;
+                        if (!scrollEl) return;
+
+                        // 纭繚婊氬姩寮€鍚紝骞跺噺灏戞祻瑙堝櫒鎵嬪娍骞叉壈
+                        const targets = [previewDoc.documentElement, previewDoc.body];
+                        targets.forEach(el => {
+                            if (!el) return;
+                            el.style.overflowX = 'auto';
+                            el.style.overflowY = 'auto';
+                            el.style.overscrollBehavior = 'contain';
+                            // 涓虹‘淇濇墜鍔跨敱鎴戜滑鎺ョ锛岀鐢ㄦ祻瑙堝櫒榛樿鎵嬪娍瑙ｆ瀽
+                            el.style.touchAction = 'none';
+                        });
+
+                        let isTouching = false;
+                        let startX = 0;
+                        let startY = 0;
+                        let startScrollLeft = 0;
+                        let startScrollTop = 0;
+
+                        previewDoc.addEventListener('touchstart', function(e) {
+                            if (e.touches.length !== 1) return;
+                            isTouching = true;
+                            const t = e.touches[0];
+                            startX = t.clientX;
+                            startY = t.clientY;
+                            startScrollLeft = scrollEl.scrollLeft;
+                            startScrollTop = scrollEl.scrollTop;
+                        }, { passive: true });
+
+                        previewDoc.addEventListener('touchmove', function(e) {
+                            if (!isTouching || e.touches.length !== 1) return;
+                            const t = e.touches[0];
+                            const dx = t.clientX - startX;
+                            const dy = t.clientY - startY;
+                            // 鍙嶅悜璁剧疆浠ョ鍚堟嫋鍔ㄧ洿瑙?                            scrollEl.scrollLeft = startScrollLeft - dx;
+                            scrollEl.scrollTop = startScrollTop - dy;
+                            // 闃绘娴忚鍣ㄩ粯璁よ涓猴紝閬垮厤椤甸潰灞傞潰鐨勬墜鍔挎嫤鎴?                            e.preventDefault();
+                        }, { passive: false });
+
+                        previewDoc.addEventListener('touchend', function() {
+                            isTouching = false;
+                        }, { passive: true });
+                    }
+                } catch (androidEnhanceError) {
+                    console.log('Android婊氬姩澧炲己閿欒:', androidEnhanceError);
+                }
+                
+            } catch (error) {
+                console.log('棰勮婊氬姩浼樺寲閿欒:', error);
+            }
+        }
+
+        function clearEditor() {
+            if (confirm('纭畾瑕佹竻绌虹紪杈戝櫒鍚楋紵')) {
+                // iOS Safari/Edge娴忚鍣ㄥ吋瀹规€у鐞?                // 鍒濆鍖栫紪杈戝櫒 - 淇敼涓烘竻绌虹姸鎬?                htmlEditor.value = '';
+                updateCharCount();
+                
+                // 纭繚棰勮鍖哄煙涔熸槸绌虹殑
+                updatePreview();
+                
+                // 寤惰繜鍐嶆娓呯┖纭繚瀹屽叏鍒濆鍖?                setTimeout(function() {
+                    updatePreview();
+                    updateCharCount();
+                }, 100);
+                
+                setTimeout(function() {
+                    updatePreview();
+                    updateCharCount();
+                }, 200);
+                
+                // 娓呴櫎鏈湴瀛樺偍
+                localStorage.removeItem('htmlEditorContent');
+                
+                showToast('缂栬緫鍣ㄥ凡娓呯┖', 'success');
+            }
+        }
+
+        function updateCharCount() {
+            charCount.textContent = htmlEditor.value.length;
+        }
+
+        // 浠庡壀璐存澘绮樿创
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                htmlEditor.value = text;
+                htmlEditor.focus();
+                updatePreview();
+                showToast('宸蹭粠鍓创鏉跨矘璐?, 'success');
+                
+                // 娣诲姞鎸夐挳鍔ㄧ敾鏁堟灉
+                pasteBtn.classList.add('pasting');
+                setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+            } catch (err) {
+                showToast('鏃犳硶璁块棶鍓创鏉匡紝璇锋墜鍔ㄧ矘璐?, 'error');
+            }
+        }
+
+        // Toast 娑堟伅鎻愮ず
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            const editorPanel = document.querySelector('.editor-panel');
+            (editorPanel || document.body).appendChild(toast);
+            
+            // iPad璁惧璋冩暣閫氱煡浣嶇疆锛堥拡瀵逛唬鐮侀潰鏉垮唴鐨則oast锛?            adjustToastPositionForiPad();
+            
+            // 瑙﹀彂鏄剧ず鍔ㄧ敾
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            // 1绉掑悗绉婚櫎锛堝師涓?绉掞級
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 1000);
+        }
+
+        function downloadHTML() {
+            const code = htmlEditor.value;
+            if (!code.trim()) {
+                showToast('璇峰厛杈撳叆HTML浠ｇ爜', 'error');
+                return;
+            }
+
+            const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('HTML鏂囦欢涓嬭浇鎴愬姛', 'success');
+        }
+
+        // 娣诲姞鍔ㄧ敾鏍峰紡
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 蹇嵎閿敮鎸?        htmlEditor.addEventListener('keydown', function(e) {
+            // Ctrl+S 淇濆瓨
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                downloadHTML();
+            }
+            // Ctrl+R 鍒锋柊棰勮
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                refreshPreview();
+            }
+            // Ctrl+V 绮樿创锛堝寮哄姛鑳斤級 - 鍏煎鍚勭璁惧
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                // 璁╂祻瑙堝櫒榛樿绮樿创琛屼负鍙戠敓锛岀劧鍚庢洿鏂伴瑙?                setTimeout(() => {
+                    updatePreview();
+                    updateCharCount();
+                }, 100);
+            }
+        });
+
+        // 鑷姩淇濆瓨鍔熻兘 - 浼樺寲绉诲姩璁惧浣撻獙
+        let autoSaveTimeout;
+        htmlEditor.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            }, 1000);
+        });
+        
+        // iOS Edge娴忚鍣細鐩戝惉change浜嬩欢鐢ㄤ簬鑷姩淇濆瓨
+        htmlEditor.addEventListener('change', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            }, 1000);
+        });
+        
+        // 椤甸潰鍙鎬у彉鍖栨椂淇濆瓨 - 绉诲姩璁惧浼樺寲
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            }
+        });
+        
+        // 椤甸潰鍗歌浇鍓嶄繚瀛?        window.addEventListener('beforeunload', function() {
+            localStorage.setItem('htmlEditorContent', htmlEditor.value);
+        });
+        
+        // 绉诲姩璁惧浼樺寲锛氬鐞嗛〉闈㈠垏鎹㈠拰鍚庡彴杩愯
+        window.addEventListener('blur', function() {
+            localStorage.setItem('htmlEditorContent', htmlEditor.value);
+        });
+        
+        // 澶勭悊璁惧鏃嬭浆
+        // 澶勭悊瑙嗗彛楂樺害鍙樺寲鍜岃澶囨柟鍚戝彉鍖?        function updateViewportHeight() {
+            // 鑾峰彇鐪熷疄鐨勮鍙ｉ珮搴?            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+            
+            // 鏇存柊缂栬緫鍣ㄩ珮搴?            htmlEditor.style.height = 'auto';
+            htmlEditor.style.height = htmlEditor.scrollHeight + 'px';
+            
+            // 澶勭悊閫氱煡浣嶇疆
+            const toast = document.querySelector('.editor-panel .toast');
+            if (toast) {
+                const isLandscape = window.innerWidth > window.innerHeight;
+                toast.style.top = isLandscape ? '85px' : '80px';
+            }
+        }
+
+        // 鐩戝惉鏂瑰悜鍙樺寲
+        window.addEventListener('orientationchange', function() {
+            // 绛夊緟鏂瑰悜鍙樺寲瀹屾垚
+            setTimeout(updateViewportHeight, 300);
+        });
+
+        // 鐩戝惉瑙嗗彛澶у皬鍙樺寲锛堝寘鎷湴鍧€鏍忔敹璧?灞曞紑锛?        window.addEventListener('resize', function() {
+            updateViewportHeight();
+        });
+
+        // 鍒濆鍖栬鍙ｉ珮搴?        updateViewportHeight();
+        
+        // iPad妫€娴嬪嚱鏁?        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+        
+        // 鍔ㄦ€佽皟鏁磇Pad閫氱煡浣嶇疆
+        function adjustToastPositionForiPad() {
+            if (isIOS()) {
+                const toast = document.querySelector('.editor-panel .toast');
+                if (toast) {
+                    // 妫€娴嬫槸鍚︿负妯睆
+                    const isLandscape = window.innerWidth > window.innerHeight;
+                    if (isLandscape) {
+                        // 妯睆妯″紡澧炲姞椤堕儴璺濈
+                        const screenWidth = window.innerWidth;
+                        if (screenWidth >= 1366) {
+                            // iPad Pro
+                            toast.style.top = '90px';
+                        } else if (screenWidth >= 1024) {
+                            // 鏍囧噯iPad
+                            toast.style.top = '80px';
+                        } else {
+                            // 杈冨皬iPad
+                            toast.style.top = '75px';
+                        }
+                    } else {
+                        // 绔栧睆妯″紡浣跨敤CSS涓畾涔夌殑浣嶇疆
+                        toast.style.top = '';
+                    }
+                }
+            }
+        }
+        
+        // 鐩戝惉绐楀彛澶у皬鍙樺寲
+        window.addEventListener('resize', adjustToastPositionForiPad);
+
+        function loadFromLocalStorage() {
+            // 淇敼涓轰笉鑷姩鍔犺浇涔嬪墠鐨勫唴瀹癸紝淇濇寔娓呯┖鐘舵€?            // 鍙互鍦ㄨ繖閲屾坊鍔犳杩庝俊鎭垨鍏朵粬鍒濆鍖栭€昏緫
+            showToast('HTML缂栬緫鍣ㄥ凡鍑嗗灏辩华', 'success');
+        }
+        
+        // 鍔熻兘绠€浠嬫樉绀哄嚱鏁?        function showHelp() {
+            // 鍒涘缓妯℃€佹
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                margin: 20px;
+            `;
+            
+            content.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #1d1d1f; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">馃帀 娆㈣繋浣跨敤HTML5缂栬緫鍣?/h2>
+                    <p style="color: #86868b; margin: 0; font-size: 16px;">杩欐槸涓€涓搷搴斿紡鐨凥TML5椤甸潰妯℃澘锛屽畬缇庨€傞厤iOS銆丄ndroid銆乵acOS鍜學indows璁惧銆?/p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">馃摫 绉诲姩浼樺厛</h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">鍦ㄥ悇绉嶇Щ鍔ㄨ澶囦笂閮芥湁鍑鸿壊鐨勬樉绀烘晥鏋?/p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">馃捇 璺ㄥ钩鍙板吋瀹?/h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">鏀寔iOS銆丄ndroid銆乵acOS銆乄indows绛変富娴佸钩鍙?/p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">馃殌 鎬ц兘浼樺寲</h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">蹇€熷姞杞斤紝娴佺晠鐨勭敤鎴蜂綋楠?/p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">馃摑 瀹炴椂缂栬緫</h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">鎵€瑙佸嵆鎵€寰楃殑HTML缂栬緫浣撻獙</p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 18px;">馃捑 鏅鸿兘淇濆瓨</h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">鑷姩淇濆瓨鍔熻兘锛岄槻姝㈠唴瀹逛涪澶?/p>
+                </div>
+                
+                <div style="background: #f5f5f7; padding: 15px; border-radius: 12px; margin: 15px 0; text-align: center;">
+                    <h3 style="color: #1d1d1f; margin: 0 0 8px 0; font-size: 16px;">馃懆鈥嶐煉?浣滆€呬俊鎭?/h3>
+                    <p style="color: #86868b; margin: 0; font-size: 14px;">pHotter Song</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="this.closest('.modal').remove()" style="
+                        background: #007aff;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        font-weight: 500;
+                    ">鍏抽棴</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            
+            // 鐐瑰嚮鑳屾櫙鍏抽棴
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            document.body.appendChild(modal);
+        }
+
+        // 鎵撳嵃棰勮鍑芥暟 - 浼樺寲iOS Safari鍏煎鎬?        function printPreview() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                // 妫€鏌ラ瑙堝唴瀹规槸鍚︿负绌?                if (!previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+                    showToast('棰勮鍐呭涓虹┖锛岃鍏堣緭鍏ヤ竴浜涘唴瀹?, 'error');
+                    return;
+                }
+
+                // iOS Safari鐗规畩澶勭悊
+                if (isIOS()) {
+                    // 鍦╥OS Safari涓紝鐩存帴鍦ㄥ綋鍓嶇獥鍙ｆ墦鍗伴瑙堝唴瀹?                    printCurrentPreview();
+                    return;
+                }
+
+                // 鍒涘缓鎵撳嵃鏍峰紡
+                const style = document.createElement('style');
+                style.textContent = `
+                    @media print {
+                        @page { margin: 1cm; }
+                        body { 
+                            margin: 0;
+                            padding: 0;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                        }
+                        * { 
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
+                `;
+
+                // 鍒涘缓涓€涓柊鐨勬墦鍗扮獥鍙?                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    showToast('鏃犳硶鎵撳紑鎵撳嵃绐楀彛锛岃妫€鏌ユ槸鍚﹁娴忚鍣ㄩ樆姝?, 'error');
+                    return;
+                }
+
+                // 澶嶅埗鎵€鏈夊師濮嬫牱寮忚〃
+                const styleSheets = Array.from(previewDoc.styleSheets);
+                const styleLinks = styleSheets.map(sheet => {
+                    if (sheet.href) {
+                        return `<link rel="stylesheet" href="${sheet.href}">`;
+                    } else if (sheet.ownerNode && sheet.ownerNode.textContent) {
+                        return `<style>${sheet.ownerNode.textContent}</style>`;
+                    }
+                    return '';
+                }).join('');
+
+                // 鏋勫缓鎵撳嵃椤甸潰
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>鎵撳嵃棰勮</title>
+                        ${styleLinks}
+                        ${style.outerHTML}
+                    </head>
+                    <body>
+                        ${previewDoc.body.innerHTML}
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+
+                // 绛夊緟璧勬簮鍔犺浇瀹屾垚鍚庢墦鍗?                if (printWindow.document.readyState === 'complete') {
+                    printWindow.print();
+                } else {
+                    printWindow.addEventListener('load', function() {
+                        printWindow.print();
+                    });
+                }
+
+                // 鎵撳嵃瀹屾垚鍚庡叧闂獥鍙?                const checkPrintCompletion = setInterval(() => {
+                    if (!printWindow || printWindow.closed) {
+                        clearInterval(checkPrintCompletion);
+                    }
+                }, 1000);
+
+                showToast('姝ｅ湪鎵撳紑鎵撳嵃棰勮...', 'success');
+            } catch (error) {
+                console.error('鎵撳嵃鍑洪敊:', error);
+                showToast('鎵撳嵃鍔熻兘鍑洪敊锛岃閲嶈瘯', 'error');
+            }
+        }
+
+        // iOS Safari涓撶敤鎵撳嵃鍑芥暟
+        function printCurrentPreview() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                
+                // 鍒涘缓涓存椂鎵撳嵃鏍峰紡
+                const printStyle = document.createElement('style');
+                printStyle.textContent = `
+                    @media print {
+                        @page { margin: 1cm; }
+                        body { 
+                            margin: 0;
+                            padding: 0;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                        }
+                        * { 
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
+                `;
+                
+                // 灏嗘墦鍗版牱寮忔坊鍔犲埌棰勮鏂囨。
+                previewDoc.head.appendChild(printStyle);
+                
+                // 鐩存帴鎵撳嵃棰勮妗嗘灦
+                previewFrame.contentWindow.print();
+                
+                // 寤惰繜绉婚櫎鎵撳嵃鏍峰紡
+                setTimeout(() => {
+                    if (printStyle.parentNode) {
+                        printStyle.parentNode.removeChild(printStyle);
+                    }
+                }, 1000);
+                
+                showToast('姝ｅ湪鎵撳嵃棰勮鍐呭...', 'success');
+            } catch (error) {
+                console.error('iOS鎵撳嵃鍑洪敊:', error);
+                showToast('iOS鎵撳嵃鍔熻兘鍑洪敊锛岃閲嶈瘯', 'error');
+            }
+        }
+
+        // 鍏ㄥ睆棰勮鍒囨崲鍑芥暟
+        function toggleFullscreenPreview() {
+            const previewPanel = document.querySelector('.preview-panel');
+            
+            if (previewPanel.classList.contains('fullscreen-preview')) {
+                // 閫€鍑哄叏灞?                previewPanel.classList.remove('fullscreen-preview');
+                // 绉婚櫎鍏抽棴鎸夐挳
+                const closeBtn = document.querySelector('.fullscreen-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('transitionend', function() {
+                        document.body.removeChild(closeBtn);
+                    });
+                    closeBtn.style.opacity = '0';
+                }
+            } else {
+                // 杩涘叆鍏ㄥ睆
+                previewPanel.classList.add('fullscreen-preview');
+                // 娣诲姞鍏抽棴鎸夐挳
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'fullscreen-close';
+                closeBtn.onclick = toggleFullscreenPreview;
+                closeBtn.title = '閫€鍑哄叏灞?;
+                document.body.appendChild(closeBtn);
+                // 寤惰繜鏄剧ず鍏抽棴鎸夐挳浠ュ疄鐜版贰鍏ユ晥鏋?                requestAnimationFrame(() => closeBtn.style.opacity = '0.3');
+            }
+            
+            // 寤惰繜鍒锋柊棰勮浠ョ‘淇濇纭覆鏌?            setTimeout(() => {
+                refreshPreview();
+            }, 100);
+        }
+
+        // iOS鍏煎鎬ф娴嬪拰閿欒澶勭悊
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+        
+        function isIOSSafari() {
+            return isIOS() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && !/CriOS/.test(navigator.userAgent);
+        }
+        
+        function isIOSEdge() {
+            return isIOS() && /EdgiOS|Edge/.test(navigator.userAgent);
+        }
+        
+        // 澧炲己鐨刬OS閿欒澶勭悊
+        function handleIOSError(operation, error) {
+            console.warn(`iOS ${operation} 閿欒:`, error);
+            
+            if (isIOSSafari()) {
+                showToast('iOS Safari鍏煎鎬ф彁绀猴細濡傞亣鍒伴棶棰橈紝璇峰皾璇曞弻鍑昏緭鍏ュ尯鍩?, 'warning');
+            } else if (isIOSEdge()) {
+                showToast('iOS Edge鍏煎鎬ф彁绀猴細鍔熻兘鍙兘鍙楅檺锛屽缓璁娇鐢⊿afari', 'warning');
+            }
+        }
+        
+        // 椤甸潰鍔犺浇鏃跺皾璇曟仮澶嶄繚瀛樼殑鍐呭
+        window.addEventListener('load', function() {
+            try {
+                loadFromLocalStorage();
+                
+                // iOS璁惧鐗规畩澶勭悊
+                if (isIOS()) {
+                    // 寤惰繜鍒濆鍖栫‘淇漣OS瀹屽叏鍔犺浇
+                    setTimeout(function() {
+                        htmlEditor.focus();
+                        htmlEditor.blur();
+                    }, 500);
+                    
+                    console.log('妫€娴嬪埌iOS璁惧锛屽凡搴旂敤鍏煎鎬т紭鍖?);
+                }
+            } catch (error) {
+                handleIOSError('椤甸潰鍔犺浇', error);
+            }
+        });
+        
+        // iOS Safari/Edge 鍏煎鎬э細澧炲己瑙︽懜浜嬩欢澶勭悊
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            // 涓烘墍鏈夋寜閽坊鍔犺Е鎽镐簨浠舵敮鎸?            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    this.style.opacity = '0.7';
+                    this.style.transform = 'scale(0.98)';
+                });
+                
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    this.style.opacity = '';
+                    this.style.transform = '';
+                    
+                    // 寤惰繜鎵ц鐐瑰嚮鍔熻兘锛岀‘淇濊Е鎽镐簨浠跺畬鍏ㄥ鐞?                    setTimeout(() => {
+                        if (this.id === 'clearBtn') {
+                            clearEditor();
+                        } else if (this.id === 'pasteBtn') {
+                            pasteFromClipboard();
+                        } else if (this.id === 'downloadBtn') {
+                            downloadHTML();
+                        } else if (this.id === 'fullscreenBtn') {
+                            toggleFullscreenPreview();
+                        } else if (this.id === 'printBtn') {
+                            printPreview();
+                        } else if (this.id === 'openBtn') {
+                            openLocalFile();
+                        }
+                    }, 50);
+                });
+                
+                btn.addEventListener('touchcancel', function(e) {
+                    this.style.opacity = '';
+                    this.style.transform = '';
+                });
+            });
+            
+            // 闃叉鍙屽嚮缂╂斁
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // 闃叉椤甸潰缂╂斁
+            document.addEventListener('gesturestart', function(e) {
+                e.preventDefault();
+            });
+        }
+    </script>
+</body>
+</html>

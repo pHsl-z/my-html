@@ -137,6 +137,7 @@
             white-space: pre;
             tab-size: 4;
             -webkit-overflow-scrolling: touch;
+            overflow-scrolling: touch;
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
@@ -157,13 +158,6 @@
             border: none;
             background: #ffffff;
             -webkit-overflow-scrolling: touch;
-            /* iOS Safari滚动优化 */
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
-            /* 确保内容可以滚动 */
-            overflow: auto;
-            /* 支持触摸滚动 */
-            touch-action: pan-x pan-y;
         }
 
         /* 按钮触摸优化 - 针对iOS Edge */
@@ -374,7 +368,6 @@
             display: flex;
             gap: 8px;
             align-items: center;
-            flex-wrap: wrap;
         }
 
         .status-bar {
@@ -464,7 +457,6 @@
                 gap: 6px;
                 margin-left: auto;
                 flex-shrink: 0;
-                justify-content: flex-end;
             }
 
             .code-editor {
@@ -488,14 +480,20 @@
                 font-size: 11px;
             }
             
-            /* 移动设备通知位置（代码面板内，靠左上，下滑） */
-            .editor-panel .toast {
-                top: 56px;
-                left: 50%; /* 强制居中 */
-                transform: translate(-50%, -10px);
-                max-width: calc(100% - 20px);
+            /* 移动设备通知位置优化 */
+            .toast {
+                top: 70px; /* 位于按钮下方 */
+                left: auto;
+                right: 10px;
+                max-width: calc(100vw - 20px);
+                width: auto;
+                transform: translateX(100%);
                 font-size: 13px;
                 padding: 10px 15px;
+            }
+            
+            .toast.show {
+                transform: translateX(0);
             }
         }
 
@@ -515,14 +513,15 @@
                 padding: 14px 18px;
             }
             
-            /* iPad竖屏通知优化（代码面板内） */
+            /* iPad竖屏通知优化 */
             @media (orientation: portrait) {
-                .editor-panel .toast {
-                    top: 64px;
-                    left: 50%; /* 竖屏也保持居中 */
-                    transform: translate(-50%, -10px);
-                    max-width: min(280px, calc(100% - 32px));
+                .toast {
+                    top: 80px; /* 位于按钮下方 */
+                    left: auto;
+                    right: 20px;
+                    max-width: 280px;
                     font-size: 13px;
+                    transform: translateX(100%);
                 }
             }
         }
@@ -537,24 +536,24 @@
 
         /* iPad横屏特殊优化 */
         @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-            /* iPad Pro横屏通知（代码面板内） */
-            .editor-panel .toast {
-                top: 64px;
-                left: 50%; /* 横屏保持居中 */
-                transform: translate(-50%, -10px);
-                max-width: min(350px, calc(100% - 48px));
+            /* iPad Pro横屏通知优化 */
+            .toast {
+                top: 80px; /* 更大的顶部距离 */
+                left: 30px;
+                max-width: 350px;
                 font-size: 14px;
             }
         }
         
         @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
-            /* iPad横屏通知（代码面板内） */
-            .editor-panel .toast {
-                top: 64px;
-                left: 50%; /* 横屏保持居中 */
-                transform: translate(-50%, -10px);
-                max-width: min(320px, calc(100% - 40px));
+            /* iPad横屏通知优化 */
+            .toast {
+                top: 80px; /* 位于按钮下方 */
+                left: auto;
+                right: 25px;
+                max-width: 320px;
                 font-size: 13px;
+                transform: translateX(100%);
             }
         }
 
@@ -656,16 +655,17 @@
                 font-size: 12px;
             }
             
-            /* 超小屏幕通知（代码面板内） */
-            .editor-panel .toast {
-                top: 52px; /* 更贴近顶部 */
-                left: 50%; /* 居中 */
-                transform: translate(-50%, -10px);
-                max-width: calc(100% - 16px);
+            /* 超小屏幕通知优化 */
+            .toast {
+                top: 60px; /* 位于按钮下方，考虑到小屏幕高度 */
+                left: auto;
+                right: 5px;
+                max-width: calc(100vw - 10px);
                 width: auto;
                 font-size: 12px;
                 padding: 8px 12px;
                 border-radius: 6px;
+                transform: translateX(100%);
             }
         }
 
@@ -685,12 +685,12 @@
                 flex: 1;
             }
             
-            /* iPad横屏通知优化 - 避免遮挡顶部按钮（代码面板内） */
-            .editor-panel .toast {
+            /* iPad横屏通知优化 - 避免遮挡顶部按钮 */
+            .toast {
                 top: 70px; /* 增加顶部距离，避免遮挡面板标题 */
-                left: 50%;
-                transform: translate(-50%, -10px);
+                left: 20px;
                 max-width: 300px;
+                font-size: 13px;
             }
         }
 
@@ -746,29 +746,27 @@
             100% { transform: scale(1); }
         }
 
-        /* 消息提示样式：放在代码面板内，从上向下滑入 */
-        .editor-panel .toast {
-            position: absolute;
-            top: 64px; /* 位于编辑器面板标题下方，紧贴代码框顶部 */
-            left: 50%; /* 顶部居中 */
-            transform: translate(-50%, -12px); /* 初始比代码框顶部略高一些 */
-            background: rgba(30, 30, 30, 0.95);
+        /* 消息提示样式 */
+        .toast {
+            position: fixed;
+            top: 80px; /* 位于按钮下方 */
+            right: 20px;
+            background: #2a2a2a;
             color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
             border: 1px solid #3a3a3a;
-            border-radius: 10px;
-            padding: 12px 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-            z-index: 10;
-            pointer-events: none;
-            opacity: 0;
-            transition: transform 0.25s ease, opacity 0.25s ease;
-            max-width: min(360px, calc(100% - 32px));
+            font-size: 14px;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
             width: auto;
         }
 
-        .editor-panel .toast.show {
-            transform: translate(-50%, 20px); /* 下移更多，完全进入代码框内 */
-            opacity: 1;
+        .toast.show {
+            transform: translateX(0);
         }
 
         .toast.success {
@@ -793,17 +791,17 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
-                        <span class="icon">📁</span>
-                        打开
+                    <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
+                        <span class="icon">📋</span>
+                        粘贴
                     </button>
                     <button class="btn btn-secondary" onclick="clearEditor()" id="clearBtn" type="button">
                         <span class="icon">🗑️</span>
                         清空
                     </button>
-                    <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
-                        <span class="icon">📋</span>
-                        粘贴
+                    <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn" type="button">
+                        <span class="icon">💾</span>
+                        下载
                     </button>
                 </div>
             </div>
@@ -823,29 +821,26 @@
             <div class="panel-header">
                 <div class="panel-title">
                     <span>👁️</span>
-                    <span>预览</span>
+                    <span>PREVIEW</span>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
-                        <span class="icon">⛶</span>
-                        全屏
+                    <button class="btn btn-secondary" onclick="refreshPreview()">
+                        <span class="icon">🔄</span>
+                        刷新
                     </button>
                     <button class="btn btn-secondary" onclick="printPreview()" id="printBtn">
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-                    <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn">
-                        <span class="icon">💾</span>
-                        下载
+                    <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
+                        <span class="icon">⛶</span>
+                        全屏
                     </button>
                 </div>
             </div>
             <iframe id="previewFrame" class="preview-frame"></iframe>
         </div>
     </div>
-
-    <!-- 隐藏的文件输入元素 -->
-    <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
 
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
@@ -854,8 +849,6 @@
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
-        const openBtn = document.getElementById('openBtn');
-        const fileInput = document.getElementById('fileInput');
 
         // 默认HTML模板 - 针对移动设备优化
         const defaultHTML = `<!DOCTYPE html>
@@ -1056,11 +1049,6 @@
                         previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
                     }
                 }
-                
-                // 延迟应用滚动优化，确保内容完全加载
-                setTimeout(() => {
-                    enhancePreviewScrolling();
-                }, 50);
             } catch (error) {
                 console.log('Preview update error:', error);
                 // IE浏览器备用方案
@@ -1074,223 +1062,6 @@
 
         function refreshPreview() {
             updatePreview();
-        }
-
-        // 打开本地HTML文件
-        function openLocalFile() {
-            // 触发文件选择对话框
-            fileInput.click();
-        }
-
-        // 处理文件选择
-        fileInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
-
-            // 检查文件类型
-            if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
-                showToast('请选择HTML文件', 'error');
-                return;
-            }
-
-            // 读取文件内容
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const content = e.target.result;
-                    
-                    // 将文件内容显示在预览窗口中
-                    displayFileInPreview(content);
-                    
-                    // 可选：将内容也加载到编辑器中
-                    if (confirm('是否将文件内容加载到编辑器中？')) {
-                        htmlEditor.value = content;
-                        updateCharCount();
-                    }
-                    
-                    showToast(`已打开文件: ${file.name}`, 'success');
-                } catch (error) {
-                    console.error('文件读取错误:', error);
-                    showToast('文件读取失败，请重试', 'error');
-                }
-            };
-            
-            reader.onerror = function() {
-                showToast('文件读取失败，请重试', 'error');
-            };
-            
-            // 以文本形式读取文件
-            reader.readAsText(file, 'UTF-8');
-        });
-
-        // 在预览窗口中显示文件内容
-        function displayFileInPreview(content) {
-            try {
-                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-                
-                // 使用srcdoc属性避免重复声明问题（现代浏览器）
-                if ('srcdoc' in previewFrame) {
-                    previewFrame.srcdoc = content;
-                } else {
-                    // IE浏览器兼容性处理
-                    if (previewDoc.open && previewDoc.write && previewDoc.close) {
-                        previewDoc.open();
-                        previewDoc.write(content);
-                        previewDoc.close();
-                    } else {
-                        // 对于IE的备用方案
-                        previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
-                    }
-                }
-                
-                // iOS Safari滚动优化
-                enhancePreviewScrolling();
-            } catch (error) {
-                console.error('预览更新错误:', error);
-                // IE浏览器备用方案
-                try {
-                    previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
-                } catch (ieError) {
-                    console.error('IE预览备用方案错误:', ieError);
-                    showToast('预览显示失败', 'error');
-                }
-            }
-        }
-
-        // 增强预览窗口的滚动体验
-        function enhancePreviewScrolling() {
-            try {
-                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-                
-                if (!previewDoc || !previewDoc.body) {
-                    return;
-                }
-
-                // 为预览文档添加iOS Safari滚动优化样式
-                const style = previewDoc.createElement('style');
-                style.textContent = `
-                    /* iOS Safari滚动优化 */
-                    html, body {
-                        -webkit-overflow-scrolling: touch !important;
-                        overscroll-behavior: contain !important;
-                        touch-action: pan-x pan-y !important;
-                        /* 确保内容可以滚动 */
-                        overflow: auto !important;
-                        /* 防止iOS Safari的橡皮筋效果影响滚动 */
-                        position: relative !important;
-                    }
-                    
-                    /* 针对A4版面内容的滚动优化 */
-                    body {
-                        min-height: 100vh !important;
-                        /* 允许内容超出视口 */
-                        overflow-x: auto !important;
-                        overflow-y: auto !important;
-                    }
-                    
-                    /* 确保所有容器都支持滚动 */
-                    * {
-                        -webkit-overflow-scrolling: touch !important;
-                    }
-                `;
-                
-                // 将样式添加到预览文档的头部
-                if (previewDoc.head) {
-                    previewDoc.head.appendChild(style);
-                } else {
-                    // 如果没有head标签，创建一个
-                    const head = previewDoc.createElement('head');
-                    head.appendChild(style);
-                    previewDoc.documentElement.insertBefore(head, previewDoc.body);
-                }
-                
-                // iOS Safari特殊处理：确保iframe内容可以滚动
-                if (isIOS()) {
-                    // 延迟执行以确保内容完全加载
-                    setTimeout(() => {
-                        try {
-                            const previewBody = previewDoc.body;
-                            if (previewBody) {
-                                // 添加触摸事件监听器
-                                previewBody.addEventListener('touchstart', function(e) {
-                                    // 允许触摸滚动
-                                    e.stopPropagation();
-                                }, { passive: true });
-                                
-                                previewBody.addEventListener('touchmove', function(e) {
-                                    // 允许触摸滚动
-                                    e.stopPropagation();
-                                }, { passive: true });
-                                
-                                // 确保内容可以滚动
-                                previewBody.style.overflow = 'auto';
-                                previewBody.style.webkitOverflowScrolling = 'touch';
-                            }
-                        } catch (error) {
-                            console.log('iOS滚动优化错误:', error);
-                        }
-                    }, 100);
-                }
-                
-                // Android 设备：单指拖动滚动回退方案（适配固定版面/A4内容）
-                try {
-                    const isAndroid = /Android/i.test(navigator.userAgent);
-                    if (isAndroid) {
-                        const scrollEl = previewDoc.scrollingElement || previewDoc.documentElement || previewDoc.body;
-                        if (!scrollEl) return;
-
-                        // 确保滚动开启，并减少浏览器手势干扰
-                        const targets = [previewDoc.documentElement, previewDoc.body];
-                        targets.forEach(el => {
-                            if (!el) return;
-                            el.style.overflowX = 'auto';
-                            el.style.overflowY = 'auto';
-                            el.style.overscrollBehavior = 'contain';
-                            // 为确保手势由我们接管，禁用浏览器默认手势解析
-                            el.style.touchAction = 'none';
-                        });
-
-                        let isTouching = false;
-                        let startX = 0;
-                        let startY = 0;
-                        let startScrollLeft = 0;
-                        let startScrollTop = 0;
-
-                        previewDoc.addEventListener('touchstart', function(e) {
-                            if (e.touches.length !== 1) return;
-                            isTouching = true;
-                            const t = e.touches[0];
-                            startX = t.clientX;
-                            startY = t.clientY;
-                            startScrollLeft = scrollEl.scrollLeft;
-                            startScrollTop = scrollEl.scrollTop;
-                        }, { passive: true });
-
-                        previewDoc.addEventListener('touchmove', function(e) {
-                            if (!isTouching || e.touches.length !== 1) return;
-                            const t = e.touches[0];
-                            const dx = t.clientX - startX;
-                            const dy = t.clientY - startY;
-                            // 反向设置以符合拖动直觉
-                            scrollEl.scrollLeft = startScrollLeft - dx;
-                            scrollEl.scrollTop = startScrollTop - dy;
-                            // 阻止浏览器默认行为，避免页面层面的手势拦截
-                            e.preventDefault();
-                        }, { passive: false });
-
-                        previewDoc.addEventListener('touchend', function() {
-                            isTouching = false;
-                        }, { passive: true });
-                    }
-                } catch (androidEnhanceError) {
-                    console.log('Android滚动增强错误:', androidEnhanceError);
-                }
-                
-            } catch (error) {
-                console.log('预览滚动优化错误:', error);
-            }
         }
 
         function clearEditor() {
@@ -1347,10 +1118,9 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            const editorPanel = document.querySelector('.editor-panel');
-            (editorPanel || document.body).appendChild(toast);
+            document.body.appendChild(toast);
             
-            // iPad设备调整通知位置（针对代码面板内的toast）
+            // iPad设备调整通知位置
             adjustToastPositionForiPad();
             
             // 触发显示动画
@@ -1358,15 +1128,13 @@
                 toast.classList.add('show');
             }, 100);
             
-            // 1秒后移除（原为3秒）
+            // 3秒后移除
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
+                    document.body.removeChild(toast);
                 }, 300);
-            }, 1000);
+            }, 3000);
         }
 
         function downloadHTML() {
@@ -1471,7 +1239,7 @@
             htmlEditor.style.height = htmlEditor.scrollHeight + 'px';
             
             // 处理通知位置
-            const toast = document.querySelector('.editor-panel .toast');
+            const toast = document.querySelector('.toast');
             if (toast) {
                 const isLandscape = window.innerWidth > window.innerHeight;
                 toast.style.top = isLandscape ? '85px' : '80px';
@@ -1501,7 +1269,7 @@
         // 动态调整iPad通知位置
         function adjustToastPositionForiPad() {
             if (isIOS()) {
-                const toast = document.querySelector('.editor-panel .toast');
+                const toast = document.querySelector('.toast');
                 if (toast) {
                     // 检测是否为横屏
                     const isLandscape = window.innerWidth > window.innerHeight;
@@ -1846,7 +1614,7 @@
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
-            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
+            [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn].forEach(function(btn) {
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     this.style.opacity = '0.7';
@@ -1870,8 +1638,6 @@
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
                             printPreview();
-                        } else if (this.id === 'openBtn') {
-                            openLocalFile();
                         }
                     }, 50);
                 });
