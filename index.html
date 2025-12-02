@@ -440,6 +440,88 @@
         .fullscreen-close::after {
             transform: rotate(-45deg) !important;
         }
+        
+        /* iPhone关闭按钮触摸优化 */
+        @media (max-width: 414px) {
+            .fullscreen-close {
+                top: 12px !important;
+                right: 12px !important;
+                width: 44px !important; /* iOS推荐触摸目标 */
+                height: 44px !important;
+                opacity: 0.5 !important;
+                background: rgba(0, 0, 0, 0.4) !important;
+                border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            }
+            
+            .fullscreen-close:hover {
+                opacity: 0.8 !important;
+                background: rgba(0, 0, 0, 0.6) !important;
+            }
+            
+            .fullscreen-close::before,
+            .fullscreen-close::after {
+                width: 20px !important;
+                height: 2px !important;
+            }
+        }
+        
+        /* iPhone面板关闭按钮优化 */
+        @media (max-width: 414px) {
+            .modal-header .btn-secondary {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 8px 12px !important;
+                font-size: 16px !important;
+                border-radius: 8px !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
+            
+            .modal-header .btn-secondary:active {
+                background-color: #6c757d !important;
+                transform: scale(0.95) !important;
+            }
+        }
+        
+        /* iPhone历史记录删除按钮优化 */
+        @media (max-width: 414px) {
+            .history-item .btn-outline-danger {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 6px 10px !important;
+                font-size: 14px !important;
+                border-radius: 8px !important;
+                -webkit-tap-highlight-color: transparent !important;
+            }
+            
+            .history-item .btn-outline-danger:active {
+                background-color: #dc3545 !important;
+                color: white !important;
+                transform: scale(0.95) !important;
+            }
+        }
+        
+        /* iPhone手势提示 */
+        @media (max-width: 414px) {
+            .gesture-hint {
+                position: fixed !important;
+                bottom: 20px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                background: rgba(0, 0, 0, 0.8) !important;
+                color: white !important;
+                padding: 8px 16px !important;
+                border-radius: 20px !important;
+                font-size: 14px !important;
+                z-index: 1000 !important;
+                opacity: 0 !important;
+                transition: opacity 0.3s ease !important;
+                pointer-events: none !important;
+            }
+            
+            .gesture-hint.show {
+                opacity: 1 !important;
+            }
+        }
 
         .btn-group {
             display: flex;
@@ -567,6 +649,80 @@
                 max-width: calc(100% - 20px);
                 font-size: 13px;
                 padding: 10px 15px;
+            }
+            
+            /* iPhone关闭按钮优化 */
+            @media (max-width: 414px) {
+                .history-panel,
+                .share-panel,
+                .settings-panel {
+                    border-radius: 16px 16px 0 0 !important;
+                    margin: 0 8px !important;
+                    max-height: 85vh !important;
+                    bottom: 0 !important;
+                    top: auto !important;
+                    left: 8px !important;
+                    right: 8px !important;
+                    width: auto !important;
+                    transform: translateY(100%) !important;
+                    transition: transform 0.3s ease-out !important;
+                }
+                
+                .history-panel.show,
+                .share-panel.show,
+                .settings-panel.show {
+                    transform: translateY(0) !important;
+                }
+                
+                .history-header,
+                .share-header,
+                .settings-header {
+                    padding: 16px 20px !important;
+                    border-radius: 16px 16px 0 0 !important;
+                    position: sticky !important;
+                    top: 0 !important;
+                    background: #1a1a1a !important;
+                    z-index: 10 !important;
+                    border-bottom: 1px solid #2a2a2a !important;
+                }
+                
+                .history-header > div,
+                .share-header > div,
+                .settings-header > div {
+                    gap: 12px !important;
+                }
+                
+                .btn-sm {
+                    padding: 8px 16px !important;
+                    font-size: 14px !important;
+                    min-height: 44px !important; /* iOS推荐触摸目标 */
+                    border-radius: 8px !important;
+                }
+                
+                /* 面板内容区域 */
+                .history-list,
+                .share-content,
+                .settings-content {
+                    padding: 20px !important;
+                    max-height: calc(85vh - 80px) !important;
+                    overflow-y: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                }
+                
+                /* 添加滑动手势提示 */
+                .history-header::after,
+                .share-header::after,
+                .settings-header::after {
+                    content: '' !important;
+                    position: absolute !important;
+                    bottom: 8px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    width: 40px !important;
+                    height: 4px !important;
+                    background: rgba(255, 255, 255, 0.3) !important;
+                    border-radius: 2px !important;
+                }
             }
         }
 
@@ -2327,6 +2483,84 @@
             sharePanel.classList.remove('show');
             settingsPanel.classList.remove('show');
         }
+        
+        // iPhone手势关闭支持
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let gestureHintTimeout = null;
+        
+        // 创建手势提示元素
+        const gestureHint = document.createElement('div');
+        gestureHint.className = 'gesture-hint';
+        gestureHint.textContent = '向下滑动关闭面板';
+        document.body.appendChild(gestureHint);
+        
+        // 显示手势提示
+        function showGestureHint() {
+            gestureHint.classList.add('show');
+            if (gestureHintTimeout) {
+                clearTimeout(gestureHintTimeout);
+            }
+            gestureHintTimeout = setTimeout(() => {
+                gestureHint.classList.remove('show');
+            }, 3000);
+        }
+        
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        });
+        
+        document.addEventListener('touchend', function(e) {
+            if (!touchStartY || !touchStartX) return;
+            
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            
+            const deltaY = touchStartY - touchEndY;
+            const deltaX = touchStartX - touchEndX;
+            
+            // 检测下滑手势（至少50px）
+            if (deltaY < -50 && Math.abs(deltaX) < 50) {
+                // 检查是否有打开的面板
+                if (historyPanel.classList.contains('show') || 
+                    sharePanel.classList.contains('show') || 
+                    settingsPanel.classList.contains('show')) {
+                    closeAllPanels();
+                    e.preventDefault();
+                    showToast('手势关闭成功', 'success');
+                }
+            }
+            
+            touchStartY = 0;
+            touchStartX = 0;
+        });
+        
+        // 面板打开时显示手势提示
+        const originalToggleHistory = toggleHistoryPanel;
+        const originalToggleShare = toggleSharePanel;
+        const originalToggleSettings = toggleSettingsPanel;
+        
+        toggleHistoryPanel = function() {
+            originalToggleHistory();
+            if (historyPanel.classList.contains('show')) {
+                setTimeout(showGestureHint, 500);
+            }
+        };
+        
+        toggleSharePanel = function() {
+            originalToggleShare();
+            if (sharePanel.classList.contains('show')) {
+                setTimeout(showGestureHint, 500);
+            }
+        };
+        
+        toggleSettingsPanel = function() {
+            originalToggleSettings();
+            if (settingsPanel.classList.contains('show')) {
+                setTimeout(showGestureHint, 500);
+            }
+        };
         
         // 显示历史记录列表
         function displayHistory() {
