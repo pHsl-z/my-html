@@ -1490,6 +1490,113 @@
             }
         }
 
+        /* 弹出式窗口基础样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            max-width: 90vw;
+            max-height: 90vh;
+            width: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #3a3a3a;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .modal-title {
+            color: #e6e6e6;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: #e6e6e6;
+            background: #3a3a3a;
+        }
+
+        .modal-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* 移动端弹窗适配 */
+        @media (max-width: 768px) {
+            .modal-container {
+                width: 95vw;
+                max-height: 85vh;
+                margin: 20px;
+                border-radius: 8px;
+            }
+            
+            .modal-header {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            
+            .modal-content {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-container {
+                width: 100vw;
+                max-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+                border: none;
+            }
+            
+            .modal-header {
+                padding: 12px 16px;
+            }
+            
+            .modal-content {
+                padding: 12px;
+            }
+        }
+
         /* 设置面板样式 */
         .settings-panel {
             position: absolute;
@@ -1826,6 +1933,19 @@
                 </div>
             </div>
             <iframe id="previewFrame" class="preview-frame"></iframe>
+        </div>
+    </div>
+
+    <!-- 弹出式窗口遮罩层 -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="modalTitle" class="modal-title">标题</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalContent" class="modal-content">
+                <!-- 动态内容将在这里插入 -->
+            </div>
         </div>
     </div>
 
@@ -2336,6 +2456,47 @@
             charCount.textContent = htmlEditor.value.length;
         }
 
+        // 弹出式窗口控制函数
+        function showModal(title, content) {
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            
+            modalTitle.textContent = title;
+            modalContent.innerHTML = content;
+            modalOverlay.classList.add('show');
+            
+            // 添加ESC键关闭功能
+            document.addEventListener('keydown', handleModalEscape);
+            
+            // 添加点击遮罩层关闭功能
+            modalOverlay.addEventListener('click', handleModalOverlayClick);
+        }
+        
+        function closeModal() {
+            const modalOverlay = document.getElementById('modalOverlay');
+            modalOverlay.classList.remove('show');
+            
+            // 移除事件监听器
+            document.removeEventListener('keydown', handleModalEscape);
+            modalOverlay.removeEventListener('click', handleModalOverlayClick);
+            
+            // 关闭下拉菜单
+            closePreviewDropdown();
+        }
+        
+        function handleModalEscape(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        }
+        
+        function handleModalOverlayClick(event) {
+            if (event.target === event.currentTarget) {
+                closeModal();
+            }
+        }
+        
         // 预览下拉菜单功能
         function togglePreviewDropdown() {
             const dropdownMenu = document.getElementById('previewDropdownMenu');
@@ -2367,40 +2528,294 @@
             }
         }
         
-        // 面板切换函数（从编辑器面板移动过来）
+        // 面板切换函数 - 改为弹窗显示
         function toggleHistoryPanel() {
-            const isVisible = historyPanel.style.display === 'block';
-            hideAllPanels();
-            if (!isVisible) {
-                historyPanel.style.display = 'block';
-                renderHistory();
-            }
-            // 关闭下拉菜单
+            const historyContent = `
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <div style="margin-bottom: 16px; display: flex; gap: 8px; justify-content: space-between; align-items: center;">
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="clearHistory()">清空历史</button>
+                        </div>
+                    </div>
+                    <div id="modalHistoryList"></div>
+                </div>
+            `;
+            showModal('📋 历史记录', historyContent);
+            renderModalHistory();
             closePreviewDropdown();
         }
         
         function toggleSharePanel() {
-            const isVisible = sharePanel.style.display === 'block';
-            hideAllPanels();
-            if (!isVisible) {
-                sharePanel.style.display = 'block';
-                generateShareLink();
-                refreshShareHistory(); // 刷新分享历史
-            }
-            // 关闭下拉菜单
+            const shareContent = `
+                <div>
+                    <p style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; line-height: 1.6;">生成一个可分享的链接，其他人可以通过该链接查看和编辑当前内容：</p>
+                    <div style="display: flex; margin-bottom: 20px; gap: 8px; align-items: center;">
+                        <input type="text" id="modalShareLink" class="share-link-input" readonly style="flex: 1;">
+                        <button class="btn btn-sm btn-primary" onclick="copyModalShareLink()">复制链接</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="generateShareLink()">重新生成</button>
+                        <button class="btn btn-success" onclick="openModalShareLink()">在新窗口打开</button>
+                        <button class="btn btn-primary" onclick="generateOnlineLink()">自动生成在线链接</button>
+                    </div>
+                    
+                    <!-- 分享历史管理 -->
+                    <div class="share-history-section" style="margin-bottom: 20px; padding: 16px; background: #2a2a2a; border-radius: 8px; border: 1px solid #3a3a3a;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4>📚 分享历史</h4>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-sm btn-secondary" onclick="refreshModalShareHistory()">刷新</button>
+                                <button class="btn btn-sm btn-danger" onclick="clearModalShareHistory()">清空历史</button>
+                            </div>
+                        </div>
+                        <div id="modalShareHistoryList" style="max-height: 200px; overflow-y: auto;">
+                            <p style="color: #888888; font-size: 13px; text-align: center; padding: 20px; font-style: italic;">暂无分享历史</p>
+                        </div>
+                    </div>
+                    
+                    <div class="share-tips" style="background: #2a2a2a; padding: 16px; border-radius: 8px; border-left: 4px solid #0066ff;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 12px; font-size: 14px; font-weight: 500;">💡 分享提示：</h4>
+                        <ul style="list-style-type: disc; list-style-position: inside; color: #888888; font-size: 13px;">
+                            <li style="margin-bottom: 8px; line-height: 1.5;">链接包含了当前编辑器的所有内容</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">链接可以被任何人访问和修改</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">新压缩算法可显著减少链接长度</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">刷新页面后链接仍然有效</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">可在设置中自定义分享链接的基础URL</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">分享历史会自动保存，方便管理之前的分享</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            showModal('🔗 分享链接', shareContent);
+            generateModalShareLink();
+            refreshModalShareHistory();
             closePreviewDropdown();
         }
         
         function toggleSettingsPanel() {
-            const isVisible = settingsPanel.style.display === 'block';
-            hideAllPanels();
-            if (!isVisible) {
-                settingsPanel.style.display = 'block';
-                loadSettings();
-            }
-            // 关闭下拉菜单
-            closePreviewDropdown();
-        }
+            const settingsContent = `
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">🔗 分享设置</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalShareBaseUrl" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">分享链接基础URL：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="text" id="modalShareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 200px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalShareBaseUrl()">保存</button>
+                                <button class="btn btn-sm btn-secondary" onclick="resetModalShareBaseUrl()">重置</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">💾 自动保存</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalAutoSaveInterval" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">自动保存间隔（秒）：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="number" id="modalAutoSaveInterval" class="setting-input" min="1" max="600" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalAutoSaveInterval()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器自动保存内容的时间间隔。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">📝 历史记录</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalMaxHistoryRecords" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">最大历史记录数：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="number" id="modalMaxHistoryRecords" class="setting-input" min="1" max="50" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalMaxHistoryRecords()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器保存的最大历史记录数量。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="applyModalAllSettings()">应用所有设置</button>
+                        <button class="btn btn-secondary" onclick="loadModalSettings()">重新加载设置</button>
+                    </div>
+                </div>
+            `;
+            showModal('⚙️ 编辑器设置', settingsContent);
+            loadModalSettings();
+         }
+         
+         // 弹窗历史记录渲染函数
+         function renderModalHistory() {
+             const modalHistoryList = document.getElementById('modalHistoryList');
+             if (!modalHistoryList) return;
+             
+             const history = JSON.parse(localStorage.getItem('editorHistory') || '[]');
+             
+             if (history.length === 0) {
+                 modalHistoryList.innerHTML = '<p style="color: #888888; font-size: 13px; text-align: center; padding: 20px; font-style: italic;">暂无历史记录</p>';
+                 return;
+             }
+             
+             modalHistoryList.innerHTML = history.map((item, index) => `
+                 <div style="padding: 12px; margin-bottom: 8px; background: #1a1a1a; border-radius: 6px; border: 1px solid #2a2a2a; cursor: pointer; transition: all 0.2s;" 
+                      onmouseover="this.style.background='#252525'; this.style.borderColor='#3a3a3a';" 
+                      onmouseout="this.style.background='#1a1a1a'; this.style.borderColor='#2a2a2a';"
+                      onclick="loadModalHistoryItem(${index})">
+                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                         <div style="flex: 1; margin-right: 12px;">
+                             <div style="color: #e6e6e6; font-weight: 500; margin-bottom: 4px; font-size: 14px;">${item.title || '无标题'}</div>
+                             <div style="color: #888888; font-size: 12px; line-height: 1.4;">${item.content ? item.content.substring(0, 100) + (item.content.length > 100 ? '...' : '') : '无内容'}</div>
+                         </div>
+                         <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                             <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); loadModalHistoryItem(${index})" title="加载">加载</button>
+                             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteModalHistoryItem(${index})" title="删除">删除</button>
+                         </div>
+                     </div>
+                     <div style="color: #888888; font-size: 11px;">
+                         ${new Date(item.timestamp).toLocaleString('zh-CN')}
+                     </div>
+                 </div>
+             `).join('');
+         }
+         
+         // 弹窗历史记录操作函数
+         function loadModalHistoryItem(index) {
+             const history = JSON.parse(localStorage.getItem('editorHistory') || '[]');
+             if (history[index]) {
+                 editor.value = history[index].content || '';
+                 document.title = history[index].title || 'Markdown 编辑器';
+                 updateCharCount();
+                 renderPreview();
+                 closeModal();
+             }
+         }
+         
+         function deleteModalHistoryItem(index) {
+             if (confirm('确定要删除这条历史记录吗？')) {
+                 const history = JSON.parse(localStorage.getItem('editorHistory') || '[]');
+                 history.splice(index, 1);
+                 localStorage.setItem('editorHistory', JSON.stringify(history));
+                 renderModalHistory();
+                 renderHistory(); // 同时更新面板中的历史记录
+             }
+         }
+         
+         // 弹窗分享功能函数
+         function generateModalShareLink() {
+             generateShareLink();
+             const shareLink = document.getElementById('shareLink')?.value;
+             if (shareLink) {
+                 document.getElementById('modalShareLink').value = shareLink;
+             }
+         }
+         
+         function copyModalShareLink() {
+             const modalShareLink = document.getElementById('modalShareLink');
+             if (modalShareLink && modalShareLink.value) {
+                 modalShareLink.select();
+                 document.execCommand('copy');
+                 alert('分享链接已复制到剪贴板！');
+             } else {
+                 alert('请先生成分享链接！');
+             }
+         }
+         
+         function openModalShareLink() {
+             const modalShareLink = document.getElementById('modalShareLink');
+             if (modalShareLink && modalShareLink.value) {
+                 window.open(modalShareLink.value, '_blank');
+             } else {
+                 alert('请先生成分享链接！');
+             }
+         }
+         
+         function refreshModalShareHistory() {
+             refreshShareHistory();
+             const shareHistoryList = document.getElementById('shareHistoryList');
+             const modalShareHistoryList = document.getElementById('modalShareHistoryList');
+             if (shareHistoryList && modalShareHistoryList) {
+                 modalShareHistoryList.innerHTML = shareHistoryList.innerHTML;
+             }
+         }
+         
+         function clearModalShareHistory() {
+             if (confirm('确定要清空所有分享历史吗？')) {
+                 localStorage.removeItem('shareHistory');
+                 refreshModalShareHistory();
+             }
+         }
+         
+         // 弹窗设置功能函数
+         function saveModalShareBaseUrl() {
+             const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
+             if (modalShareBaseUrl) {
+                 localStorage.setItem('shareBaseUrl', modalShareBaseUrl.value);
+                 alert('分享链接基础URL已保存！');
+             }
+         }
+         
+         function resetModalShareBaseUrl() {
+             const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
+             if (modalShareBaseUrl) {
+                 modalShareBaseUrl.value = window.location.href.split('?')[0];
+                 localStorage.setItem('shareBaseUrl', modalShareBaseUrl.value);
+                 alert('分享链接基础URL已重置为当前页面URL！');
+             }
+         }
+         
+         function saveModalAutoSaveInterval() {
+             const modalAutoSaveInterval = document.getElementById('modalAutoSaveInterval');
+             if (modalAutoSaveInterval) {
+                 const interval = parseInt(modalAutoSaveInterval.value);
+                 if (interval > 0 && interval <= 600) {
+                     localStorage.setItem('autoSaveInterval', interval);
+                     restartAutoSave();
+                     alert('自动保存间隔已保存！');
+                 } else {
+                     alert('自动保存间隔必须在1-600秒之间！');
+                 }
+             }
+         }
+         
+         function saveModalMaxHistoryRecords() {
+             const modalMaxHistoryRecords = document.getElementById('modalMaxHistoryRecords');
+             if (modalMaxHistoryRecords) {
+                 const maxRecords = parseInt(modalMaxHistoryRecords.value);
+                 if (maxRecords > 0 && maxRecords <= 50) {
+                     localStorage.setItem('maxHistoryRecords', maxRecords);
+                     alert('最大历史记录数已保存！');
+                 } else {
+                     alert('最大历史记录数必须在1-50之间！');
+                 }
+             }
+         }
+         
+         function applyModalAllSettings() {
+             saveModalShareBaseUrl();
+             saveModalAutoSaveInterval();
+             saveModalMaxHistoryRecords();
+             alert('所有设置已应用！');
+         }
+         
+         function loadModalSettings() {
+             loadSettings();
+             // 同步面板中的设置值到弹窗
+             const shareBaseUrl = document.getElementById('shareBaseUrl');
+             const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
+             if (shareBaseUrl && modalShareBaseUrl) {
+                 modalShareBaseUrl.value = shareBaseUrl.value;
+             }
+             
+             const autoSaveInterval = document.getElementById('autoSaveInterval');
+             const modalAutoSaveInterval = document.getElementById('modalAutoSaveInterval');
+             if (autoSaveInterval && modalAutoSaveInterval) {
+                 modalAutoSaveInterval.value = autoSaveInterval.value;
+             }
+             
+             const maxHistoryRecords = document.getElementById('maxHistoryRecords');
+             const modalMaxHistoryRecords = document.getElementById('modalMaxHistoryRecords');
+             if (maxHistoryRecords && modalMaxHistoryRecords) {
+                 modalMaxHistoryRecords.value = maxHistoryRecords.value;
+             }
+         }
         
         // 关闭下拉菜单
         function closePreviewDropdown() {
