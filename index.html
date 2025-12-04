@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
@@ -1728,19 +1728,132 @@
         @media (max-width: 768px) {
             .settings-content {
                 padding: 12px;
+                max-height: calc(85vh - 60px) !important; /* iOS Safari安全区域适配 */
+                -webkit-overflow-scrolling: touch !important; /* iOS滚动优化 */
+                padding-bottom: env(safe-area-inset-bottom, 20px) !important; /* iOS底部安全区域 */
             }
             
             .settings-control {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 6px !important; /* 减少间距 */
             }
             
             .setting-input {
                 min-width: auto;
+                font-size: 16px !important; /* iOS Safari防止缩放 */
+                padding: 10px 12px !important; /* 增大触摸区域 */
             }
             
             .settings-actions {
                 flex-direction: column;
+                gap: 6px !important; /* 减少按钮间距 */
+            }
+            
+            .settings-section {
+                margin-bottom: 16px !important; /* 减少段落间距 */
+                padding-bottom: 12px !important;
+            }
+            
+            .setting-item {
+                margin-bottom: 12px !important; /* 减少项目间距 */
+            }
+            
+            .setting-label {
+                font-size: 14px !important; /* 增大字体便于阅读 */
+                margin-bottom: 6px !important;
+            }
+            
+            .setting-description {
+                font-size: 12px !important; /* 增大描述字体 */
+            }
+            
+            .btn-sm {
+                font-size: 14px !important; /* iOS Safari防止缩放 */
+                min-height: 44px !important; /* iOS推荐最小触摸目标 */
+                padding: 8px 12px !important;
+            }
+        }
+        
+        /* iOS Safari特殊优化 */
+        @supports (-webkit-touch-callout: none) {
+            @media (max-width: 768px) {
+                .settings-panel {
+                    border-radius: 20px 20px 0 0 !important; /* 更大的圆角 */
+                    max-height: 85vh !important; /* 考虑iOS地址栏 */
+                    margin: 0 8px !important;
+                    bottom: 0 !important;
+                    top: auto !important;
+                    transform: translateY(100%) !important;
+                }
+                
+                .settings-panel.show {
+                    transform: translateY(0) !important;
+                }
+                
+                .settings-header {
+                    padding: 16px 20px !important; /* 增加头部内边距 */
+                    border-radius: 20px 20px 0 0 !important;
+                    position: sticky !important;
+                    top: 0 !important;
+                    background: #1a1a1a !important;
+                    z-index: 10 !important;
+                }
+                
+                .settings-content {
+                    padding-top: 8px !important; /* 减少顶部内边距 */
+                    padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 16px) !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    overscroll-behavior: contain !important; /* 防止滚动传播 */
+                }
+                
+                /* iOS横屏优化 */
+                @media (orientation: landscape) {
+                    .settings-panel {
+                        max-height: 75vh !important; /* 横屏时更低的高度 */
+                        margin: 0 12px !important;
+                    }
+                    
+                    .settings-content {
+                        max-height: calc(75vh - 60px) !important;
+                        padding: 12px 16px !important;
+                    }
+                    
+                    .settings-control {
+                        flex-direction: row !important; /* 横屏时恢复横向布局 */
+                        flex-wrap: wrap !important;
+                    }
+                    
+                    .setting-input {
+                        flex: 1 !important;
+                        min-width: 120px !important;
+                    }
+                }
+            }
+            
+            /* iOS安全区域适配 */
+            .settings-panel {
+                padding-top: env(safe-area-inset-top, 0) !important;
+                padding-bottom: env(safe-area-inset-bottom, 0) !important;
+                padding-left: env(safe-area-inset-left, 0) !important;
+                padding-right: env(safe-area-inset-right, 0) !important;
+            }
+            
+            /* iOS状态栏高度补偿 */
+            @media (max-width: 768px) {
+                .settings-header {
+                    padding-top: calc(16px + env(safe-area-inset-top, 0)) !important;
+                }
+                
+                .settings-content {
+                    padding-top: 8px !important;
+                    padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)) !important;
+                }
+            }
+            
+            /* iOS键盘弹出时的适配 */
+            .setting-input:focus {
+                transform: translateY(0) !important; /* 防止输入框被键盘遮挡 */
             }
         }
     </style>
@@ -3060,6 +3173,68 @@
             return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         }
+        
+        // iOS设置面板显示优化
+        function optimizeSettingsPanelForIOS() {
+            if (isIOS()) {
+                const settingsPanel = document.getElementById('settingsPanel');
+                if (settingsPanel) {
+                    // 添加iOS专用类
+                    settingsPanel.classList.add('ios-settings-panel');
+                    
+                    // 监听键盘显示/隐藏事件
+                    document.addEventListener('focusin', function() {
+                        // 键盘显示时，调整面板位置
+                        if (window.innerHeight < 500) { // 小屏幕或键盘弹出
+                            settingsPanel.style.transform = 'translateY(20px)';
+                            settingsPanel.style.maxHeight = '70vh';
+                        }
+                    });
+                    
+                    document.addEventListener('focusout', function() {
+                        // 键盘隐藏时，恢复面板位置
+                        setTimeout(() => {
+                            settingsPanel.style.transform = '';
+                            settingsPanel.style.maxHeight = '';
+                        }, 100);
+                    });
+                    
+                    // iOS Safari地址栏变化监听
+                    let lastHeight = window.innerHeight;
+                    window.addEventListener('resize', function() {
+                        const currentHeight = window.innerHeight;
+                        if (Math.abs(currentHeight - lastHeight) > 50) {
+                            // 地址栏状态发生变化
+                            setTimeout(updateViewportHeight, 100);
+                            lastHeight = currentHeight;
+                        }
+                    });
+                    
+                    // 触摸滚动优化
+                    const settingsContent = settingsPanel.querySelector('.settings-content');
+                    if (settingsContent) {
+                        settingsContent.style.webkitOverflowScrolling = 'touch';
+                        settingsContent.style.overscrollBehavior = 'contain';
+                    }
+                    
+                    // 输入框优化
+                    const inputs = settingsPanel.querySelectorAll('.setting-input');
+                    inputs.forEach(input => {
+                        input.addEventListener('touchstart', function(e) {
+                            // 防止iOS双击缩放
+                            e.preventDefault();
+                            this.focus();
+                        });
+                        
+                        // 确保字体大小防止iOS缩放
+                        input.style.fontSize = '16px';
+                    });
+                }
+            }
+        }
+        
+        // 初始化iOS优化
+        document.addEventListener('DOMContentLoaded', optimizeSettingsPanelForIOS);
         
         // 动态调整iPad通知位置
         function adjustToastPositionForiPad() {
