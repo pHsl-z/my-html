@@ -1007,116 +1007,7 @@
             background: rgba(255, 71, 87, 0.1);
         }
 
-        /* 历史记录面板样式 */
-        .history-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            max-height: 300px;
-            background: #1a1a1a;
-            border-top: 1px solid #2a2a2a;
-            display: none;
-            flex-direction: column;
-            z-index: 100;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .history-panel.show {
-            display: flex;
-        }
-
-        .history-header {
-            padding: 12px 20px;
-            background: #2a2a2a;
-            border-bottom: 1px solid #3a3a3a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px 0;
-        }
-
-        .history-item {
-            padding: 12px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            font-size: 13px;
-        }
-
-        .history-item:hover {
-            background: #2a2a2a;
-        }
-
-        .history-item:active {
-            background: #1a1a1a;
-        }
-
-        .history-item-content {
-            color: #e6e6e6;
-            margin-bottom: 8px;
-            word-break: break-all;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .history-item-info {
-            color: #888888;
-            font-size: 11px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .history-item-delete {
-            background: none;
-            border: none;
-            color: #888888;
-            cursor: pointer;
-            font-size: 12px;
-            padding: 4px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .history-item-delete:hover {
-            background: #3a3a3a;
-            color: #ff4757;
-        }
-
-        /* 历史记录面板滚动条样式 */
-        .history-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .history-list::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-
-        .history-list::-webkit-scrollbar-thumb {
-            background: #3a3a3a;
-            border-radius: 4px;
-        }
-
-        .history-list::-webkit-scrollbar-thumb:hover {
-            background: #4a4a4a;
-        }
-
-        /* 空历史记录提示 */
-        .history-empty {
-            padding: 40px 20px;
-            text-align: center;
-            color: #888888;
-            font-size: 14px;
-        }
+        /* 历史记录功能已改为弹出窗口，移除了底部面板样式 */
 
         /* 分享面板样式 */
         .share-panel {
@@ -1635,57 +1526,101 @@
         
         /* iOS Safari特殊优化 */
         @supports (-webkit-touch-callout: none) {
+            /* iOS Safari模态框优化 */
+            .modal-overlay {
+                padding-top: env(safe-area-inset-top, 44px); /* 为iOS状态栏留出空间 */
+                padding-bottom: env(safe-area-inset-bottom, 34px); /* 为iOS底部指示器留出空间 */
+            }
+            
+            .modal-container {
+                margin-top: env(safe-area-inset-top, 44px); /* 顶部额外边距 */
+                max-height: calc(90vh - env(safe-area-inset-top, 44px) - env(safe-area-inset-bottom, 34px)); /* 调整最大高度 */
+            }
+            
             @media (max-width: 768px) {
+                .modal-overlay {
+                    padding-top: calc(env(safe-area-inset-top, 44px) + 20px); /* 移动端增加额外顶部边距 */
+                    align-items: flex-start; /* 改为顶部对齐 */
+                    padding-top: 60px; /* 固定顶部边距，确保不被状态栏遮挡 */
+                }
+                
+                .modal-container {
+                    margin-top: 0; /* 重置顶部边距 */
+                    max-height: calc(85vh - 60px); /* 调整最大高度 */
+                    transform: translateY(0); /* 确保不偏移 */
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .modal-overlay {
+                    padding-top: 70px; /* 小屏幕增加更多顶部边距 */
+                }
+                
+                .modal-container {
+                    max-height: calc(90vh - 70px); /* 调整最大高度 */
+                }
+            }
+            
+            /* iOS横屏优化 */
+            @media (orientation: landscape) and (max-width: 768px) {
+                .modal-overlay {
+                    padding-top: 40px; /* 横屏时减少顶部边距 */
+                }
+                
+                .modal-container {
+                    max-height: calc(80vh - 40px); /* 横屏时调整最大高度 */
+                }
+            }
+            
+            .settings-panel {
+                border-radius: 20px 20px 0 0 !important; /* 更大的圆角 */
+                max-height: 85vh !important; /* 考虑iOS地址栏 */
+                margin: 0 8px !important;
+                bottom: 0 !important;
+                top: auto !important;
+                transform: translateY(100%) !important;
+            }
+            
+            .settings-panel.show {
+                transform: translateY(0) !important;
+            }
+            
+            .settings-header {
+                padding: 16px 20px !important; /* 增加头部内边距 */
+                border-radius: 20px 20px 0 0 !important;
+                position: sticky !important;
+                top: 0 !important;
+                background: #1a1a1a !important;
+                z-index: 10 !important;
+            }
+            
+            .settings-content {
+                padding-top: 8px !important; /* 减少顶部内边距 */
+                padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 16px) !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important; /* 防止滚动传播 */
+            }
+            
+            /* iOS横屏优化 */
+            @media (orientation: landscape) {
                 .settings-panel {
-                    border-radius: 20px 20px 0 0 !important; /* 更大的圆角 */
-                    max-height: 85vh !important; /* 考虑iOS地址栏 */
-                    margin: 0 8px !important;
-                    bottom: 0 !important;
-                    top: auto !important;
-                    transform: translateY(100%) !important;
-                }
-                
-                .settings-panel.show {
-                    transform: translateY(0) !important;
-                }
-                
-                .settings-header {
-                    padding: 16px 20px !important; /* 增加头部内边距 */
-                    border-radius: 20px 20px 0 0 !important;
-                    position: sticky !important;
-                    top: 0 !important;
-                    background: #1a1a1a !important;
-                    z-index: 10 !important;
+                    max-height: 75vh !important; /* 横屏时更低的高度 */
+                    margin: 0 12px !important;
                 }
                 
                 .settings-content {
-                    padding-top: 8px !important; /* 减少顶部内边距 */
-                    padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 16px) !important;
-                    -webkit-overflow-scrolling: touch !important;
-                    overscroll-behavior: contain !important; /* 防止滚动传播 */
+                    max-height: calc(75vh - 60px) !important;
+                    padding: 12px 16px !important;
                 }
                 
-                /* iOS横屏优化 */
-                @media (orientation: landscape) {
-                    .settings-panel {
-                        max-height: 75vh !important; /* 横屏时更低的高度 */
-                        margin: 0 12px !important;
-                    }
-                    
-                    .settings-content {
-                        max-height: calc(75vh - 60px) !important;
-                        padding: 12px 16px !important;
-                    }
-                    
-                    .settings-control {
-                        flex-direction: row !important; /* 横屏时恢复横向布局 */
-                        flex-wrap: wrap !important;
-                    }
-                    
-                    .setting-input {
-                        flex: 1 !important;
-                        min-width: 120px !important;
-                    }
+                .settings-control {
+                    flex-direction: row !important; /* 横屏时恢复横向布局 */
+                    flex-wrap: wrap !important;
+                }
+                
+                .setting-input {
+                    flex: 1 !important;
+                    min-width: 120px !important;
                 }
             }
             
@@ -1753,17 +1688,7 @@
                 </div>
             </div>
             
-            <!-- 历史记录面板 -->
-            <div id="historyPanel" class="history-panel">
-                <div class="history-header">
-                    <span>📋 历史记录</span>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-sm btn-danger" onclick="clearHistory()">清空历史</button>
-                        <button class="btn btn-sm btn-secondary" onclick="closeAllPanels()">关闭</button>
-                    </div>
-                </div>
-                <div id="historyList" class="history-list"></div>
-            </div>
+            <!-- 历史记录功能已改为弹出窗口，移除了底部面板 -->
             
             <!-- 分享功能已改为弹出窗口，移除了底部面板 -->
             
@@ -1844,8 +1769,7 @@
         const shareBtn = document.getElementById('shareBtn');
         const settingsBtn = document.getElementById('settingsBtn');
         const fileInput = document.getElementById('fileInput');
-        const historyPanel = document.getElementById('historyPanel');
-        const historyList = document.getElementById('historyList');
+        // 历史记录面板元素已移除，现在使用模态窗口
         const settingsPanel = document.getElementById('settingsPanel');
         const shareBaseUrlInput = document.getElementById('shareBaseUrl');
         const autoSaveIntervalInput = document.getElementById('autoSaveInterval');
@@ -3035,61 +2959,44 @@
             addToHistory();
         });
         
-        // 切换历史记录面板显示/隐藏
+        // 切换历史记录面板显示/隐藏 - 现在使用模态窗口
         function toggleHistoryPanel() {
-            historyPanel.classList.toggle('show');
-            if (historyPanel.classList.contains('show')) {
-                displayHistory();
-            }
-        }
-        
-        // 关闭所有面板
-        function closeAllPanels() {
-            historyPanel.classList.remove('show');
-            settingsPanel.classList.remove('show');
-            // 不再关闭sharePanel，因为现在使用弹窗
-        }
-        
-        // 显示历史记录列表
-        function displayHistory() {
-            if (historyRecords.length === 0) {
-                historyList.innerHTML = '<div class="history-empty">暂无历史记录</div>';
-                return;
-            }
-            
-            historyList.innerHTML = historyRecords.map(record => {
-                const date = new Date(record.timestamp).toLocaleString('zh-CN');
-                return `
-                    <div class="history-item" onclick="restoreFromHistory(${record.id})">
-                        <div class="history-item-content">${escapeHtml(record.preview)}</div>
-                        <div class="history-item-info">
-                            <span>${date}</span>
-                            <button class="history-item-delete" onclick="event.stopPropagation(); deleteHistoryItem(${record.id})">×</button>
+            const historyContent = `
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <div style="margin-bottom: 16px; display: flex; gap: 8px; justify-content: space-between; align-items: center;">
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="clearHistory()">清空历史</button>
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <div id="modalHistoryList"></div>
+                </div>
+            `;
+            showModal('📋 历史记录', historyContent);
+            renderModalHistory();
+            closePreviewDropdown();
         }
         
-        // 从历史记录恢复代码
+        // 关闭所有面板 - 历史记录面板已改为弹窗，不再需要
+        function closeAllPanels() {
+            settingsPanel.classList.remove('show');
+            // 不再关闭sharePanel和历史记录面板，因为现在都使用弹窗
+        }
+        
+        // 显示历史记录列表函数已移除，现在使用模态窗口版本
+        
+        // 从历史记录恢复代码 - 现在使用模态窗口，关闭模态窗口即可
         function restoreFromHistory(id) {
             const record = historyRecords.find(r => r.id === id);
             if (record) {
                 htmlEditor.value = record.content;
                 updatePreview();
                 updateCharCount();
-                closeAllPanels();
+                closeModal(); // 关闭模态窗口而不是面板
                 showToast('已从历史记录恢复', 'success');
             }
         }
         
-        // 删除单条历史记录
-        function deleteHistoryItem(id) {
-            historyRecords = historyRecords.filter(r => r.id !== id);
-            saveHistory();
-            displayHistory();
-            showToast('历史记录已删除', 'success');
-        }
+        // 删除单条历史记录函数已移除，现在使用模态窗口版本
         
         // 清空所有历史记录
         function clearHistory() {
@@ -3611,10 +3518,7 @@
             // 保存到localStorage
             saveHistory();
             
-            // 如果历史面板已打开，更新显示
-            if (historyPanel.classList.contains('show')) {
-                displayHistory();
-            }
+            // 历史记录功能已改为弹出窗口，移除了底部面板更新逻辑
         }
         
         // 页面加载时尝试恢复保存的内容
@@ -3665,8 +3569,8 @@
             addToHistory();
             console.log('添加第二条历史记录后数量:', historyRecords.length);
             
-            // 测试显示历史记录
-            displayHistory();
+            // 测试显示历史记录（模态窗口版本）
+            renderModalHistory();
             
             console.log('=== 历史记录测试完成 ===');
         }
