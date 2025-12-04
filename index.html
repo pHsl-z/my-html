@@ -1794,51 +1794,7 @@
                 <div id="historyList" class="history-list"></div>
             </div>
             
-            <!-- 分享面板 -->
-            <div id="sharePanel" class="share-panel">
-                <div class="share-header">
-                    <span>🔗 分享链接</span>
-                    <button class="btn btn-sm btn-secondary" onclick="closeAllPanels()">关闭</button>
-                </div>
-                <div class="share-content">
-                    <p class="share-description">生成一个可分享的链接，其他人可以通过该链接查看和编辑当前内容：</p>
-                    <div class="share-link-container">
-                        <input type="text" id="shareLink" class="share-link-input" readonly>
-                        <button class="btn btn-sm btn-primary" onclick="copyShareLink()">复制链接</button>
-                    </div>
-                    <div class="share-actions">
-                        <button class="btn btn-secondary" onclick="generateShareLink()">重新生成</button>
-                        <button class="btn btn-success" onclick="openShareLink()">在新窗口打开</button>
-                        <button class="btn btn-primary" onclick="generateOnlineLink()">自动生成在线链接</button>
-                    </div>
-                    
-                    <!-- 分享历史管理 -->
-                    <div class="share-history-section">
-                        <div class="share-history-header">
-                            <h4>📚 分享历史</h4>
-                            <div class="share-history-actions">
-                                <button class="btn btn-sm btn-secondary" onclick="refreshShareHistory()">刷新</button>
-                                <button class="btn btn-sm btn-danger" onclick="clearShareHistory()">清空历史</button>
-                            </div>
-                        </div>
-                        <div id="shareHistoryList" class="share-history-list">
-                            <p class="no-history">暂无分享历史</p>
-                        </div>
-                    </div>
-                    
-                    <div class="share-tips">
-                        <h4>💡 分享提示：</h4>
-                        <ul>
-                            <li>链接包含了当前编辑器的所有内容</li>
-                            <li>链接可以被任何人访问和修改</li>
-                            <li>新压缩算法可显著减少链接长度</li>
-                            <li>刷新页面后链接仍然有效</li>
-                            <li>可在设置中自定义分享链接的基础URL</li>
-                            <li>分享历史会自动保存，方便管理之前的分享</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+            <!-- 分享功能已改为弹出窗口，移除了底部面板 -->
             
             <!-- 设置面板 -->
             <div id="settingsPanel" class="settings-panel">
@@ -1968,8 +1924,6 @@
         const fileInput = document.getElementById('fileInput');
         const historyPanel = document.getElementById('historyPanel');
         const historyList = document.getElementById('historyList');
-        const sharePanel = document.getElementById('sharePanel');
-        const shareLink = document.getElementById('shareLink');
         const settingsPanel = document.getElementById('settingsPanel');
         const shareBaseUrlInput = document.getElementById('shareBaseUrl');
         const autoSaveIntervalInput = document.getElementById('autoSaveInterval');
@@ -2243,9 +2197,12 @@
                     
                     showToast(`已打开文件: ${file.name}`, 'success');
                 } catch (error) {
+                // 只在开发模式下显示文件读取错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     console.error('文件读取错误:', error);
-                    showToast('文件读取失败，请重试', 'error');
                 }
+                showToast('文件读取失败，请重试', 'error');
+            }
             };
             
             reader.onerror = function() {
@@ -2279,12 +2236,18 @@
                 // iOS Safari滚动优化
                 enhancePreviewScrolling();
             } catch (error) {
-                console.error('预览更新错误:', error);
+                // 只在开发模式下显示预览更新错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('预览更新错误:', error);
+                }
                 // IE浏览器备用方案
                 try {
                     previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
                 } catch (ieError) {
-                    console.error('IE预览备用方案错误:', ieError);
+                    // 只在开发模式下显示IE预览备用方案错误
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.error('IE预览备用方案错误:', ieError);
+                    }
                     showToast('预览显示失败', 'error');
                 }
             }
@@ -2360,7 +2323,10 @@
                                 previewBody.style.webkitOverflowScrolling = 'touch';
                             }
                         } catch (error) {
-                            console.log('iOS滚动优化错误:', error);
+                            // 只在开发模式下显示iOS滚动优化错误
+                            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                                console.log('iOS滚动优化错误:', error);
+                            }
                         }
                     }, 100);
                 }
@@ -2416,11 +2382,17 @@
                         }, { passive: true });
                     }
                 } catch (androidEnhanceError) {
-                    console.log('Android滚动增强错误:', androidEnhanceError);
+                    // 只在开发模式下显示Android滚动增强错误
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('Android滚动增强错误:', androidEnhanceError);
+                    }
                 }
                 
             } catch (error) {
-                console.log('预览滚动优化错误:', error);
+                // 只在开发模式下显示预览滚动优化错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('预览滚动优化错误:', error);
+                }
             }
         }
 
@@ -2545,7 +2517,8 @@
             closePreviewDropdown();
         }
         
-        function toggleSharePanel() {
+        // 分享面板弹窗版本 - 应用类弹出窗口
+        function toggleSharePanelModal() {
             const shareContent = `
                 <div>
                     <p style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; line-height: 1.6;">生成一个可分享的链接，其他人可以通过该链接查看和编辑当前内容：</p>
@@ -2970,15 +2943,8 @@
         // 关闭所有面板
         function closeAllPanels() {
             historyPanel.classList.remove('show');
-            sharePanel.classList.remove('show');
             settingsPanel.classList.remove('show');
-        }
-        
-        // 关闭所有面板
-        function closeAllPanels() {
-            historyPanel.classList.remove('show');
-            sharePanel.classList.remove('show');
-            settingsPanel.classList.remove('show');
+            // 不再关闭sharePanel，因为现在使用弹窗
         }
         
         // 显示历史记录列表
@@ -3314,7 +3280,10 @@
 
                 showToast('正在打开打印预览...', 'success');
             } catch (error) {
-                console.error('打印出错:', error);
+                // 只在开发模式下显示打印错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('打印出错:', error);
+                }
                 showToast('打印功能出错，请重试', 'error');
             }
         }
@@ -3356,7 +3325,10 @@
                 
                 showToast('正在打印预览内容...', 'success');
             } catch (error) {
-                console.error('iOS打印出错:', error);
+                // 只在开发模式下显示iOS打印错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('iOS打印出错:', error);
+                }
                 showToast('iOS打印功能出错，请重试', 'error');
             }
         }
@@ -3411,7 +3383,10 @@
         
         // 增强的iOS错误处理
         function handleIOSError(operation, error) {
-            console.warn(`iOS ${operation} 错误:`, error);
+            // 只在开发模式下显示详细的iOS错误
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.warn(`iOS ${operation} 错误:`, error);
+            }
             
             if (isIOSSafari()) {
                 showToast('iOS Safari兼容性提示：如遇到问题，请尝试双击输入区域', 'warning');
@@ -3428,7 +3403,7 @@
                     historyRecords = JSON.parse(stored);
                 }
             } catch (error) {
-                console.error('加载历史记录失败:', error);
+                // 静默处理历史记录加载错误，避免控制台污染
                 historyRecords = [];
             }
         }
@@ -3438,7 +3413,7 @@
             try {
                 localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyRecords));
             } catch (error) {
-                console.error('保存历史记录失败:', error);
+                // 静默处理历史记录保存错误，避免控制台污染
             }
         }
         
@@ -3563,16 +3538,14 @@
             // Ctrl+Shift+S 打开分享面板
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's') {
                 e.preventDefault();
-                toggleSharePanel();
+                toggleSharePanelModal();
             }
         });
         
-        // 切换分享面板显示/隐藏
+        // 切换分享面板显示/隐藏 - 改为使用弹出窗口
         function toggleSharePanel() {
-            sharePanel.classList.toggle('show');
-            if (sharePanel.classList.contains('show')) {
-                generateShareLink();
-            }
+            // 直接调用弹窗版本的分享面板
+            toggleSharePanelModal();
         }
         
         // 生成分享链接
@@ -3627,7 +3600,10 @@
                 showToast(`分享链接已生成，压缩率: ${savedPercent}%`, 'success');
                 
             } catch (error) {
-                console.error('生成分享链接失败:', error);
+                // 只在开发模式下显示分享链接生成错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('生成分享链接失败:', error);
+                }
                 showToast('生成分享链接失败，请检查URL格式', 'error');
             }
         }
@@ -3710,7 +3686,10 @@
                     fallbackCopyShareLink(link);
                 }
             } catch (error) {
-                console.error('复制链接失败:', error);
+                // 只在开发模式下显示复制链接错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('复制链接失败:', error);
+                }
                 fallbackCopyShareLink(link);
             }
         }
@@ -3738,7 +3717,10 @@
                     showToast('复制失败，请手动复制', 'error');
                 }
             } catch (error) {
-                console.error('降级复制方案失败:', error);
+                // 只在开发模式下显示降级复制错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('降级复制方案失败:', error);
+                }
                 showToast('复制失败，请手动复制', 'error');
             }
         }
@@ -3755,7 +3737,10 @@
                 window.open(link, '_blank');
                 showToast('分享链接已在新窗口打开', 'success');
             } catch (error) {
-                console.error('打开分享链接失败:', error);
+                // 只在开发模式下显示打开分享链接错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('打开分享链接失败:', error);
+                }
                 showToast('打开分享链接失败，请手动打开', 'error');
             }
         }
@@ -3783,7 +3768,10 @@
                     console.log('从分享链接加载内容成功');
                 }
             } catch (error) {
-                console.error('从分享链接加载内容失败:', error);
+                // 只在开发模式下显示分享链接加载错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('从分享链接加载内容失败:', error);
+                }
                 showToast('分享链接无效或已损坏', 'error');
             }
         }
@@ -3820,7 +3808,10 @@
                     }
                 }
             } catch (error) {
-                console.error('加载设置失败:', error);
+                // 只在开发模式下显示设置加载错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('加载设置失败:', error);
+                }
                 showToast('加载设置失败', 'error');
             }
         }
@@ -3834,7 +3825,10 @@
                 showToast('设置已保存', 'success');
                 return true;
             } catch (error) {
-                console.error('保存设置失败:', error);
+                // 只在开发模式下显示设置保存错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.error('保存设置失败:', error);
+                }
                 showToast('保存设置失败', 'error');
                 return false;
             }
@@ -3898,7 +3892,7 @@
             }
             
             try {
-                showToast('生成中...', 'success');
+                showToast('正在生成分享链接...', 'success');
                 
                 // 使用新的分享管理器
                 const result = await shareManager.share(content, {
@@ -3910,18 +3904,43 @@
                     shareLink.value = result.url;
                     
                     // 自动复制链接到剪贴板
-                    await navigator.clipboard.writeText(result.url);
-                    showToast('链接已生成并复制', 'success');
+                    try {
+                        await navigator.clipboard.writeText(result.url);
+                        showToast('链接已生成并复制到剪贴板', 'success');
+                    } catch (clipboardError) {
+                        // 如果自动复制失败，显示链接供用户手动复制
+                        showToast('链接已生成，请手动复制', 'success');
+                    }
                     
                     console.log(`分享成功，使用提供商: ${result.provider}`);
                     console.log('在线链接:', result.url);
+                    
+                    // 如果有特殊说明，显示给用户
+                    if (result.note) {
+                        setTimeout(() => {
+                            showToast(result.note, 'info');
+                        }, 2000);
+                    }
                 } else {
-                    showToast(result.message || '分享失败', 'error');
+                    // 显示详细的错误信息
+                    let errorMessage = result.message || '分享失败';
+                    
+                    // 如果有详细的错误信息，添加到消息中
+                    if (result.errors && result.errors.length > 0) {
+                        errorMessage += '\n详细错误：' + result.errors.join('\n');
+                    }
+                    
+                    if (result.suggestion) {
+                        errorMessage += '\n' + result.suggestion;
+                    }
+                    
+                    console.error('分享失败详情:', result);
+                    showToast(errorMessage, 'error', 8000); // 显示8秒，让用户有时间阅读
                 }
                 
             } catch (error) {
                 console.error('生成失败:', error);
-                showToast('生成失败', 'error');
+                showToast('生成分享链接时发生错误: ' + error.message, 'error', 5000);
             }
         }
         
@@ -3946,9 +3965,12 @@
                     const history = localStorage.getItem('shareHistory');
                     return history ? JSON.parse(history) : [];
                 } catch (error) {
+                // 只在开发模式下显示分享历史加载错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     console.error('加载分享历史失败:', error);
-                    return [];
                 }
+                return [];
+            }
             }
             
             // 保存分享历史
@@ -3956,8 +3978,11 @@
                 try {
                     localStorage.setItem('shareHistory', JSON.stringify(this.shareHistory));
                 } catch (error) {
+                // 只在开发模式下显示分享历史保存错误
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     console.error('保存分享历史失败:', error);
                 }
+            }
             }
             
             // 添加到分享历史
@@ -3982,13 +4007,26 @@
             // 主分享方法
             async share(content, options = {}) {
                 const title = options.title || this.generateTitle(content);
+                const errors = [];
+                
+                console.log(`开始分享，内容长度: ${content.length} 字符`);
                 
                 for (const provider of this.providers) {
                     try {
                         console.log(`尝试使用 ${provider.name} 分享...`);
+                        
+                        // 检查内容大小限制
+                        const sizeLimit = provider.getSizeLimit();
+                        if (sizeLimit !== Infinity && content.length > sizeLimit) {
+                            console.warn(`${provider.name} 内容超出大小限制 (${content.length} > ${sizeLimit})`);
+                            errors.push(`${provider.name}: 内容太大 (限制 ${Math.round(sizeLimit/1024)}KB)`);
+                            continue;
+                        }
+                        
                         const result = await provider.share(content, { title, ...options });
                         
                         if (result.success) {
+                            console.log(`${provider.name} 分享成功:`, result.url);
                             this.addToHistory({
                                 provider: provider.name,
                                 url: result.url,
@@ -4000,18 +4038,24 @@
                                 success: true,
                                 url: result.url,
                                 provider: provider.name,
-                                message: '分享成功'
+                                message: '分享成功',
+                                note: result.note || ''
                             };
                         }
                     } catch (error) {
                         console.error(`${provider.name} 分享失败:`, error);
+                        errors.push(`${provider.name}: ${error.message}`);
                         continue;
                     }
                 }
                 
+                // 所有提供商都失败了，提供详细的错误信息
+                console.error('所有分享提供商都失败了:', errors);
                 return {
                     success: false,
-                    message: '所有分享方式都失败了'
+                    message: '所有分享方式都失败了',
+                    errors: errors,
+                    suggestion: '建议：\n1. 检查网络连接\n2. 减小内容大小\n3. 稍后再试'
                 };
             }
             
@@ -4087,11 +4131,13 @@
                 const fileName = `share-${Date.now()}.html`;
                 
                 try {
+                    // 使用GitHub的匿名Gist创建，但添加更好的错误处理
                     const response = await fetch('https://api.github.com/gists', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Accept': 'application/vnd.github.v3+json'
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'HTML-Editor-Share-Tool'
                         },
                         body: JSON.stringify({
                             description: title,
@@ -4105,7 +4151,14 @@
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        // 提供更详细的错误信息
+                        let errorMsg = `HTTP ${response.status}`;
+                        if (response.status === 403) {
+                            errorMsg = 'GitHub API速率限制，请稍后再试';
+                        } else if (response.status === 401) {
+                            errorMsg = 'GitHub认证失败';
+                        }
+                        throw new Error(errorMsg);
                     }
                     
                     const data = await response.json();
@@ -4117,7 +4170,44 @@
                         rawUrl: rawUrl
                     };
                 } catch (error) {
-                    throw new Error(`GitHub Gist分享失败: ${error.message}`);
+                    // 如果GitHub失败，提供替代方案
+                    console.warn('GitHub Gist分享失败，尝试替代方案:', error.message);
+                    return await this.fallbackShare(content, options);
+                }
+            }
+            
+            // 使用替代服务的回退方案
+            async fallbackShare(content, options = {}) {
+                try {
+                    // 使用一个免费的代码分享服务
+                    const response = await fetch('https://dpaste.org/api/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            content: content,
+                            title: options.title || 'HTML分享',
+                            syntax: 'html',
+                            expiry_days: '30'
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`dpaste API错误: ${response.status}`);
+                    }
+                    
+                    const data = await response.text();
+                    // dpaste返回的是URL路径
+                    const pasteUrl = data.trim();
+                    
+                    return {
+                        success: true,
+                        url: pasteUrl.startsWith('http') ? pasteUrl : `https://dpaste.org${pasteUrl}`,
+                        provider: 'dpaste'
+                    };
+                } catch (fallbackError) {
+                    throw new Error(`GitHub Gist和替代方案都失败: ${fallbackError.message}`);
                 }
             }
         }
@@ -4134,75 +4224,71 @@
                 const title = options.title || 'HTML分享';
                 
                 try {
-                    // 使用Vercel的部署API
+                    // 使用Vercel的部署按钮API
                     const deploymentData = {
-                        name: `html-share-${Date.now()}`,
-                        files: [
-                            {
-                                file: 'index.html',
-                                data: content
-                            }
-                        ]
+                        name: title,
+                        files: {
+                            'index.html': content
+                        }
                     };
                     
-                    // 注意：这需要Vercel的API令牌
-                    // 这里使用一个公共的示例服务
+                    console.log('尝试使用Vercel API分享...');
                     const response = await fetch('https://api.vercel.com/v1/integrations/deploy-button', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'HTML-Editor-Share-Tool'
                         },
-                        body: JSON.stringify({
-                            name: title,
-                            files: {
-                                'index.html': content
-                            }
-                        })
+                        body: JSON.stringify(deploymentData)
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        let errorMsg = `HTTP ${response.status}`;
+                        if (response.status === 401) {
+                            errorMsg = 'Vercel API认证失败';
+                        } else if (response.status === 429) {
+                            errorMsg = 'Vercel API速率限制';
+                        } else if (response.status === 400) {
+                            errorMsg = 'Vercel API请求格式错误';
+                        }
+                        throw new Error(errorMsg);
                     }
                     
                     const data = await response.json();
+                    console.log('Vercel API响应:', data);
                     
                     return {
                         success: true,
-                        url: data.url || `https://${data.id}.vercel.app`
+                        url: data.url || data.deploymentUrl || `https://${data.id || 'share-' + Date.now()}.vercel.app`,
+                        deploymentUrl: data.deploymentUrl || data.url
                     };
                 } catch (error) {
-                    // 如果Vercel失败，回退到简单的托管服务
-                    return await this.fallbackShare(content, options);
+                    console.warn('Vercel分享失败，使用Data URL作为回退方案:', error.message);
+                    // 使用Data URL作为回退方案，避免循环依赖
+                    return await this.dataUrlShare(content, options);
                 }
             }
             
-            async fallbackShare(content, options) {
+            // Data URL分享作为回退方案
+            async dataUrlShare(content, options = {}) {
                 try {
-                    // 使用一个简化的托管服务
-                    const response = await fetch('https://api.github.com/gists', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            description: options.title || 'HTML分享',
-                            public: true,
-                            files: {
-                                'index.html': {
-                                    content: content
-                                }
-                            }
-                        })
-                    });
+                    // 将HTML内容转换为Data URL
+                    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
                     
-                    const data = await response.json();
+                    // 检查内容大小（Data URL有长度限制）
+                    if (dataUrl.length > 2000000) { // 约2MB限制
+                        throw new Error('内容太大，无法使用Data URL分享');
+                    }
+                    
+                    console.log('使用Data URL作为回退方案');
                     return {
                         success: true,
-                        url: data.html_url,
-                        rawUrl: data.files['index.html'].raw_url
+                        url: dataUrl,
+                        provider: 'data-url',
+                        note: '这是一个Data URL，复制后在新标签页打开即可查看'
                     };
-                } catch (error) {
-                    throw new Error(`Vercel分享失败: ${error.message}`);
+                } catch (dataError) {
+                    throw new Error(`Vercel和Data URL方案都失败: ${dataError.message}`);
                 }
             }
         }
