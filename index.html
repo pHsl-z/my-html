@@ -1597,156 +1597,14 @@
             }
         }
 
-        /* 设置面板样式 */
+        /* 设置面板样式 - 已废弃，使用模态窗口 */
         .settings-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            max-height: 450px;
-            background: #1a1a1a;
-            border-top: 1px solid #2a2a2a;
-            display: none;
-            flex-direction: column;
-            z-index: 102;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+            display: none !important;
         }
 
         .settings-panel.show {
-            display: flex;
+            display: none !important;
         }
-
-        .settings-header {
-            padding: 12px 20px;
-            background: #2a2a2a;
-            border-bottom: 1px solid #3a3a3a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .settings-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .settings-section {
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #2a2a2a;
-        }
-
-        .settings-section:last-child {
-            border-bottom: none;
-            margin-bottom: 20px;
-            padding-bottom: 0;
-        }
-
-        .settings-section h4 {
-            color: #e6e6e6;
-            margin-bottom: 16px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .setting-item {
-            margin-bottom: 16px;
-        }
-
-        .setting-label {
-            display: block;
-            color: #e6e6e6;
-            margin-bottom: 8px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .setting-control {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-        }
-
-        .setting-input {
-            padding: 8px 12px;
-            background: #0d0d0d;
-            border: 1px solid #2a2a2a;
-            color: #e6e6e6;
-            font-size: 13px;
-            border-radius: 4px;
-            outline: none;
-            min-width: 200px;
-        }
-
-        .setting-input:focus {
-            border-color: #0066ff;
-        }
-
-        .setting-input[type="number"] {
-            min-width: 80px;
-            width: 80px;
-        }
-
-        .setting-description {
-            color: #888888;
-            font-size: 11px;
-            line-height: 1.5;
-            margin: 0;
-        }
-
-        .settings-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        /* 设置面板滚动条样式 */
-        .settings-content::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .settings-content::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-
-        .settings-content::-webkit-scrollbar-thumb {
-            background: #3a3a3a;
-            border-radius: 4px;
-        }
-
-        .settings-content::-webkit-scrollbar-thumb:hover {
-            background: #4a4a4a;
-        }
-
-        /* 移动设备适配 */
-        @media (max-width: 768px) {
-            .settings-content {
-                padding: 12px;
-                max-height: calc(85vh - 60px) !important; /* iOS Safari安全区域适配 */
-                -webkit-overflow-scrolling: touch !important; /* iOS滚动优化 */
-                padding-bottom: env(safe-area-inset-bottom, 20px) !important; /* iOS底部安全区域 */
-            }
-            
-            .settings-control {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 6px !important; /* 减少间距 */
-            }
-            
-            .setting-input {
-                min-width: auto;
-                font-size: 16px !important; /* iOS Safari防止缩放 */
-                padding: 10px 12px !important; /* 增大触摸区域 */
-            }
-            
-            .settings-actions {
-                flex-direction: column;
                 gap: 6px !important; /* 减少按钮间距 */
             }
             
@@ -1909,56 +1767,7 @@
             
             <!-- 分享功能已改为弹出窗口，移除了底部面板 -->
             
-            <!-- 设置面板 -->
-            <div id="settingsPanel" class="settings-panel">
-                <div class="settings-header">
-                    <span>⚙️ 编辑器设置</span>
-                    <button class="btn btn-sm btn-secondary" onclick="closeAllPanels()">关闭</button>
-                </div>
-                <div class="settings-content">
-                    <div class="settings-section">
-                        <h4>🔗 分享设置</h4>
-                        <div class="setting-item">
-                            <label for="shareBaseUrl" class="setting-label">分享链接基础URL：</label>
-                            <div class="setting-control">
-                                <input type="text" id="shareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html">
-                                <button class="btn btn-sm btn-primary" onclick="saveShareBaseUrl()">保存</button>
-                                <button class="btn btn-sm btn-secondary" onclick="resetShareBaseUrl()">重置</button>
-                            </div>
-                            <p class="setting-description">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-section">
-                        <h4>💾 自动保存</h4>
-                        <div class="setting-item">
-                            <label for="autoSaveInterval" class="setting-label">自动保存间隔（秒）：</label>
-                            <div class="setting-control">
-                                <input type="number" id="autoSaveInterval" class="setting-input" min="1" max="600" value="10">
-                                <button class="btn btn-sm btn-primary" onclick="saveAutoSaveInterval()">保存</button>
-                            </div>
-                            <p class="setting-description">设置编辑器自动保存内容的时间间隔。</p>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-section">
-                        <h4>📝 历史记录</h4>
-                        <div class="setting-item">
-                            <label for="maxHistoryRecords" class="setting-label">最大历史记录数：</label>
-                            <div class="setting-control">
-                                <input type="number" id="maxHistoryRecords" class="setting-input" min="1" max="50" value="10">
-                                <button class="btn btn-sm btn-primary" onclick="saveMaxHistoryRecords()">保存</button>
-                            </div>
-                            <p class="setting-description">设置编辑器保存的最大历史记录数量。</p>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-actions">
-                        <button class="btn btn-primary" onclick="applyAllSettings()">应用所有设置</button>
-                        <button class="btn btn-secondary" onclick="loadSettings()">重新加载设置</button>
-                    </div>
-                </div>
-            </div>
+            <!-- 设置面板已改为弹出窗口模式，移除了原生面板 -->
         </div>
         
         <div class="preview-panel">
@@ -2630,6 +2439,109 @@
             closePreviewDropdown();
         }
         
+        // 显示GitHub Pages配置对话框
+        function showGitHubPagesConfig() {
+            const savedConfig = localStorage.getItem('githubPagesConfig') || '{}';
+            let config;
+            try {
+                config = JSON.parse(savedConfig);
+            } catch (e) {
+                config = {};
+            }
+            
+            const configContent = `
+                <div style="max-width: 500px;">
+                    <p style="color: #e6e6e6; margin-bottom: 20px; font-size: 14px; line-height: 1.6;">
+                        配置GitHub Pages分享功能，将内容保存到您的GitHub仓库中，生成永久稳定的分享链接。
+                    </p>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="githubToken" style="display: block; margin-bottom: 8px; color: #e6e6e6; font-size: 14px;">
+                            GitHub访问令牌 <span style="color: #ff6b6b;">*</span>
+                        </label>
+                        <input type="password" id="githubToken" class="form-input" placeholder="输入GitHub Personal Access Token" 
+                               value="${config.token || ''}" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #e6e6e6;">
+                        <small style="color: #888888; font-size: 12px; display: block; margin-top: 4px;">
+                            需要具有repo权限的Personal Access Token
+                        </small>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="githubRepo" style="display: block; margin-bottom: 8px; color: #e6e6e6; font-size: 14px;">
+                            仓库名称 <span style="color: #ff6b6b;">*</span>
+                        </label>
+                        <input type="text" id="githubRepo" class="form-input" placeholder="username/repository-name" 
+                               value="${config.repo || ''}" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #e6e6e6;">
+                        <small style="color: #888888; font-size: 12px; display: block; margin-top: 4px;">
+                            格式: 用户名/仓库名称
+                        </small>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="githubBranch" style="display: block; margin-bottom: 8px; color: #e6e6e6; font-size: 14px;">
+                            分支名称
+                        </label>
+                        <input type="text" id="githubBranch" class="form-input" placeholder="main" 
+                               value="${config.branch || 'main'}" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #e6e6e6;">
+                        <small style="color: #888888; font-size: 12px; display: block; margin-top: 4px;">
+                            默认为main分支
+                        </small>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="githubPath" style="display: block; margin-bottom: 8px; color: #e6e6e6; font-size: 14px;">
+                            保存路径
+                        </label>
+                        <input type="text" id="githubPath" class="form-input" placeholder="shared/" 
+                               value="${config.path || 'shared/'}" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #e6e6e6;">
+                        <small style="color: #888888; font-size: 12px; display: block; margin-top: 4px;">
+                            文件在仓库中的保存路径，以/结尾
+                        </small>
+                    </div>
+                    
+                    <div style="background: #2a2a2a; padding: 16px; border-radius: 8px; border-left: 4px solid #ff6b6b; margin-bottom: 20px;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 12px; font-size: 14px; font-weight: 500;">⚠️ 重要提示：</h4>
+                        <ul style="list-style-type: disc; list-style-position: inside; color: #888888; font-size: 13px; line-height: 1.5;">
+                            <li style="margin-bottom: 8px;">请确保您的仓库已启用GitHub Pages功能</li>
+                            <li style="margin-bottom: 8px;">访问令牌将被安全地保存在本地浏览器中</li>
+                            <li style="margin-bottom: 8px;">分享的文件将公开可访问，请勿包含敏感信息</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                        <button class="btn btn-primary" onclick="saveGitHubPagesConfig()">保存配置</button>
+                    </div>
+                </div>
+            `;
+            
+            showModal('⚙️ GitHub Pages配置', configContent);
+        }
+        
+        // 保存GitHub Pages配置
+        function saveGitHubPagesConfig() {
+            const token = document.getElementById('githubToken').value.trim();
+            const repo = document.getElementById('githubRepo').value.trim();
+            const branch = document.getElementById('githubBranch').value.trim() || 'main';
+            const path = document.getElementById('githubPath').value.trim() || 'shared/';
+            
+            if (!token || !repo) {
+                showToast('请填写必填字段', 'error');
+                return;
+            }
+            
+            const config = {
+                token,
+                repo,
+                branch,
+                path: path.endsWith('/') ? path : path + '/'
+            };
+            
+            localStorage.setItem('githubPagesConfig', JSON.stringify(config));
+            showToast('GitHub Pages配置已保存', 'success');
+            closeModal();
+        }
+        
         // 分享面板弹窗版本 - 应用类弹出窗口
         function toggleSharePanelModal() {
             const shareContent = `
@@ -2643,6 +2555,7 @@
                         <button class="btn btn-secondary" onclick="generateShareLink()">重新生成</button>
                         <button class="btn btn-success" onclick="openModalShareLink()">在新窗口打开</button>
                         <button class="btn btn-primary" onclick="generateOnlineLink()">自动生成在线链接</button>
+                        <button class="btn btn-info" onclick="showGitHubPagesConfig()">GitHub Pages配置</button>
                     </div>
                     
                     <!-- 分享历史管理 -->
@@ -2668,6 +2581,7 @@
                             <li style="margin-bottom: 8px; line-height: 1.5;">刷新页面后链接仍然有效</li>
                             <li style="margin-bottom: 8px; line-height: 1.5;">可在设置中自定义分享链接的基础URL</li>
                             <li style="margin-bottom: 8px; line-height: 1.5;">分享历史会自动保存，方便管理之前的分享</li>
+                            <li style="margin-bottom: 8px; line-height: 1.5;">使用GitHub Pages可创建永久稳定的分享链接</li>
                         </ul>
                     </div>
                 </div>
@@ -2786,21 +2700,39 @@
          
          // 弹窗分享功能函数
          function generateModalShareLink() {
-             generateShareLink();
-             const shareLink = document.getElementById('shareLink')?.value;
-             if (shareLink) {
-                 document.getElementById('modalShareLink').value = shareLink;
-             }
+             // 使用新的分享管理器生成链接
+             shareManager.share(htmlEditor.value)
+                 .then(result => {
+                     const modalShareLinkInput = document.getElementById('modalShareLink');
+                     if (modalShareLinkInput) {
+                         modalShareLinkInput.value = result.url;
+                         
+                         // 显示成功消息
+                         showToast(`分享链接已生成 (${result.provider})`, 'success');
+                     }
+                 })
+                 .catch(error => {
+                     console.error('生成分享链接失败:', error);
+                     showToast('生成分享链接失败: ' + error.message, 'error');
+                 });
          }
          
          function copyModalShareLink() {
              const modalShareLink = document.getElementById('modalShareLink');
              if (modalShareLink && modalShareLink.value) {
-                 modalShareLink.select();
-                 document.execCommand('copy');
-                 alert('分享链接已复制到剪贴板！');
+                 // 使用现代的Clipboard API
+                 navigator.clipboard.writeText(modalShareLink.value)
+                     .then(() => {
+                         showToast('分享链接已复制到剪贴板', 'success');
+                     })
+                     .catch(err => {
+                         // 回退到传统方法
+                         modalShareLink.select();
+                         document.execCommand('copy');
+                         showToast('分享链接已复制到剪贴板', 'success');
+                     });
              } else {
-                 alert('请先生成分享链接！');
+                 showToast('请先生成分享链接', 'error');
              }
          }
          
@@ -2809,23 +2741,81 @@
              if (modalShareLink && modalShareLink.value) {
                  window.open(modalShareLink.value, '_blank');
              } else {
-                 alert('请先生成分享链接！');
+                 showToast('请先生成分享链接', 'error');
              }
          }
          
          function refreshModalShareHistory() {
-             refreshShareHistory();
-             const shareHistoryList = document.getElementById('shareHistoryList');
+             const history = shareManager.getShareHistory();
              const modalShareHistoryList = document.getElementById('modalShareHistoryList');
-             if (shareHistoryList && modalShareHistoryList) {
-                 modalShareHistoryList.innerHTML = shareHistoryList.innerHTML;
+             
+             if (!modalShareHistoryList) return;
+             
+             if (history.length === 0) {
+                 modalShareHistoryList.innerHTML = '<p style="color: #888888; font-size: 13px; text-align: center; padding: 20px; font-style: italic;">暂无分享历史</p>';
+                 return;
              }
+             
+             let html = '';
+             history.forEach(item => {
+                 html += `
+                     <div class="share-history-item" style="padding: 12px; border-bottom: 1px solid #3a3a3a; display: flex; justify-content: space-between; align-items: center;">
+                         <div style="flex: 1; min-width: 0;">
+                             <div style="font-size: 13px; color: #e6e6e6; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                 ${item.title} (${item.provider})
+                             </div>
+                             <div style="font-size: 11px; color: #888888;">
+                                 ${new Date(item.timestamp).toLocaleString()} | ${formatFileSize(item.size)}
+                             </div>
+                         </div>
+                         <div style="display: flex; gap: 4px; margin-left: 8px;">
+                             <button class="btn btn-xs btn-primary" onclick="copyHistoryLink('${item.id}')" title="复制链接">📋</button>
+                             <button class="btn btn-xs btn-success" onclick="openHistoryLink('${item.id}')" title="打开链接">🔗</button>
+                             <button class="btn btn-xs btn-danger" onclick="removeHistoryItem('${item.id}')" title="删除">🗑️</button>
+                         </div>
+                     </div>
+                 `;
+             });
+             
+             modalShareHistoryList.innerHTML = html;
          }
          
          function clearModalShareHistory() {
              if (confirm('确定要清空所有分享历史吗？')) {
-                 localStorage.removeItem('shareHistory');
+                 shareManager.clearHistory();
                  refreshModalShareHistory();
+                 showToast('分享历史已清空', 'success');
+             }
+         }
+         
+         // 分享历史操作函数
+         function copyHistoryLink(id) {
+             const history = shareManager.getShareHistory();
+             const item = history.find(h => h.id === id);
+             if (item) {
+                 navigator.clipboard.writeText(item.url)
+                     .then(() => {
+                         showToast('链接已复制到剪贴板', 'success');
+                     })
+                     .catch(err => {
+                         showToast('复制失败', 'error');
+                     });
+             }
+         }
+         
+         function openHistoryLink(id) {
+             const history = shareManager.getShareHistory();
+             const item = history.find(h => h.id === id);
+             if (item) {
+                 window.open(item.url, '_blank');
+             }
+         }
+         
+         function removeHistoryItem(id) {
+             if (confirm('确定要删除这条分享记录吗？')) {
+                 shareManager.removeFromHistory(id);
+                 refreshModalShareHistory();
+                 showToast('分享记录已删除', 'success');
              }
          }
          
@@ -3951,12 +3941,56 @@
             }
         }
         
-        // 切换设置面板显示/隐藏
+        // 切换设置面板显示/隐藏 - 改为弹出窗口模式
         function toggleSettingsPanel() {
-            settingsPanel.classList.toggle('show');
-            if (settingsPanel.classList.contains('show')) {
-                loadSettings();
-            }
+            const settingsContent = `
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">🔗 分享设置</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalShareBaseUrl" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">分享链接基础URL：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="text" id="modalShareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 200px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalShareBaseUrl()">保存</button>
+                                <button class="btn btn-sm btn-secondary" onclick="resetModalShareBaseUrl()">重置</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">💾 自动保存</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalAutoSaveInterval" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">自动保存间隔（秒）：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="number" id="modalAutoSaveInterval" class="setting-input" min="1" max="600" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalAutoSaveInterval()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器自动保存内容的时间间隔。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">📝 历史记录</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalMaxHistoryRecords" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">最大历史记录数：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="number" id="modalMaxHistoryRecords" class="setting-input" min="1" max="50" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalMaxHistoryRecords()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器保存的最大历史记录数量。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="applyModalAllSettings()">应用所有设置</button>
+                        <button class="btn btn-secondary" onclick="loadModalSettings()">重新加载设置</button>
+                    </div>
+                </div>
+            `;
+            showModal('⚙️ 编辑器设置', settingsContent);
+            loadModalSettings();
+            closePreviewDropdown();
         }
         
         // 加载设置
@@ -4126,9 +4160,11 @@
         class ShareManager {
             constructor() {
                 this.providers = [
+                    new GitHubPagesProvider(),
                     new GitHubGistProvider(),
                     new VercelProvider(),
                     new FirebaseProvider(),
+                    new CodePenProvider(),
                     new DataUrlProvider()
                 ];
                 this.shareHistory = this.loadShareHistory();
@@ -4510,6 +4546,131 @@
         }
         
         // ==========================================
+        // GitHub Pages 提供商
+        // ==========================================
+        class GitHubPagesProvider extends ShareProvider {
+            constructor() {
+                super('GitHub Pages');
+                this.apiBaseUrl = 'https://api.github.com';
+                this.repoOwner = ''; // 用户需要配置
+                this.repoName = ''; // 用户需要配置
+            }
+            
+            async share(content, options = {}) {
+                const title = options.title || 'HTML分享';
+                const fileName = `share-${Date.now()}.html`;
+                
+                try {
+                    // 检查是否已配置GitHub仓库信息
+                    if (!this.repoOwner || !this.repoName) {
+                        // 尝试从localStorage获取配置
+                        const settings = JSON.parse(localStorage.getItem('editorSettings') || '{}');
+                        this.repoOwner = settings.githubRepoOwner || '';
+                        this.repoName = settings.githubRepoName || '';
+                        
+                        if (!this.repoOwner || !this.repoName) {
+                            throw new Error('请先在设置中配置GitHub仓库信息');
+                        }
+                    }
+                    
+                    // 创建或更新文件
+                    const response = await fetch(`${this.apiBaseUrl}/repos/${this.repoOwner}/${this.repoName}/contents/${fileName}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Authorization': `token ${this.getGitHubToken()}`
+                        },
+                        body: JSON.stringify({
+                            message: `添加分享文件: ${title}`,
+                            content: btoa(unescape(encodeURIComponent(content))) // Base64编码
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        let errorMsg = `HTTP ${response.status}`;
+                        
+                        if (response.status === 401) {
+                            errorMsg = 'GitHub认证失败，请检查访问令牌';
+                        } else if (response.status === 403) {
+                            errorMsg = 'GitHub API权限不足或速率限制';
+                        } else if (response.status === 404) {
+                            errorMsg = 'GitHub仓库不存在或无访问权限';
+                        } else if (errorData.message) {
+                            errorMsg = errorData.message;
+                        }
+                        
+                        throw new Error(errorMsg);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // 构建GitHub Pages URL
+                    const pagesUrl = `https://${this.repoOwner}.github.io/${this.repoName}/${fileName}`;
+                    
+                    return {
+                        success: true,
+                        url: pagesUrl,
+                        rawUrl: data.content.download_url,
+                        note: '文件已上传到GitHub Pages，可能需要几分钟才能访问'
+                    };
+                } catch (error) {
+                    console.error('GitHub Pages分享失败:', error);
+                    throw new Error(`GitHub Pages分享失败: ${error.message}`);
+                }
+            }
+            
+            getGitHubToken() {
+                // 从localStorage获取GitHub访问令牌
+                const settings = JSON.parse(localStorage.getItem('editorSettings') || '{}');
+                return settings.githubToken || '';
+            }
+            
+            async isAvailable() {
+                // 检查是否配置了必要的参数
+                const settings = JSON.parse(localStorage.getItem('editorSettings') || '{}');
+                return !!(settings.githubToken && settings.githubRepoOwner && settings.githubRepoName);
+            }
+            
+            // 获取配置表单HTML
+            getConfigForm() {
+                const settings = JSON.parse(localStorage.getItem('editorSettings') || '{}');
+                return `
+                    <div class="github-pages-config">
+                        <h3>GitHub Pages 配置</h3>
+                        <div class="config-item">
+                            <label for="githubToken">GitHub访问令牌:</label>
+                            <input type="password" id="githubToken" placeholder="输入GitHub个人访问令牌" 
+                                value="${settings.githubToken || ''}">
+                            <small>需要repo权限</small>
+                        </div>
+                        <div class="config-item">
+                            <label for="githubRepoOwner">仓库所有者:</label>
+                            <input type="text" id="githubRepoOwner" placeholder="GitHub用户名或组织名" 
+                                value="${settings.githubRepoOwner || ''}">
+                        </div>
+                        <div class="config-item">
+                            <label for="githubRepoName">仓库名称:</label>
+                            <input type="text" id="githubRepoName" placeholder="已启用GitHub Pages的仓库名" 
+                                value="${settings.githubRepoName || ''}">
+                        </div>
+                        <button id="saveGitHubConfig" class="btn-primary">保存配置</button>
+                        <div class="config-help">
+                            <h4>使用说明:</h4>
+                            <ol>
+                                <li>创建GitHub个人访问令牌，需要repo权限</li>
+                                <li>确保目标仓库已启用GitHub Pages</li>
+                                <li>配置仓库所有者和仓库名称</li>
+                                <li>保存配置后即可使用GitHub Pages分享</li>
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // ==========================================
         // 数据URL 提供商（最终备选）
         // ==========================================
         class DataUrlProvider extends ShareProvider {
@@ -4539,6 +4700,118 @@
                 } catch (error) {
                     throw new Error(`数据URL生成失败: ${error.message}`);
                 }
+            }
+        }
+        
+        // ==========================================
+        // CodePen 提供商
+        // ==========================================
+        class CodePenProvider extends ShareProvider {
+            constructor() {
+                super('CodePen');
+                this.apiBaseUrl = 'https://codepen.io/pen/define';
+            }
+            
+            getSizeLimit() {
+                return 1024 * 1024; // 1MB限制
+            }
+            
+            async share(content, options = {}) {
+                const title = options.title || 'HTML分享';
+                
+                try {
+                    // 从HTML内容中提取CSS和JS
+                    const { html, css, js } = this.parseHtmlContent(content);
+                    
+                    // 创建CodePen数据
+                    const penData = {
+                        title: title,
+                        description: `通过HTML编辑器分享 - ${new Date().toLocaleDateString()}`,
+                        html: html,
+                        css: css,
+                        js: js,
+                        css_external: '',
+                        js_external: '',
+                        editors: '101', // 显示HTML、CSS和JS编辑器
+                        layout: 'left' // 布局方式
+                    };
+                    
+                    // 创建表单数据
+                    const formData = new FormData();
+                    formData.append('data', JSON.stringify(penData));
+                    
+                    // 创建隐藏表单并提交
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = this.apiBaseUrl;
+                    form.style.display = 'none';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'data';
+                    input.value = JSON.stringify(penData);
+                    
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    
+                    // 提交表单
+                    form.submit();
+                    
+                    // 由于表单提交会导航到新页面，我们需要等待一下再返回结果
+                    // 实际上，这种方法不会返回URL，所以我们需要使用替代方案
+                    
+                    // 移除表单
+                    document.body.removeChild(form);
+                    
+                    // 使用替代方案：创建一个可以打开的URL
+                    const dataParam = encodeURIComponent(JSON.stringify(penData));
+                    const penUrl = `${this.apiBaseUrl}?data=${dataParam}`;
+                    
+                    return {
+                        success: true,
+                        url: penUrl,
+                        note: '点击链接将在CodePen中打开您的代码'
+                    };
+                } catch (error) {
+                    throw new Error(`CodePen分享失败: ${error.message}`);
+                }
+            }
+            
+            // 解析HTML内容，提取CSS和JS
+            parseHtmlContent(content) {
+                // 提取HTML内容（去除head和body标签）
+                let html = content;
+                let css = '';
+                let js = '';
+                
+                // 提取<style>标签中的CSS
+                const styleMatches = content.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+                if (styleMatches) {
+                    css = styleMatches.map(match => match.replace(/<\/?style[^>]*>/gi, '')).join('\n');
+                }
+                
+                // 提取<script>标签中的JS
+                const scriptMatches = content.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+                if (scriptMatches) {
+                    js = scriptMatches.map(match => match.replace(/<\/?script[^>]*>/gi, '')).join('\n');
+                }
+                
+                // 移除style和script标签，只保留body内容
+                html = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+                html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+                
+                // 移除head、html和body标签，只保留内容
+                html = html.replace(/<\/?html[^>]*>/gi, '');
+                html = html.replace(/<\/?head[^>]*>/gi, '');
+                html = html.replace(/<\/?body[^>]*>/gi, '');
+                
+                // 提取body内的内容
+                const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                if (bodyMatch) {
+                    html = bodyMatch[1];
+                }
+                
+                return { html, css, js };
             }
         }
         
