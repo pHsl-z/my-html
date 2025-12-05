@@ -2929,14 +2929,16 @@
 
         // 自动保存功能 - 优化移动设备体验
         let autoSaveTimeout;
+        let lastContent = htmlEditor.value; // 记录上次内容
         htmlEditor.addEventListener('input', function() {
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                // 每10秒自动添加到历史记录
-                if (Date.now() - lastHistoryAddTime > 10000) {
+                // 内容发生变化时添加到历史记录（每3秒最多一次）
+                if (htmlEditor.value !== lastContent && Date.now() - lastHistoryAddTime > 3000) {
                     addToHistory();
                     lastHistoryAddTime = Date.now();
+                    lastContent = htmlEditor.value;
                 }
             }, 1000);
         });
@@ -2946,7 +2948,12 @@
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                addToHistory();
+                // 内容发生变化时添加到历史记录
+                if (htmlEditor.value !== lastContent) {
+                    addToHistory();
+                    lastContent = htmlEditor.value;
+                    lastHistoryAddTime = Date.now();
+                }
             }, 1000);
         });
         
@@ -2956,7 +2963,10 @@
         // 页面卸载时添加到历史记录
         window.addEventListener('beforeunload', function() {
             localStorage.setItem('htmlEditorContent', htmlEditor.value);
-            addToHistory();
+            // 确保在页面卸载前保存历史记录
+            if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
+                addToHistory();
+            }
         });
         
         // 切换历史记录面板显示/隐藏 - 现在使用模态窗口
@@ -2966,6 +2976,7 @@
                     <div style="margin-bottom: 16px; display: flex; gap: 8px; justify-content: space-between; align-items: center;">
                         <div>
                             <button class="btn btn-sm btn-danger" onclick="clearHistory()">清空历史</button>
+                            <button class="btn btn-sm btn-info" onclick="checkHistoryStatus()">检查状态</button>
                         </div>
                     </div>
                     <div id="modalHistoryList"></div>
@@ -3573,6 +3584,34 @@
             renderModalHistory();
             
             console.log('=== 历史记录测试完成 ===');
+            showToast('历史记录测试完成，查看控制台获取详情', 'success');
+        }
+        
+        // 检查历史记录状态
+        function checkHistoryStatus() {
+            console.log('=== 历史记录状态检查 ===');
+            console.log('当前历史记录数量:', historyRecords.length);
+            console.log('最大历史记录数:', MAX_HISTORY_RECORDS);
+            console.log('localStorage键名:', HISTORY_STORAGE_KEY);
+            console.log('上次添加时间:', new Date(lastHistoryAddTime).toLocaleString());
+            console.log('当前编辑器内容长度:', htmlEditor.value.length);
+            console.log('最后记录内容预览:', historyRecords.length > 0 ? historyRecords[0].preview.substring(0, 50) + '...' : '无记录');
+            
+            // 检查localStorage中的数据
+            try {
+                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    console.log('localStorage中存储的记录数:', parsed.length);
+                } else {
+                    console.log('localStorage中无历史记录数据');
+                }
+            } catch (error) {
+                console.log('读取localStorage失败:', error.message);
+            }
+            
+            console.log('=== 状态检查完成 ===');
+            showToast('历史记录状态已输出到控制台', 'info');
         }
         
         // 测试分享功能（可选）
@@ -3608,6 +3647,12 @@
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's') {
                 e.preventDefault();
                 toggleSharePanelModal();
+            }
+            // Ctrl+S 手动保存到历史记录
+            if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
+                e.preventDefault();
+                addToHistory();
+                showToast('已保存到历史记录', 'success');
             }
         });
         
