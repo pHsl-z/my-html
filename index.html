@@ -92,6 +92,9 @@
             align-items: center;
             border-bottom: 1px solid #2a2a2a;
             letter-spacing: 0.5px;
+            /* iOS 安全区域适配 */
+            padding-top: calc(16px + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         }
 
         .panel-title {
@@ -400,8 +403,8 @@
         /* 自定义关闭按钮 */
         .fullscreen-close {
             position: fixed !important;
-            top: 16px !important;
-            right: 16px !important;
+            top: calc(16px + env(safe-area-inset-top, 0px)) !important;
+            right: calc(16px + env(safe-area-inset-right, 0px)) !important;
             width: 32px !important;
             height: 32px !important;
             z-index: 10000 !important;
@@ -441,12 +444,12 @@
             transform: rotate(-45deg) !important;
         }
         
-        /* iPhone关闭按钮触摸优化 */
+        /* iPhone 关闭按钮触摸优化 */
         @media (max-width: 414px) {
             .fullscreen-close {
-                top: 12px !important;
-                right: 12px !important;
-                width: 44px !important; /* iOS推荐触摸目标 */
+                top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+                right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+                width: 44px !important; /* iOS 推荐触摸目标 */
                 height: 44px !important;
                 opacity: 0.5 !important;
                 background: rgba(0, 0, 0, 0.4) !important;
@@ -884,7 +887,7 @@
             
             /* 超小屏幕通知（代码面板内） */
             .editor-panel .toast {
-                top: 52px; /* 更贴近顶部 */
+                top: calc(52px + env(safe-area-inset-top, 0px)); /* 更贴近顶部 */
                 left: 50%; /* 居中 */
                 transform: translate(-50%, -10px);
                 max-width: calc(100% - 16px);
@@ -928,8 +931,8 @@
                 justify-content: flex-end;
                 align-items: center;
                 position: absolute;
-                top: 10px;
-                right: 10px;
+                top: calc(10px + env(safe-area-inset-top, 0px));
+                right: calc(10px + env(safe-area-inset-right, 0px));
                 background: rgba(0,0,0,0.8);
                 border-radius: 8px;
                 left: auto;
@@ -948,8 +951,8 @@
                 justify-content: flex-end;
                 align-items: center;
                 position: absolute;
-                top: 10px;
-                right: 10px;
+                top: calc(10px + env(safe-area-inset-top, 0px));
+                right: calc(10px + env(safe-area-inset-right, 0px));
                 background: rgba(0,0,0,0.8);
                 border-radius: 8px;
                 left: auto;
@@ -975,7 +978,7 @@
         /* 消息提示样式：放在代码面板内，从上向下滑入 */
         .editor-panel .toast {
             position: absolute;
-            top: 64px; /* 位于编辑器面板标题下方，紧贴代码框顶部 */
+            top: calc(64px + env(safe-area-inset-top, 0px)); /* 位于编辑器面板标题下方，紧贴代码框顶部 */
             left: 50%; /* 顶部居中 */
             transform: translate(-50%, -12px); /* 初始比代码框顶部略高一些 */
             background: rgba(30, 30, 30, 0.95);
@@ -1496,35 +1499,8 @@
         .settings-panel.show {
             display: none !important;
         }
-                gap: 6px !important; /* 减少按钮间距 */
-            }
-            
-            .settings-section {
-                margin-bottom: 16px !important; /* 减少段落间距 */
-                padding-bottom: 12px !important;
-            }
-            
-            .setting-item {
-                margin-bottom: 12px !important; /* 减少项目间距 */
-            }
-            
-            .setting-label {
-                font-size: 14px !important; /* 增大字体便于阅读 */
-                margin-bottom: 6px !important;
-            }
-            
-            .setting-description {
-                font-size: 12px !important; /* 增大描述字体 */
-            }
-            
-            .btn-sm {
-                font-size: 14px !important; /* iOS Safari防止缩放 */
-                min-height: 44px !important; /* iOS推荐最小触摸目标 */
-                padding: 8px 12px !important;
-            }
-        }
-        
-        /* iOS Safari特殊优化 */
+
+        /* iOS Safari 特殊优化 */
         @supports (-webkit-touch-callout: none) {
             /* iOS Safari模态框优化 */
             .modal-overlay {
