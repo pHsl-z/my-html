@@ -85,6 +85,7 @@
             background: #1a1a1a;
             color: #ffffff;
             padding: 16px 24px;
+            padding-top: calc(16px + env(safe-area-inset-top, 0px));
             font-weight: 500;
             font-size: 14px;
             display: flex;
@@ -92,6 +93,8 @@
             align-items: center;
             border-bottom: 1px solid #2a2a2a;
             letter-spacing: 0.5px;
+            position: relative;
+            z-index: 100;
         }
 
         .panel-title {
@@ -583,9 +586,12 @@
 
             .panel-header {
                 padding: 10px 12px;
+                padding-top: calc(10px + env(safe-area-inset-top, 0px));
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                position: relative;
+                z-index: 100;
             }
 
             .panel-title {
@@ -739,6 +745,7 @@
             
             .panel-header {
                 padding: 14px 18px;
+                padding-top: calc(14px + env(safe-area-inset-top, 0px));
             }
             
             /* iPad竖屏通知优化（代码面板内） */
@@ -800,11 +807,14 @@
 
         .fullscreen-preview .panel-header {
             padding: 12px 20px;
+            padding-top: calc(12px + env(safe-area-inset-top, 0px));
             background: #2a2a2a;
             border-bottom: 1px solid #3a3a3a;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
+            z-index: 100;
         }
 
         .fullscreen-preview .panel-title {
@@ -839,11 +849,14 @@
         @media (max-width: 480px) {
             .panel-header {
                 padding: 8px 10px;
+                padding-top: calc(8px + env(safe-area-inset-top, 0px));
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 flex-wrap: nowrap;
                 gap: 8px;
+                position: relative;
+                z-index: 100;
             }
 
             .panel-title {
@@ -924,11 +937,12 @@
         @media (max-width: 768px) and (orientation: portrait) {
             .fullscreen-preview .panel-header {
                 padding: 10px 15px;
+                padding-top: calc(10px + env(safe-area-inset-top, 10px));
                 display: flex;
                 justify-content: flex-end;
                 align-items: center;
                 position: absolute;
-                top: 10px;
+                top: calc(10px + env(safe-area-inset-top, 0px));
                 right: 10px;
                 background: rgba(0,0,0,0.8);
                 border-radius: 8px;
