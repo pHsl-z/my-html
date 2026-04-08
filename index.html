@@ -628,7 +628,7 @@
             
             /* 移动设备通知位置（代码面板内，靠左上，下滑） */
             .editor-panel .toast {
-                top: 56px;
+                top: calc(56px + env(safe-area-inset-top, 0px));
                 left: 50%; /* 强制居中 */
                 transform: translate(-50%, -10px);
                 max-width: calc(100% - 20px);
@@ -751,7 +751,7 @@
             /* iPad竖屏通知优化（代码面板内） */
             @media (orientation: portrait) {
                 .editor-panel .toast {
-                    top: 64px;
+                    top: calc(64px + env(safe-area-inset-top, 0px));
                     left: 50%; /* 竖屏也保持居中 */
                     transform: translate(-50%, -10px);
                     max-width: min(280px, calc(100% - 32px));
@@ -768,11 +768,11 @@
             }
         }
 
-        /* iPad横屏特殊优化 */
+        /* iPad Pro横屏特殊优化 */
         @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
             /* iPad Pro横屏通知（代码面板内） */
             .editor-panel .toast {
-                top: 64px;
+                top: calc(64px + env(safe-area-inset-top, 0px));
                 left: 50%; /* 横屏保持居中 */
                 transform: translate(-50%, -10px);
                 max-width: min(350px, calc(100% - 48px));
@@ -783,7 +783,7 @@
         @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
             /* iPad横屏通知（代码面板内） */
             .editor-panel .toast {
-                top: 64px;
+                top: calc(64px + env(safe-area-inset-top, 0px));
                 left: 50%; /* 横屏保持居中 */
                 transform: translate(-50%, -10px);
                 max-width: min(320px, calc(100% - 40px));
@@ -897,7 +897,7 @@
             
             /* 超小屏幕通知（代码面板内） */
             .editor-panel .toast {
-                top: 52px; /* 更贴近顶部 */
+                top: calc(52px + env(safe-area-inset-top, 0px)); /* 更贴近顶部 */
                 left: 50%; /* 居中 */
                 transform: translate(-50%, -10px);
                 max-width: calc(100% - 16px);
@@ -926,7 +926,7 @@
             
             /* iPad横屏通知优化 - 避免遮挡顶部按钮（代码面板内） */
             .editor-panel .toast {
-                top: 70px; /* 增加顶部距离，避免遮挡面板标题 */
+                top: calc(70px + env(safe-area-inset-top, 0px)); /* 增加顶部距离，避免遮挡面板标题 */
                 left: 50%;
                 transform: translate(-50%, -10px);
                 max-width: 300px;
