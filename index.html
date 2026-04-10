@@ -1730,6 +1730,10 @@
                                 <span class="icon">⚙️</span>
                                 设置
                             </button>
+                            <button class="btn btn-success dropdown-item" onclick="downloadHTML()" id="exportHtmlBtn">
+                                <span class="icon">💾</span>
+                                导出HTML
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1742,9 +1746,9 @@
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-                    <button class="btn btn-primary" onclick="downloadHTML()" id="downloadBtn">
-                        <span class="icon">💾</span>
-                        下载
+                    <button class="btn btn-primary" onclick="exportToPdf()" id="downloadBtn">
+                        <span class="icon">📄</span>
+                        导出
                     </button>
                 </div>
             </div>
@@ -2420,6 +2424,7 @@
                             <button class="btn btn-sm btn-secondary" onclick="shareToCodePen()" style="flex: 1; justify-content: center;">CodePen</button>
                             <button class="btn btn-sm btn-secondary" onclick="downloadAsFile()" style="flex: 1; justify-content: center;">下载文件</button>
                             <button class="btn btn-sm btn-secondary" onclick="copyAsDataUrl()" style="flex: 1; justify-content: center;">Data URL</button>
+                            <button class="btn btn-sm btn-success" onclick="exportToPdf()" style="flex: 1; justify-content: center;">📄 导出PDF</button>
                         </div>
                     </div>
                     <div style="background: #1a1a1a; border-radius: 8px; padding: 16px; border: 1px solid #2a2a2a;">
@@ -3286,6 +3291,46 @@
             document.body.appendChild(modal);
         }
 
+        function exportToPdf() {
+            const content = htmlEditor.value.trim();
+            if (!content) {
+                showToast('请先输入内容', 'error');
+                return;
+            }
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+                    showToast('预览内容为空，请先输入内容', 'error');
+                    return;
+                }
+
+                const pdfFrame = document.createElement('iframe');
+                pdfFrame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:794px;height:1123px;';
+                document.body.appendChild(pdfFrame);
+
+                const pdfDoc = pdfFrame.contentDocument;
+                pdfDoc.open();
+                pdfDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:15mm 20mm}body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{max-width:100%!important;page-break-inside:avoid}table{page-break-inside:avoid}h1,h2,h3,h4,h5,h6{page-break-after:avoid}p{orphans:3;widows:3}</style></head><body>' + previewDoc.body.innerHTML + '</body></html>');
+                pdfDoc.close();
+
+                setTimeout(() => {
+                    try {
+                        pdfFrame.contentWindow.focus();
+                        pdfFrame.contentWindow.print();
+                        showToast('正在生成PDF，请在打印对话框中选择"另存为PDF"', 'success');
+                    } catch (e) {
+                        showToast('导出失败，请尝试使用打印功能', 'error');
+                    }
+                    setTimeout(() => {
+                        try { document.body.removeChild(pdfFrame); } catch(e) {}
+                    }, 5000);
+                }, 500);
+            } catch (error) {
+                printPreview();
+                showToast('请使用打印功能另存为PDF', 'info');
+            }
+        }
+
         // 打印预览函数 - 优化iOS Safari兼容性
         function printPreview() {
             try {
@@ -4074,7 +4119,7 @@
                         } else if (this.id === 'pasteBtn') {
                             pasteFromClipboard();
                         } else if (this.id === 'downloadBtn') {
-                            downloadHTML();
+                            exportToPdf();
                         } else if (this.id === 'fullscreenBtn') {
                             toggleFullscreenPreview();
                         } else if (this.id === 'printBtn') {
