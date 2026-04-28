@@ -4139,7 +4139,7 @@
         }
         
         // iOS Safari/Edge 兼容性：增强触摸事件处理
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        if ('ontouchstart' in window && /iPad|iPhone|iPod|Android/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
             [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
                 btn.addEventListener('touchstart', function(e) {
