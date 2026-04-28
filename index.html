@@ -2262,31 +2262,34 @@
         }
 
         function clearEditor() {
-            if (confirm('确定要清空编辑器吗？')) {
-                // iOS Safari/Edge浏览器兼容性处理
-                // 初始化编辑器 - 修改为清空状态
-                htmlEditor.value = '';
-                updateCharCount();
-                
-                // 确保预览区域也是空的
-                updatePreview();
-                
-                // 延迟再次清空确保完全初始化
-                setTimeout(function() {
-                    updatePreview();
-                    updateCharCount();
-                }, 100);
-                
-                setTimeout(function() {
-                    updatePreview();
-                    updateCharCount();
-                }, 200);
-                
-                // 清除本地存储
-                localStorage.removeItem('htmlEditorContent');
-                
-                showToast('编辑器已清空', 'success');
+            if (htmlEditor.value.trim() === '') {
+                showToast('编辑器已经是空的', 'info');
+                return;
             }
+            const confirmContent = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">🗑️</div>
+                    <p style="color: #e6e6e6; font-size: 16px; margin-bottom: 24px;">确定要清空编辑器吗？此操作不可撤销。</p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="closeModal()" style="min-width: 80px;">取消</button>
+                        <button class="btn btn-danger" onclick="doClearEditor()" style="min-width: 80px; background: #dc3545; border-color: #dc3545;">确认清空</button>
+                    </div>
+                </div>
+            `;
+            showModal('清空确认', confirmContent);
+        }
+
+        function doClearEditor() {
+            closeModal();
+            htmlEditor.value = '';
+            updateCharCount();
+            updatePreview();
+            setTimeout(function() {
+                updatePreview();
+                updateCharCount();
+            }, 100);
+            localStorage.removeItem('htmlEditorContent');
+            showToast('编辑器已清空', 'success');
         }
 
         function updateCharCount() {
@@ -2568,13 +2571,28 @@
         }
          
          function deleteModalHistoryItem(index) {
-            if (confirm('确定要删除这条历史记录吗？')) {
-                historyRecords.splice(index, 1);
-                saveHistory();
-                const searchInput = document.getElementById('historySearchInput');
-                renderModalHistory(searchInput ? searchInput.value : '');
-                showToast('历史记录已删除', 'success');
+            if (historyRecords[index]) {
+                const confirmContent = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <p style="color: #e6e6e6; font-size: 16px; margin-bottom: 24px;">确定要删除这条历史记录吗？</p>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button class="btn btn-secondary" onclick="closeModal()" style="min-width: 80px;">取消</button>
+                            <button class="btn btn-danger" onclick="doDeleteHistoryItem(${index})" style="min-width: 80px; background: #dc3545; border-color: #dc3545;">确认删除</button>
+                        </div>
+                    </div>
+                `;
+                showModal('删除确认', confirmContent);
             }
+        }
+
+        function doDeleteHistoryItem(index) {
+            closeModal();
+            historyRecords.splice(index, 1);
+            saveHistory();
+            const searchInput = document.getElementById('historySearchInput');
+            renderModalHistory(searchInput ? searchInput.value : '');
+            showToast('历史记录已删除', 'success');
         }
          
          function copyModalShareLink() {
@@ -2710,12 +2728,25 @@
          }
 
          function clearShareHistory() {
-             if (confirm('确定要清空所有分享历史吗？')) {
-                 localStorage.removeItem('shareHistory');
-                 refreshShareHistoryModal();
-                 showToast('分享历史已清空', 'success');
-             }
-         }
+            const confirmContent = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                    <p style="color: #e6e6e6; font-size: 16px; margin-bottom: 24px;">确定要清空所有分享历史吗？</p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="closeModal()" style="min-width: 80px;">取消</button>
+                        <button class="btn btn-danger" onclick="doClearShareHistory()" style="min-width: 80px; background: #dc3545; border-color: #dc3545;">确认清空</button>
+                    </div>
+                </div>
+            `;
+            showModal('清空确认', confirmContent);
+        }
+
+        function doClearShareHistory() {
+            closeModal();
+            localStorage.removeItem('shareHistory');
+            refreshShareHistoryModal();
+            showToast('分享历史已清空', 'success');
+        }
          
          // 弹窗设置功能函数
          function saveModalShareBaseUrl() {
@@ -2986,12 +3017,29 @@
         
         // 清空所有历史记录
         function clearHistory() {
-            if (confirm('确定要清空所有历史记录吗？')) {
-                historyRecords = [];
-                localStorage.removeItem(HISTORY_STORAGE_KEY);
-                renderModalHistory();
-                showToast('历史记录已清空', 'success');
+            if (historyRecords.length === 0) {
+                showToast('没有可清空的历史记录', 'info');
+                return;
             }
+            const confirmContent = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                    <p style="color: #e6e6e6; font-size: 16px; margin-bottom: 24px;">确定要清空所有历史记录吗？此操作不可撤销。</p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="closeModal()" style="min-width: 80px;">取消</button>
+                        <button class="btn btn-danger" onclick="doClearHistory()" style="min-width: 80px; background: #dc3545; border-color: #dc3545;">确认清空</button>
+                    </div>
+                </div>
+            `;
+            showModal('清空确认', confirmContent);
+        }
+
+        function doClearHistory() {
+            closeModal();
+            historyRecords = [];
+            localStorage.removeItem(HISTORY_STORAGE_KEY);
+            renderModalHistory();
+            showToast('历史记录已清空', 'success');
         }
 
         function exportHistory() {
@@ -4139,7 +4187,7 @@
         }
         
         // iOS Safari/Edge 兼容性：增强触摸事件处理
-        if ('ontouchstart' in window && /iPad|iPhone|iPod|Android/.test(navigator.userAgent)) {
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             // 为所有按钮添加触摸事件支持
             [clearBtn, pasteBtn, downloadBtn, fullscreenBtn, printBtn, openBtn].forEach(function(btn) {
                 btn.addEventListener('touchstart', function(e) {
