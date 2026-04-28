@@ -2904,19 +2904,16 @@
 
         // 快捷键支持
         htmlEditor.addEventListener('keydown', function(e) {
-            // Ctrl+S 保存
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                downloadHTML();
+                addToHistory();
+                showToast('已保存到历史记录', 'success');
             }
-            // Ctrl+R 刷新预览
             if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
                 refreshPreview();
             }
-            // Ctrl+V 粘贴（增强功能） - 兼容各种设备
             if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-                // 让浏览器默认粘贴行为发生，然后更新预览
                 setTimeout(() => {
                     updatePreview();
                     updateCharCount();
@@ -2968,8 +2965,7 @@
         
         // 关闭所有面板 - 历史记录面板已改为弹窗，不再需要
         function closeAllPanels() {
-            settingsPanel.classList.remove('show');
-            // 不再关闭sharePanel和历史记录面板，因为现在都使用弹窗
+            if (settingsPanel) settingsPanel.classList.remove('show');
         }
         
         // 显示历史记录列表函数已移除，现在使用模态窗口版本
@@ -3061,16 +3057,10 @@
             return div.innerHTML;
         }
         
-        // 页面可见性变化时保存 - 移动设备优化
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
             }
-        });
-        
-        // 页面卸载前保存
-        window.addEventListener('beforeunload', function() {
-            localStorage.setItem('htmlEditorContent', htmlEditor.value);
         });
         
         // 移动设备优化：处理页面切换和后台运行
@@ -3117,12 +3107,6 @@
 
         // 初始化视口高度
         updateViewportHeight();
-        
-        // iPad检测函数
-        function isIOS() {
-            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        }
         
         // iOS设置面板显示优化
         function optimizeSettingsPanelForIOS() {
@@ -3290,7 +3274,7 @@
                 </div>
                 
                 <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="document.querySelector('.modal').remove()" style="
+                    <button onclick="this.closest('.modal').remove()" style="
                         background: #007aff;
                         color: white;
                         border: none;
@@ -3379,8 +3363,24 @@
                         position += pageHeight;
                     }
 
-                    pdf.save(filename);
-                    showToast('PDF导出成功', 'success');
+                    const pdfBlob = pdf.output('blob');
+
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], filename, { type: 'application/pdf' })] })) {
+                        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+                        navigator.share({
+                            files: [file],
+                            title: title
+                        }).then(() => {
+                            showToast('PDF导出成功', 'success');
+                        }).catch(err => {
+                            if (err.name !== 'AbortError') {
+                                pdf.save(filename);
+                            }
+                        });
+                    } else {
+                        pdf.save(filename);
+                        showToast('PDF导出成功', 'success');
+                    }
                     try { document.body.removeChild(container); } catch(e) {}
                 }).catch(err => {
                     showToast('PDF生成失败', 'error');
@@ -3567,7 +3567,6 @@
             }, 100);
         }
 
-        // iOS兼容性检测和错误处理
         function isIOS() {
             return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -3765,22 +3764,14 @@
         // 测试分享功能（可选）
 
         
-        // 快捷键支持：Ctrl+H 打开历史记录
         htmlEditor.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
                 e.preventDefault();
                 toggleHistoryPanel();
             }
-            // Ctrl+Shift+S 打开分享面板
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 toggleSharePanelModal();
-            }
-            // Ctrl+S 手动保存到历史记录
-            if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
-                e.preventDefault();
-                addToHistory();
-                showToast('已保存到历史记录', 'success');
             }
         });
         
@@ -4020,28 +4011,25 @@
                 if (stored) {
                     const settings = JSON.parse(stored);
                     
-                    // 应用设置
                     if (settings.shareBaseUrl) {
                         shareBaseUrl = settings.shareBaseUrl;
-                        shareBaseUrlInput.value = settings.shareBaseUrl;
+                        if (shareBaseUrlInput) shareBaseUrlInput.value = settings.shareBaseUrl;
                     }
                     
                     if (settings.autoSaveInterval) {
                         autoSaveInterval = settings.autoSaveInterval;
-                        autoSaveIntervalInput.value = settings.autoSaveInterval;
+                        if (autoSaveIntervalInput) autoSaveIntervalInput.value = settings.autoSaveInterval;
                     }
                     
                     if (settings.maxHistoryRecords) {
                         MAX_HISTORY_RECORDS = settings.maxHistoryRecords;
-                        maxHistoryRecordsInput.value = settings.maxHistoryRecords;
+                        if (maxHistoryRecordsInput) maxHistoryRecordsInput.value = settings.maxHistoryRecords;
                     }
                 }
             } catch (error) {
-                // 只在开发模式下显示设置加载错误
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     console.error('加载设置失败:', error);
                 }
-                showToast('加载设置失败', 'error');
             }
         }
         
@@ -4115,13 +4103,6 @@
         // 自动生成在线可访问链接（使用新的分享管理器）
 
         
-        
-        // 工具函数
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
         
         function formatDate(timestamp) {
             const date = new Date(timestamp);
