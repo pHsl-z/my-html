@@ -2804,18 +2804,41 @@
         // 从剪贴板粘贴
         async function pasteFromClipboard() {
             try {
-                const text = await navigator.clipboard.readText();
-                htmlEditor.value = text;
-                htmlEditor.focus();
-                updatePreview();
-                showToast('已从剪贴板粘贴', 'success');
-                
-                // 添加按钮动画效果
-                pasteBtn.classList.add('pasting');
-                setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    htmlEditor.value = text;
+                    htmlEditor.focus();
+                    updatePreview();
+                    updateCharCount();
+                    showToast('已从剪贴板粘贴', 'success');
+                    pasteBtn.classList.add('pasting');
+                    setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                    return;
+                }
             } catch (err) {
-                showToast('无法访问剪贴板，请手动粘贴', 'error');
+                // Clipboard API 失败，尝试回退方案
             }
+
+            try {
+                htmlEditor.focus();
+                const success = document.execCommand('paste');
+                if (success) {
+                    setTimeout(() => {
+                        updatePreview();
+                        updateCharCount();
+                    }, 100);
+                    showToast('已从剪贴板粘贴', 'success');
+                    pasteBtn.classList.add('pasting');
+                    setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                    return;
+                }
+            } catch (err) {
+                // execCommand paste 也失败
+            }
+
+            // 最终回退：提示用户手动粘贴
+            htmlEditor.focus();
+            showToast('请长按编辑器区域，选择"粘贴"', 'info');
         }
 
         // Toast 消息提示
@@ -4145,26 +4168,28 @@
                 });
                 
                 btn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
                     this.style.opacity = '';
                     this.style.transform = '';
                     
-                    // 延迟执行点击功能，确保触摸事件完全处理
-                    setTimeout(() => {
-                        if (this.id === 'clearBtn') {
-                            clearEditor();
-                        } else if (this.id === 'pasteBtn') {
-                            pasteFromClipboard();
-                        } else if (this.id === 'downloadBtn') {
-                            exportToPdf();
-                        } else if (this.id === 'fullscreenBtn') {
-                            toggleFullscreenPreview();
-                        } else if (this.id === 'printBtn') {
-                            printPreview();
-                        } else if (this.id === 'openBtn') {
-                            openLocalFile();
-                        }
-                    }, 50);
+                    if (this.id === 'pasteBtn') {
+                        e.preventDefault();
+                        pasteFromClipboard();
+                    } else {
+                        e.preventDefault();
+                        setTimeout(() => {
+                            if (this.id === 'clearBtn') {
+                                clearEditor();
+                            } else if (this.id === 'downloadBtn') {
+                                exportToPdf();
+                            } else if (this.id === 'fullscreenBtn') {
+                                toggleFullscreenPreview();
+                            } else if (this.id === 'printBtn') {
+                                printPreview();
+                            } else if (this.id === 'openBtn') {
+                                openLocalFile();
+                            }
+                        }, 50);
+                    }
                 });
                 
                 btn.addEventListener('touchcancel', function(e) {
