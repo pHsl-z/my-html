@@ -3475,7 +3475,8 @@
                 
                 const previewStyles = previewDoc.querySelectorAll('style');
                 const styleHtml = Array.from(previewStyles).map(s => s.outerHTML).join('');
-                container.innerHTML = styleHtml + previewDoc.body.innerHTML;
+                const forceWhiteBg = '<style>html,body{background:#fff!important;background-color:#fff!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style>';
+                container.innerHTML = styleHtml + forceWhiteBg + previewDoc.body.innerHTML;
                 document.body.appendChild(container);
 
                 const title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || 'export';
