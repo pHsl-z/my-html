@@ -3471,44 +3471,13 @@
                 
                 const container = document.createElement('div');
                 const containerWidthPx = Math.round(contentWidthMm * 3.7795275591);
-                container.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
+                container.setAttribute('data-pdf-container', 'true');
+                container.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + containerWidthPx + 'px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
                 
                 const previewStyles = previewDoc.querySelectorAll('style');
                 const styleHtml = Array.from(previewStyles).map(s => s.outerHTML).join('');
                 container.innerHTML = styleHtml + previewDoc.body.innerHTML;
                 document.body.appendChild(container);
-
-                container.querySelectorAll('*').forEach(function(el) {
-                    const computed = window.getComputedStyle(el);
-                    const bg = computed.backgroundColor;
-                    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                        const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                        if (match) {
-                            const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
-                            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                            if (lum < 0.5) {
-                                el.style.setProperty('background', '#ffffff', 'important');
-                                el.style.setProperty('background-color', '#ffffff', 'important');
-                                el.style.setProperty('background-image', 'none', 'important');
-                            }
-                        }
-                    }
-                    const bgImage = computed.backgroundImage;
-                    if (bgImage && bgImage !== 'none') {
-                        el.style.setProperty('background-image', 'none', 'important');
-                    }
-                    const color = computed.color;
-                    if (color) {
-                        const cMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                        if (cMatch) {
-                            const cr = parseInt(cMatch[1]), cg = parseInt(cMatch[2]), cb = parseInt(cMatch[3]);
-                            const cLum = (0.299 * cr + 0.587 * cg + 0.114 * cb) / 255;
-                            if (cLum > 0.8) {
-                                el.style.setProperty('color', '#333333', 'important');
-                            }
-                        }
-                    }
-                });
 
                 const title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || 'export';
                 const filename = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') + '.pdf';
@@ -3519,7 +3488,47 @@
                     logging: false,
                     backgroundColor: '#ffffff',
                     width: containerWidthPx,
-                    windowWidth: containerWidthPx
+                    windowWidth: containerWidthPx,
+                    onclone: function(clonedDoc) {
+                        var headStyles = clonedDoc.querySelectorAll('head style, head link[rel="stylesheet"]');
+                        headStyles.forEach(function(s) { s.remove(); });
+
+                        var clonedContainer = clonedDoc.querySelector('[data-pdf-container]');
+                        if (clonedContainer) {
+                            clonedContainer.style.setProperty('background', '#ffffff', 'important');
+                            clonedContainer.style.setProperty('background-color', '#ffffff', 'important');
+                            
+                            clonedContainer.querySelectorAll('*').forEach(function(el) {
+                                el.style.setProperty('background', '#ffffff', 'important');
+                                el.style.setProperty('background-color', '#ffffff', 'important');
+                                el.style.setProperty('background-image', 'none', 'important');
+
+                                var inlineColor = el.style.color;
+                                if (inlineColor) {
+                                    var cr = -1, cg = -1, cb = -1;
+                                    var rgbM = inlineColor.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                                    if (rgbM) {
+                                        cr = parseInt(rgbM[1]); cg = parseInt(rgbM[2]); cb = parseInt(rgbM[3]);
+                                    } else {
+                                        var hexM = inlineColor.match(/^#([0-9a-f]{3,6})$/i);
+                                        if (hexM) {
+                                            var hx = hexM[1];
+                                            if (hx.length === 3) hx = hx[0]+hx[0]+hx[1]+hx[1]+hx[2]+hx[2];
+                                            cr = parseInt(hx.substring(0,2), 16);
+                                            cg = parseInt(hx.substring(2,4), 16);
+                                            cb = parseInt(hx.substring(4,6), 16);
+                                        }
+                                    }
+                                    if (cr >= 0) {
+                                        var cLum = (0.299 * cr + 0.587 * cg + 0.114 * cb) / 255;
+                                        if (cLum > 0.8) {
+                                            el.style.setProperty('color', '#333333', 'important');
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }).then(canvas => {
                     const { jsPDF } = window.jspdf;
                     const imgWidthMm = contentWidthMm;
