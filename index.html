@@ -1806,6 +1806,18 @@
         // 自动保存相关变量
         let autoSaveInterval = 10;
         const SETTINGS_STORAGE_KEY = 'htmlEditorSettings';
+        
+        let pdfPageSize = 'a4';
+        let pdfOrientation = 'p';
+        let pdfMargin = 10;
+        
+        const PDF_PAGE_SIZES = {
+            a4: { width: 210, height: 297 },
+            a3: { width: 297, height: 420 },
+            a5: { width: 148, height: 210 },
+            letter: { width: 215.9, height: 279.4 },
+            legal: { width: 215.9, height: 355.6 }
+        };
 
         // 默认HTML模板 - 针对移动设备优化
         const defaultHTML = `<!DOCTYPE html>
@@ -2517,6 +2529,43 @@
                         </div>
                     </div>
                     
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">📄 PDF导出设置</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalPdfPageSize" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">纸张大小：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalPdfPageSize" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="a4">A4 (210×297mm)</option>
+                                    <option value="a3">A3 (297×420mm)</option>
+                                    <option value="a5">A5 (148×210mm)</option>
+                                    <option value="letter">Letter (216×279mm)</option>
+                                    <option value="legal">Legal (216×356mm)</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalPdfPageSize()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置PDF导出的纸张大小，默认A4。</p>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalPdfOrientation" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">纸张方向：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalPdfOrientation" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="p">纵向</option>
+                                    <option value="l">横向</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalPdfOrientation()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置PDF导出的纸张方向，默认纵向。</p>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalPdfMargin" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">页边距（mm）：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="number" id="modalPdfMargin" class="setting-input" min="0" max="50" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalPdfMargin()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置PDF页边距，0表示无边距，默认10mm。</p>
+                        </div>
+                    </div>
+                    
                     <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
                         <button class="btn btn-primary" onclick="applyModalAllSettings()">应用所有设置</button>
                         <button class="btn btn-secondary" onclick="loadModalSettings()">重新加载设置</button>
@@ -2802,7 +2851,6 @@
          
          function loadModalSettings() {
              loadSettings();
-             // 同步面板中的设置值到弹窗
              const shareBaseUrl = document.getElementById('shareBaseUrl');
              const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
              if (shareBaseUrl && modalShareBaseUrl) {
@@ -2820,6 +2868,15 @@
              if (maxHistoryRecords && modalMaxHistoryRecords) {
                  modalMaxHistoryRecords.value = maxHistoryRecords.value;
              }
+             
+             const modalPdfPageSize = document.getElementById('modalPdfPageSize');
+             if (modalPdfPageSize) modalPdfPageSize.value = pdfPageSize;
+             
+             const modalPdfOrientation = document.getElementById('modalPdfOrientation');
+             if (modalPdfOrientation) modalPdfOrientation.value = pdfOrientation;
+             
+             const modalPdfMargin = document.getElementById('modalPdfMargin');
+             if (modalPdfMargin) modalPdfMargin.value = pdfMargin;
          }
         
         // 关闭下拉菜单
@@ -3344,9 +3401,22 @@
 
                 showToast('正在生成PDF...', 'info');
 
+                const pageSize = PDF_PAGE_SIZES[pdfPageSize] || PDF_PAGE_SIZES.a4;
+                const orientation = pdfOrientation;
+                const margin = pdfMargin;
+                
+                const pageWidthMm = orientation === 'l' ? pageSize.height : pageSize.width;
+                const pageHeightMm = orientation === 'l' ? pageSize.width : pageSize.height;
+                const contentWidthMm = pageWidthMm - margin * 2;
+                const contentHeightMm = pageHeightMm - margin * 2;
+                
                 const container = document.createElement('div');
-                container.style.cssText = 'position:fixed;left:0;top:0;width:794px;background:#fff;padding:40px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
-                container.innerHTML = previewDoc.body.innerHTML;
+                const containerWidthPx = Math.round(contentWidthMm * 3.7795275591);
+                container.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
+                
+                const previewStyles = previewDoc.querySelectorAll('style');
+                const styleHtml = Array.from(previewStyles).map(s => s.outerHTML).join('');
+                container.innerHTML = styleHtml + previewDoc.body.innerHTML;
                 document.body.appendChild(container);
 
                 const title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || 'export';
@@ -3357,34 +3427,35 @@
                     useCORS: true,
                     logging: false,
                     backgroundColor: '#ffffff',
-                    width: 794,
-                    windowWidth: 794
+                    width: containerWidthPx,
+                    windowWidth: containerWidthPx
                 }).then(canvas => {
                     const { jsPDF } = window.jspdf;
-                    const imgWidth = 210;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    const pageHeight = 297;
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    let position = 0;
-                    let remainingHeight = imgHeight;
+                    const imgWidthMm = contentWidthMm;
+                    const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+                    const pdf = new jsPDF(orientation, 'mm', pdfPageSize);
+                    let positionMm = 0;
+                    let remainingHeightMm = imgHeightMm;
 
-                    while (remainingHeight > 0) {
-                        const sourceY = position * (canvas.width / imgWidth);
-                        const sourceHeight = pageHeight * (canvas.width / imgWidth);
+                    while (remainingHeightMm > 0) {
+                        const sourceY = positionMm * (canvas.width / imgWidthMm);
+                        const sourceHeight = contentHeightMm * (canvas.width / imgWidthMm);
                         const pageCanvas = document.createElement('canvas');
                         pageCanvas.width = canvas.width;
-                        pageCanvas.height = Math.min(sourceHeight, canvas.height - sourceY);
+                        pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
+                        if (pageCanvas.height <= 0) break;
                         const ctx = pageCanvas.getContext('2d');
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-                        ctx.drawImage(canvas, 0, sourceY, pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+                        ctx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
 
                         const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-                        if (position > 0) pdf.addPage();
-                        pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, (pageCanvas.height * imgWidth) / canvas.width);
+                        if (positionMm > 0) pdf.addPage();
+                        const pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+                        pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidthMm, pageImgHeightMm);
 
-                        remainingHeight -= pageHeight;
-                        position += pageHeight;
+                        remainingHeightMm -= contentHeightMm;
+                        positionMm += contentHeightMm;
                     }
 
                     const pdfBlob = pdf.output('blob');
@@ -4056,6 +4127,18 @@
                         MAX_HISTORY_RECORDS = settings.maxHistoryRecords;
                         if (maxHistoryRecordsInput) maxHistoryRecordsInput.value = settings.maxHistoryRecords;
                     }
+                    
+                    if (settings.pdfPageSize) {
+                        pdfPageSize = settings.pdfPageSize;
+                    }
+                    
+                    if (settings.pdfOrientation) {
+                        pdfOrientation = settings.pdfOrientation;
+                    }
+                    
+                    if (settings.pdfMargin !== undefined) {
+                        pdfMargin = settings.pdfMargin;
+                    }
                 }
             } catch (error) {
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -4129,6 +4212,32 @@
             saveAutoSaveInterval();
             saveMaxHistoryRecords();
             showToast('所有设置已应用', 'success');
+        }
+        
+        function saveModalPdfPageSize() {
+            const select = document.getElementById('modalPdfPageSize');
+            if (!select) return;
+            pdfPageSize = select.value;
+            saveSettings({ pdfPageSize: pdfPageSize });
+        }
+        
+        function saveModalPdfOrientation() {
+            const select = document.getElementById('modalPdfOrientation');
+            if (!select) return;
+            pdfOrientation = select.value;
+            saveSettings({ pdfOrientation: pdfOrientation });
+        }
+        
+        function saveModalPdfMargin() {
+            const input = document.getElementById('modalPdfMargin');
+            if (!input) return;
+            const margin = parseInt(input.value);
+            if (isNaN(margin) || margin < 0 || margin > 50) {
+                showToast('请输入0-50之间的数值', 'error');
+                return;
+            }
+            pdfMargin = margin;
+            saveSettings({ pdfMargin: margin });
         }
         
         // 自动生成在线可访问链接（使用新的分享管理器）
