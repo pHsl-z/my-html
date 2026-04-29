@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HTML → PDF 方案对比测试</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface2: #242424;
+            --border: #333;
+            --text: #e6e6e6;
+            --text2: #999;
+            --accent: #4a9eff;
+            --accent2: #3d8bfd;
+            --success: #28a745;
+            --warning: #ffc107;
+            --error: #dc3545;
+            --radius: 10px;
+        }
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+        }
+        .header {
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+        .header .badge {
+            font-size: 11px;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .editor-panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            min-width: 0;
+        }
+        .preview-panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .panel-header {
+            padding: 8px 12px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .panel-header .label { color: var(--text); font-weight: 600; }
+        #htmlEditor {
+            flex: 1;
+            width: 100%;
+            background: #111;
+            color: #d4d4d4;
+            border: none;
+            padding: 12px;
+            font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            tab-size: 2;
+        }
+        #previewFrame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #fff;
+        }
+        .methods-bar {
+            padding: 10px 12px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .methods-bar h3 {
+            font-size: 12px;
+            color: var(--text2);
+            margin-bottom: 8px;
+        }
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .method-btn {
+            padding: 8px 6px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            line-height: 1.3;
+        }
+        .method-btn:hover {
+            border-color: var(--accent);
+            background: rgba(74, 158, 255, 0.1);
+        }
+        .method-btn:active {
+            transform: scale(0.97);
+        }
+        .method-btn .num {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-size: 10px;
+            margin-right: 4px;
+        }
+        .method-btn .desc {
+            display: block;
+            font-size: 9px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
+        .status-bar {
+            padding: 6px 12px;
+            background: var(--surface2);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .status-bar .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: #fff;
+            animation: toastIn 0.3s ease;
+            max-width: 320px;
+            word-break: break-word;
+        }
+        .toast.info { background: var(--accent2); }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+        .toast.warning { background: #e67e22; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sample-btns {
+            display: flex;
+            gap: 4px;
+        }
+        .sample-btn {
+            padding: 3px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text2);
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .sample-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .info-panel {
+            padding: 8px 12px;
+            background: rgba(74, 158, 255, 0.05);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text2);
+            line-height: 1.5;
+            flex-shrink: 0;
+        }
+        .info-panel strong { color: var(--accent); }
+        @media (max-width: 768px) {
+            .main { flex-direction: column; }
+            .editor-panel, .preview-panel { width: 100%; height: 50%; }
+            .editor-panel { border-right: none; border-bottom: 1px solid var(--border); }
+            .methods-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1>HTML → PDF 方案对比测试</h1>
+        <span class="badge">6 种方案</span>
+    </div>
+
+    <div class="info-panel">
+        <strong>测试说明：</strong>输入 HTML 代码（含深色背景），点击下方方案按钮导出 PDF，对比各方案对深色背景的处理效果。推荐先用"深色背景"示例测试。
+    </div>
+
+    <div class="main">
+        <div class="editor-panel">
+            <div class="panel-header">
+                <span class="label">HTML 编辑器</span>
+                <div class="sample-btns">
+                    <button class="sample-btn" onclick="loadSample('dark')">深色背景</button>
+                    <button class="sample-btn" onclick="loadSample('light')">浅色背景</button>
+                    <button class="sample-btn" onclick="loadSample('complex')">复杂布局</button>
+                    <button class="sample-btn" onclick="loadSample('gradient')">渐变背景</button>
+                </div>
+            </div>
+            <textarea id="htmlEditor" spellcheck="false"></textarea>
+        </div>
+
+        <div class="preview-panel">
+            <div class="panel-header">
+                <span class="label">实时预览</span>
+                <span id="charCount" style="font-size:10px;">0 字符</span>
+            </div>
+            <iframe id="previewFrame"></iframe>
+            <div class="methods-bar">
+                <h3>选择导出方案：</h3>
+                <div class="methods-grid">
+                    <button class="method-btn" onclick="exportMethod1()">
+                        <span class="num">1</span>jsPDF+html2canvas
+                        <span class="desc">截图式·当前方案</span>
+                    </button>
+                    <button class="method-btn" onclick="exportMethod2()">
+                        <span class="num">2</span>html2pdf.js
+                        <span class="desc">封装库·分页优化</span>
+                    </button>
+                    <button class="method-btn" onclick="exportMethod3()">
+                        <span class="num">3</span>pdf-lib+Canvas
+                        <span class="desc">底层控制·白底强制</span>
+                    </button>
+                    <button class="method-btn" onclick="exportMethod4()">
+                        <span class="num">4</span>window.print()
+                        <span class="desc">浏览器原生·打印</span>
+                    </button>
+                    <button class="method-btn" onclick="exportMethod5()">
+                        <span class="num">5</span>隔离iframe渲染
+                        <span class="desc">iframe隔离·白底注入</span>
+                    </button>
+                    <button class="method-btn" onclick="exportMethod6()">
+                        <span class="num">6</span>SVG中转方案
+                        <span class="desc">DOM→SVG→Canvas→PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span class="status-dot"></span>就绪</span>
+        <span id="statusText">选择方案后点击导出</span>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const htmlEditor = document.getElementById('htmlEditor');
+const previewFrame = document.getElementById('previewFrame');
+const charCount = document.getElementById('charCount');
+const statusText = document.getElementById('statusText');
+
+const SAMPLES = {
+    dark: `<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #e6e6e6;
+    font-family: -apple-system, sans-serif;
+    padding: 40px;
+    min-height: 100vh;
+  }
+  h1 { color: #4a9eff; margin-bottom: 20px; font-size: 28px; }
+  p { line-height: 1.8; margin-bottom: 16px; color: #ccc; }
+  .card {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid #2a3a5e;
+  }
+  .card h2 { color: #7ec8e3; margin-bottom: 12px; }
+  .highlight { color: #ffc107; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>深色主题页面</h1>
+  <div class="card">
+    <h2>关于此测试</h2>
+    <p>这是一个使用<span class="highlight">深色背景</span>的 HTML 页面，用于测试 PDF 导出时背景色的处理。</p>
+    <p>如果导出的 PDF 背景是黑色的，说明该方案未能正确处理深色背景。</p>
+  </div>
+  <div class="card">
+    <h2>预期效果</h2>
+    <p>理想的 PDF 应该是白色背景 + 深色文字，方便打印和阅读。</p>
+    <p>文字内容应当完整保留，排版不乱。</p>
+  </div>
+</body>
+</html>`,
+
+    light: `<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    background: #ffffff;
+    color: #333;
+    font-family: Georgia, serif;
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+  p { line-height: 1.8; margin: 16px 0; }
+  blockquote {
+    border-left: 4px solid #3498db;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    margin: 20px 0;
+    color: #555;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+  <h1>浅色主题页面</h1>
+  <p>这是一个标准的浅色背景页面，文字为深色。这种页面导出 PDF 通常没有问题。</p>
+  <blockquote>引用文本：好的 PDF 导出方案应该同时处理好浅色和深色背景的页面。</blockquote>
+  <p>这段文字用于验证 PDF 导出的基本功能是否正常。</p>
+</body>
+</html>`,
+
+    complex: `<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, sans-serif;
+    padding: 30px;
+  }
+  .header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    color: white;
+  }
+  .header h1 { font-size: 24px; margin-bottom: 8px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .grid .item {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .grid .item h3 { color: #58a6ff; margin-bottom: 8px; }
+  .grid .item p { font-size: 14px; line-height: 1.6; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #161b22;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th { background: #21262d; color: #f0f6fc; padding: 12px; text-align: left; }
+  td { padding: 10px 12px; border-top: 1px solid #30363d; }
+  .footer {
+    margin-top: 24px;
+    padding: 16px;
+    background: #161b22;
+    border-radius: 8px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>复杂布局测试</h1>
+    <p>包含渐变、网格、表格等多种元素</p>
+  </div>
+  <div class="grid">
+    <div class="item">
+      <h3>卡片一</h3>
+      <p>深色背景卡片内容，测试背景色处理。</p>
+    </div>
+    <div class="item">
+      <h3>卡片二</h3>
+      <p>另一个深色背景卡片。</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>方案</th><th>原理</th><th>背景处理</th></tr></thead>
+    <tbody>
+      <tr><td>jsPDF</td><td>Canvas截图</td><td>需手动处理</td></tr>
+      <tr><td>html2pdf</td><td>封装库</td><td>可配置</td></tr>
+      <tr><td>pdf-lib</td><td>底层API</td><td>完全控制</td></tr>
+    </tbody>
+  </table>
+  <div class="footer">复杂布局测试 · 页脚信息</div>
+</body>
+</html>`,
+
+    gradient: `<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    background: linear-gradient(180deg, #0f0c29, #302b63, #24243e);
+    color: #fff;
+    font-family: -apple-system, sans-serif;
+    padding: 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 32px;
+    background: linear-gradient(90deg, #f093fb, #f5576c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 24px;
+  }
+  .box {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .box p { line-height: 1.8; }
+  .gradient-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+  <h1>渐变背景测试</h1>
+  <div class="gradient-bar"></div>
+  <div class="box">
+    <p>此页面使用 CSS 渐变作为背景，这是 PDF 导出中最难处理的情况之一。</p>
+    <p>渐变背景 + 半透明毛玻璃效果，测试各方案的兼容性。</p>
+  </div>
+  <div class="box">
+    <p>如果 PDF 中渐变被移除并替换为白色背景，说明该方案能正确处理渐变。</p>
+    <p>如果 PDF 中保留了渐变背景，那也是一种可选的效果。</p>
+  </div>
+</body>
+</html>`
+};
+
+function loadSample(name) {
+    htmlEditor.value = SAMPLES[name] || '';
+    updatePreview();
+}
+
+function updatePreview() {
+    const code = htmlEditor.value;
+    charCount.textContent = code.length + ' 字符';
+    try {
+        const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        if ('srcdoc' in previewFrame) {
+            previewFrame.srcdoc = code;
+        } else {
+            doc.open(); doc.write(code); doc.close();
+        }
+    } catch(e) {
+        previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
+    }
+}
+
+htmlEditor.addEventListener('input', function() {
+    clearTimeout(htmlEditor._timer);
+    htmlEditor._timer = setTimeout(updatePreview, 300);
+    charCount.textContent = htmlEditor.value.length + ' 字符';
+});
+
+function showToast(msg, type) {
+    type = type || 'info';
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.getElementById('toastContainer').appendChild(t);
+    setTimeout(function() { t.remove(); }, 3000);
+}
+
+function setStatus(text) {
+    statusText.textContent = text;
+}
+
+function getPreviewDoc() {
+    return previewFrame.contentDocument || previewFrame.contentWindow.document;
+}
+
+function forceWhiteBackground(container) {
+    container.querySelectorAll('*').forEach(function(el) {
+        const computed = window.getComputedStyle(el);
+        const bg = computed.backgroundColor;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+            const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (match) {
+                const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                if (lum < 0.5) {
+                    el.style.setProperty('background', '#ffffff', 'important');
+                    el.style.setProperty('background-color', '#ffffff', 'important');
+                    el.style.setProperty('background-image', 'none', 'important');
+                }
+            }
+        }
+        const bgImage = computed.backgroundImage;
+        if (bgImage && bgImage !== 'none') {
+            el.style.setProperty('background-image', 'none', 'important');
+        }
+        const color = computed.color;
+        if (color) {
+            const cMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (cMatch) {
+                const cr = parseInt(cMatch[1]), cg = parseInt(cMatch[2]), cb = parseInt(cMatch[3]);
+                const cLum = (0.299 * cr + 0.587 * cg + 0.114 * cb) / 255;
+                if (cLum > 0.8) {
+                    el.style.setProperty('color', '#333333', 'important');
+                }
+            }
+        }
+    });
+}
+
+function createPdfContainer(previewDoc) {
+    const container = document.createElement('div');
+    const containerWidthPx = 794;
+    container.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
+    const previewStyles = previewDoc.querySelectorAll('style');
+    const styleHtml = Array.from(previewStyles).map(function(s) { return s.outerHTML; }).join('');
+    container.innerHTML = styleHtml + previewDoc.body.innerHTML;
+    document.body.appendChild(container);
+    return { container: container, containerWidthPx: containerWidthPx };
+}
+
+function downloadBlob(blob, filename) {
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] })) {
+        const file = new File([blob], filename, { type: blob.type });
+        navigator.share({ files: [file], title: filename }).then(function() {
+            showToast('导出成功', 'success');
+        }).catch(function(err) {
+            if (err.name !== 'AbortError') {
+                fallbackDownload(blob, filename);
+            }
+        });
+    } else {
+        fallbackDownload(blob, filename);
+    }
+}
+
+function fallbackDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    showToast('PDF导出成功', 'success');
+}
+
+function getFilename() {
+    const content = htmlEditor.value;
+    const title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+    return (title ? title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') : 'export') + '.pdf';
+}
+
+// ==================== 方案 1: jsPDF + html2canvas ====================
+async function exportMethod1() {
+    setStatus('方案1: jsPDF + html2canvas 渲染中...');
+    showToast('方案1: jsPDF + html2canvas 开始生成', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+        if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+            showToast('库未加载，请刷新页面', 'error'); return;
+        }
+
+        const { container, containerWidthPx } = createPdfContainer(previewDoc);
+        forceWhiteBackground(container);
+
+        const canvas = await html2canvas(container, {
+            scale: 2, useCORS: true, logging: false,
+            backgroundColor: '#ffffff',
+            width: containerWidthPx, windowWidth: containerWidthPx
+        });
+
+        const { jsPDF } = window.jspdf;
+        const imgWidthMm = 190;
+        const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        let positionMm = 0;
+        const pageHeightMm = 277;
+        let remainingHeightMm = imgHeightMm;
+
+        while (remainingHeightMm > 0) {
+            const sourceY = positionMm * (canvas.width / imgWidthMm);
+            const sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
+            if (pageCanvas.height <= 0) break;
+            const ctx = pageCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            ctx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+            const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+            if (positionMm > 0) pdf.addPage();
+            const pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+            pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
+            remainingHeightMm -= pageHeightMm;
+            positionMm += pageHeightMm;
+        }
+
+        const pdfBlob = pdf.output('blob');
+        downloadBlob(pdfBlob, getFilename());
+        try { document.body.removeChild(container); } catch(e) {}
+        setStatus('方案1: 导出完成');
+    } catch (error) {
+        showToast('方案1导出失败: ' + error.message, 'error');
+        setStatus('方案1: 导出失败');
+    }
+}
+
+// ==================== 方案 2: html2pdf.js ====================
+async function exportMethod2() {
+    setStatus('方案2: html2pdf.js 渲染中...');
+    showToast('方案2: html2pdf.js 开始生成', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+        if (typeof html2pdf === 'undefined') {
+            showToast('html2pdf.js 未加载，请刷新页面', 'error'); return;
+        }
+
+        const { container, containerWidthPx } = createPdfContainer(previewDoc);
+        forceWhiteBackground(container);
+
+        const opt = {
+            margin: 10,
+            filename: getFilename(),
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: {
+                scale: 2, useCORS: true, logging: false,
+                backgroundColor: '#ffffff',
+                width: containerWidthPx, windowWidth: containerWidthPx
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        await html2pdf().set(opt).from(container).save();
+        showToast('方案2: html2pdf.js 导出成功', 'success');
+        try { document.body.removeChild(container); } catch(e) {}
+        setStatus('方案2: 导出完成');
+    } catch (error) {
+        showToast('方案2导出失败: ' + error.message, 'error');
+        setStatus('方案2: 导出失败');
+    }
+}
+
+// ==================== 方案 3: pdf-lib + Canvas ====================
+async function exportMethod3() {
+    setStatus('方案3: pdf-lib + Canvas 渲染中...');
+    showToast('方案3: pdf-lib + Canvas 开始生成', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+        if (typeof PDFLib === 'undefined' || typeof html2canvas === 'undefined') {
+            showToast('库未加载，请刷新页面', 'error'); return;
+        }
+
+        const { container, containerWidthPx } = createPdfContainer(previewDoc);
+        forceWhiteBackground(container);
+
+        const canvas = await html2canvas(container, {
+            scale: 2, useCORS: true, logging: false,
+            backgroundColor: '#ffffff',
+            width: containerWidthPx, windowWidth: containerWidthPx
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgBytes = await fetch(imgData).then(function(r) { return r.arrayBuffer(); });
+        const pdfDoc = await PDFLib.PDFDocument.create();
+
+        const pageWidth = 595.28;
+        const pageHeight = 841.89;
+        const margin = 28.35;
+        const contentWidth = pageWidth - margin * 2;
+        const contentHeight = pageHeight - margin * 2;
+        const imgAspect = canvas.width / canvas.height;
+        const renderWidth = contentWidth;
+        const renderHeight = renderWidth / imgAspect;
+
+        let yOffset = 0;
+        const totalContentHeight = renderHeight;
+        const scale = canvas.width / renderWidth;
+
+        while (yOffset < totalContentHeight) {
+            const page = pdfDoc.addPage([pageWidth, pageHeight]);
+            page.drawRectangle({ x: 0, y: 0, width: pageWidth, height: pageHeight, color: PDFLib.rgb(1, 1, 1) });
+
+            const sliceHeight = Math.min(contentHeight, totalContentHeight - yOffset);
+            const sourceY = yOffset * scale;
+            const sourceHeight = sliceHeight * scale;
+
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = Math.round(sourceHeight);
+            const ctx = sliceCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+            ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, Math.round(sourceHeight), 0, 0, canvas.width, Math.round(sourceHeight));
+
+            const sliceData = sliceCanvas.toDataURL('image/png');
+            const sliceBytes = await fetch(sliceData).then(function(r) { return r.arrayBuffer(); });
+            const sliceImg = await pdfDoc.embedPng(sliceBytes);
+            page.drawImage(sliceImg, { x: margin, y: pageHeight - margin - sliceHeight, width: renderWidth, height: sliceHeight });
+
+            yOffset += contentHeight;
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        downloadBlob(blob, getFilename());
+        try { document.body.removeChild(container); } catch(e) {}
+        setStatus('方案3: 导出完成');
+    } catch (error) {
+        showToast('方案3导出失败: ' + error.message, 'error');
+        setStatus('方案3: 导出失败');
+    }
+}
+
+// ==================== 方案 4: window.print() ====================
+function exportMethod4() {
+    setStatus('方案4: window.print() 调用中...');
+    showToast('方案4: 使用浏览器原生打印功能', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            showToast('弹窗被拦截，请允许弹窗', 'error'); return;
+        }
+
+        const styles = previewDoc.querySelectorAll('style');
+        const styleHtml = Array.from(styles).map(function(s) { return s.outerHTML; }).join('');
+        const printStyles = '<style>@media print { @page { margin: 10mm; } html, body, * { background: #fff !important; background-color: #fff !important; background-image: none !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style>';
+
+        printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">' + styleHtml + printStyles + '</head><body>' + previewDoc.body.innerHTML + '</body></html>');
+        printWin.document.close();
+        printWin.onload = function() {
+            printWin.print();
+            setTimeout(function() { printWin.close(); }, 500);
+        };
+        setStatus('方案4: 打印窗口已打开');
+    } catch (error) {
+        showToast('方案4失败: ' + error.message, 'error');
+        setStatus('方案4: 失败');
+    }
+}
+
+// ==================== 方案 5: 隔离 iframe 渲染 ====================
+async function exportMethod5() {
+    setStatus('方案5: 隔离iframe渲染中...');
+    showToast('方案5: 隔离iframe白底注入 开始生成', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+        if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+            showToast('库未加载，请刷新页面', 'error'); return;
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:1200px;z-index:-1;opacity:0.01;pointer-events:none;border:none;';
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        const whiteOverride = '<style>html,body,div,section,main,article,aside,header,footer,nav,ul,ol,li,table,tr,td,th,form,fieldset,span,p,h1,h2,h3,h4,h5,h6,a,blockquote,pre,code,figure,figcaption,details,summary{background:#ffffff!important;background-color:#ffffff!important;background-image:none!important;color:#000000!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style>';
+        const userStyles = previewDoc.querySelectorAll('style');
+        const styleHtml = Array.from(userStyles).map(function(s) { return s.outerHTML; }).join('');
+        iframeDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8">' + styleHtml + whiteOverride + '</head><body style="background:#fff;color:#000;padding:0;margin:0;">' + previewDoc.body.innerHTML + '</body></html>');
+        iframeDoc.close();
+
+        await new Promise(function(r) { setTimeout(r, 500); });
+
+        const iframeBody = iframeDoc.body;
+        const canvas = await html2canvas(iframeBody, {
+            scale: 2, useCORS: true, logging: false,
+            backgroundColor: '#ffffff', width: 794, windowWidth: 794
+        });
+
+        const { jsPDF } = window.jspdf;
+        const imgWidthMm = 190;
+        const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        let positionMm = 0;
+        const pageHeightMm = 277;
+        let remainingHeightMm = imgHeightMm;
+
+        while (remainingHeightMm > 0) {
+            const sourceY = positionMm * (canvas.width / imgWidthMm);
+            const sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
+            if (pageCanvas.height <= 0) break;
+            const ctx = pageCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            ctx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+            const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+            if (positionMm > 0) pdf.addPage();
+            const pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+            pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
+            remainingHeightMm -= pageHeightMm;
+            positionMm += pageHeightMm;
+        }
+
+        const pdfBlob = pdf.output('blob');
+        downloadBlob(pdfBlob, getFilename());
+        try { document.body.removeChild(iframe); } catch(e) {}
+        setStatus('方案5: 导出完成');
+    } catch (error) {
+        showToast('方案5导出失败: ' + error.message, 'error');
+        setStatus('方案5: 导出失败');
+    }
+}
+
+// ==================== 方案 6: SVG 中转方案 ====================
+async function exportMethod6() {
+    setStatus('方案6: SVG中转方案渲染中...');
+    showToast('方案6: DOM→SVG→Canvas→PDF 开始生成', 'info');
+    try {
+        const previewDoc = getPreviewDoc();
+        if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+            showToast('预览内容为空', 'error'); return;
+        }
+        if (typeof window.jspdf === 'undefined') {
+            showToast('jsPDF未加载，请刷新页面', 'error'); return;
+        }
+
+        const { container, containerWidthPx } = createPdfContainer(previewDoc);
+        forceWhiteBackground(container);
+
+        await new Promise(function(r) { setTimeout(r, 200); });
+
+        const containerHeight = container.scrollHeight || container.offsetHeight;
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('xmlns', svgNS);
+        svg.setAttribute('width', containerWidthPx);
+        svg.setAttribute('height', containerHeight);
+
+        const fo = document.createElementNS(svgNS, 'foreignObject');
+        fo.setAttribute('width', '100%');
+        fo.setAttribute('height', '100%');
+
+        const cloneBody = container.cloneNode(true);
+        cloneBody.style.cssText = 'background:#fff;color:#000;width:' + containerWidthPx + 'px;';
+        fo.appendChild(cloneBody);
+        svg.appendChild(fo);
+
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        await new Promise(function(resolve, reject) {
+            img.onload = resolve;
+            img.onerror = function() {
+                reject(new Error('SVG渲染失败，回退到html2canvas'));
+            };
+            img.src = svgUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = containerWidthPx * 2;
+        canvas.height = containerHeight * 2;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(svgUrl);
+
+        const { jsPDF } = window.jspdf;
+        const imgWidthMm = 190;
+        const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        let positionMm = 0;
+        const pageHeightMm = 277;
+        let remainingHeightMm = imgHeightMm;
+
+        while (remainingHeightMm > 0) {
+            const sourceY = positionMm * (canvas.width / imgWidthMm);
+            const sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
+            if (pageCanvas.height <= 0) break;
+            const pCtx = pageCanvas.getContext('2d');
+            pCtx.fillStyle = '#ffffff';
+            pCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pCtx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+            const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+            if (positionMm > 0) pdf.addPage();
+            const pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+            pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
+            remainingHeightMm -= pageHeightMm;
+            positionMm += pageHeightMm;
+        }
+
+        const pdfBlob = pdf.output('blob');
+        downloadBlob(pdfBlob, getFilename());
+        try { document.body.removeChild(container); } catch(e) {}
+        setStatus('方案6: 导出完成');
+    } catch (error) {
+        showToast('方案6导出失败: ' + error.message, 'error');
+        setStatus('方案6: 导出失败');
+    }
+}
+
+// 初始化
+loadSample('dark');
+</script>
+</body>
+</html>
