@@ -4114,58 +4114,6 @@
         }
         
         // 切换设置面板显示/隐藏 - 改为弹出窗口模式
-        function toggleSettingsPanel() {
-            const settingsContent = `
-                <div style="max-height: 60vh; overflow-y: auto;">
-                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">🔗 分享设置</h4>
-                        <div style="margin-bottom: 16px;">
-                            <label for="modalShareBaseUrl" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">分享链接基础URL：</label>
-                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                                <input type="text" id="modalShareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 200px;">
-                                <button class="btn btn-sm btn-primary" onclick="saveModalShareBaseUrl()">保存</button>
-                                <button class="btn btn-sm btn-secondary" onclick="resetModalShareBaseUrl()">重置</button>
-                            </div>
-                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">💾 自动保存</h4>
-                        <div style="margin-bottom: 16px;">
-                            <label for="modalAutoSaveInterval" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">自动保存间隔（秒）：</label>
-                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                                <input type="number" id="modalAutoSaveInterval" class="setting-input" min="1" max="600" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
-                                <button class="btn btn-sm btn-primary" onclick="saveModalAutoSaveInterval()">保存</button>
-                            </div>
-                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器自动保存内容的时间间隔。</p>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">📝 历史记录</h4>
-                        <div style="margin-bottom: 16px;">
-                            <label for="modalMaxHistoryRecords" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">最大历史记录数：</label>
-                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                                <input type="number" id="modalMaxHistoryRecords" class="setting-input" min="1" max="50" value="10" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 80px; width: 80px;">
-                                <button class="btn btn-sm btn-primary" onclick="saveModalMaxHistoryRecords()">保存</button>
-                            </div>
-                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置编辑器保存的最大历史记录数量。</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="applyModalAllSettings()">应用所有设置</button>
-                        <button class="btn btn-secondary" onclick="loadModalSettings()">重新加载设置</button>
-                    </div>
-                </div>
-            `;
-            showModal('⚙️ 编辑器设置', settingsContent);
-            loadModalSettings();
-            closePreviewDropdown();
-        }
-        
-        // 加载设置
         function loadSettings() {
             try {
                 const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
