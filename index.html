@@ -2894,39 +2894,98 @@
             try {
                 if (navigator.clipboard && navigator.clipboard.readText) {
                     const text = await navigator.clipboard.readText();
-                    htmlEditor.value = text;
+                    if (text) {
+                        htmlEditor.value = text;
+                        htmlEditor.focus();
+                        updatePreview();
+                        updateCharCount();
+                        showToast('已从剪贴板粘贴', 'success');
+                        pasteBtn.classList.add('pasting');
+                        setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                        return;
+                    }
+                }
+            } catch (err) {
+            }
+
+            try {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.setAttribute('readonly', '');
+                hiddenInput.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
+                document.body.appendChild(hiddenInput);
+                hiddenInput.focus();
+                const pasteSucceeded = document.execCommand('paste');
+                
+                if (pasteSucceeded && hiddenInput.value) {
+                    htmlEditor.value = hiddenInput.value;
                     htmlEditor.focus();
                     updatePreview();
                     updateCharCount();
                     showToast('已从剪贴板粘贴', 'success');
                     pasteBtn.classList.add('pasting');
                     setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                    document.body.removeChild(hiddenInput);
                     return;
                 }
+                document.body.removeChild(hiddenInput);
             } catch (err) {
-                // Clipboard API 失败，尝试回退方案
             }
 
             try {
-                htmlEditor.focus();
-                const success = document.execCommand('paste');
-                if (success) {
-                    setTimeout(() => {
+                const hiddenInput = document.createElement('textarea');
+                hiddenInput.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:80%;max-width:300px;height:120px;z-index:100001;background:#2a2a2a;color:#fff;border:1px solid #3a3a3a;border-radius:8px;padding:12px;font-size:14px;font-family:monospace;resize:none;outline:none;';
+                
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;display:flex;justify-content:center;align-items:center;';
+                
+                const dialog = document.createElement('div');
+                dialog.style.cssText = 'background:#2a2a2a;border:1px solid #3a3a3a;border-radius:12px;padding:20px;max-width:340px;width:90%;text-align:center;';
+                
+                const title = document.createElement('p');
+                title.textContent = '请粘贴内容到下方输入框';
+                title.style.cssText = 'color:#e6e6e6;margin:0 0 12px;font-size:15px;';
+                
+                hiddenInput.placeholder = '长按此处粘贴...';
+                
+                const btnGroup = document.createElement('div');
+                btnGroup.style.cssText = 'display:flex;gap:10px;justify-content:center;margin-top:12px;';
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = '取消';
+                cancelBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:1px solid #3a3a3a;background:#404040;color:#fff;font-size:14px;cursor:pointer;';
+                cancelBtn.onclick = function() { document.body.removeChild(overlay); };
+                
+                const confirmBtn = document.createElement('button');
+                confirmBtn.textContent = '确定';
+                confirmBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:14px;cursor:pointer;font-weight:500;';
+                confirmBtn.onclick = function() {
+                    const val = hiddenInput.value;
+                    if (val.trim()) {
+                        htmlEditor.value = val;
+                        htmlEditor.focus();
                         updatePreview();
                         updateCharCount();
-                    }, 100);
-                    showToast('已从剪贴板粘贴', 'success');
-                    pasteBtn.classList.add('pasting');
-                    setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
-                    return;
-                }
+                        showToast('已从剪贴板粘贴', 'success');
+                        pasteBtn.classList.add('pasting');
+                        setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
+                    }
+                    document.body.removeChild(overlay);
+                };
+                
+                btnGroup.appendChild(cancelBtn);
+                btnGroup.appendChild(confirmBtn);
+                dialog.appendChild(title);
+                dialog.appendChild(hiddenInput);
+                dialog.appendChild(btnGroup);
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+                
+                setTimeout(function() { hiddenInput.focus(); }, 100);
+                return;
             } catch (err) {
-                // execCommand paste 也失败
+                htmlEditor.focus();
+                showToast('请长按编辑器区域，选择"粘贴"', 'info');
             }
-
-            // 最终回退：提示用户手动粘贴
-            htmlEditor.focus();
-            showToast('请长按编辑器区域，选择"粘贴"', 'info');
         }
 
         // Toast 消息提示
