@@ -2952,43 +2952,36 @@
             }
         });
 
-        // 自动保存功能 - 优化移动设备体验
+        let lastHistoryAddTime = 0;
+        let lastContent = htmlEditor.value;
         let autoSaveTimeout;
-        let lastContent = htmlEditor.value; // 记录上次内容
+
         htmlEditor.addEventListener('input', function() {
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                // 内容发生变化时添加到历史记录（每3秒最多一次）
-                if (htmlEditor.value !== lastContent && Date.now() - lastHistoryAddTime > 3000) {
+                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                     addToHistory();
-                    lastHistoryAddTime = Date.now();
                     lastContent = htmlEditor.value;
+                    lastHistoryAddTime = Date.now();
                 }
-            }, 1000);
+            }, 2000);
         });
         
-        // iOS Edge浏览器：监听change事件用于自动保存
         htmlEditor.addEventListener('change', function() {
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                // 内容发生变化时添加到历史记录
-                if (htmlEditor.value !== lastContent) {
+                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                     addToHistory();
                     lastContent = htmlEditor.value;
                     lastHistoryAddTime = Date.now();
                 }
-            }, 1000);
+            }, 2000);
         });
         
-        // 历史记录添加时间戳
-        let lastHistoryAddTime = Date.now();
-        
-        // 页面卸载时添加到历史记录
         window.addEventListener('beforeunload', function() {
             localStorage.setItem('htmlEditorContent', htmlEditor.value);
-            // 确保在页面卸载前保存历史记录
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                 addToHistory();
             }
@@ -3643,7 +3636,15 @@
             try {
                 localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyRecords));
             } catch (error) {
-                // 静默处理历史记录保存错误，避免控制台污染
+                if (historyRecords.length > 10) {
+                    try {
+                        historyRecords = historyRecords.slice(0, Math.floor(historyRecords.length / 2));
+                        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyRecords));
+                    } catch (e) {
+                        historyRecords = historyRecords.slice(0, 5);
+                        try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyRecords)); } catch(e2) {}
+                    }
+                }
             }
         }
         
@@ -3688,9 +3689,8 @@
             const code = htmlEditor.value.trim();
             if (!code) return;
 
-            if (historyRecords.length > 0 && historyRecords[0].content === code) {
-                return;
-            }
+            const recentDuplicate = historyRecords.slice(0, 3).find(r => r.content === code);
+            if (recentDuplicate) return;
 
             const record = {
                 id: Date.now(),
