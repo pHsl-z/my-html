@@ -23,7 +23,7 @@
         .panel-header{padding:6px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
         .panel-header .label{color:var(--text);font-weight:600;}
         #htmlEditor{flex:1;width:100%;background:#111;color:#d4d4d4;border:none;padding:12px;font-family:"SF Mono","Fira Code",Menlo,Monaco,monospace;font-size:12px;line-height:1.5;resize:none;outline:none;tab-size:2;}
-        #previewFrame{flex:1;width:100%;border:none;background:#fff;}
+        #previewFrame{flex:1;width:100%;border:none;}
         .templates-bar{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
         .templates-bar h3{font-size:11px;color:var(--text2);margin-bottom:6px;}
         .templates-scroll{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
@@ -77,16 +77,16 @@
             <div class="methods-bar">
                 <h3>🔧 导出方案（🟢=可靠 🟡=一般 🔴=有限制）：</h3>
                 <div class="methods-grid">
-                    <button class="method-btn reliable" onclick="exportMethod1()"><span class="num">1</span>iframe渲染+jsPDF<span class="desc">🟢 iframe截图·最可靠</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod2()"><span class="num">2</span>html2pdf.js<span class="desc">🟢 封装库·分页优化</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod3()"><span class="num">3</span>pdf-lib+Canvas<span class="desc">🟢 底层控制·白底</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod4()"><span class="num">4</span>modern-screenshot<span class="desc">🟢 新截图库·高质量</span></button>
-                    <button class="method-btn" onclick="exportMethod5()"><span class="num">5</span>iframe打印<span class="desc">🟡 隐藏iframe·打印</span></button>
-                    <button class="method-btn" onclick="exportMethod6()"><span class="num">6</span>新窗口打印<span class="desc">🟡 弹窗·白底CSS</span></button>
-                    <button class="method-btn" onclick="exportMethod7()"><span class="num">7</span>图片导出PDF<span class="desc">🟢 PNG→PDF·通用</span></button>
-                    <button class="method-btn" onclick="exportMethod8()"><span class="num">8</span>纯Canvas绘制<span class="desc">🟡 Canvas API直绘</span></button>
-                    <button class="method-btn" onclick="exportMethod9()"><span class="num">9</span>双iframe隔离<span class="desc">🟢 双重隔离·白底</span></button>
-                    <button class="method-btn" onclick="exportMethod10()"><span class="num">10</span>srcdoc直出<span class="desc">🟢 编辑器源码直出</span></button>
+                    <button class="method-btn reliable" onclick="exportMethod1()"><span class="num">1</span>iframe渲染+jsPDF<span class="desc">🟢 所见即所得·最可靠</span></button>
+                    <button class="method-btn reliable" onclick="exportMethod2()"><span class="num">2</span>html2pdf.js<span class="desc">🟢 所见即所得·分页</span></button>
+                    <button class="method-btn reliable" onclick="exportMethod3()"><span class="num">3</span>pdf-lib+Canvas<span class="desc">🟢 所见即所得·底层</span></button>
+                    <button class="method-btn reliable" onclick="exportMethod4()"><span class="num">4</span>modern-screenshot<span class="desc">🟢 所见即所得·高质量</span></button>
+                    <button class="method-btn" onclick="exportMethod5()"><span class="num">5</span>iframe打印<span class="desc">🟡 所见即所得·打印</span></button>
+                    <button class="method-btn" onclick="exportMethod6()"><span class="num">6</span>新窗口打印<span class="desc">🟡 所见即所得·弹窗</span></button>
+                    <button class="method-btn" onclick="exportMethod7()"><span class="num">7</span>图片导出PDF<span class="desc">🟢 所见即所得·高清</span></button>
+                    <button class="method-btn" onclick="exportMethod8()"><span class="num">8</span>纯Canvas绘制<span class="desc">🟡 所见即所得·直绘</span></button>
+                    <button class="method-btn" onclick="exportMethod9()"><span class="num">9</span>双iframe隔离<span class="desc">🟢 所见即所得·双重隔离</span></button>
+                    <button class="method-btn" onclick="exportMethod10()"><span class="num">10</span>srcdoc直出<span class="desc">🟢 所见即所得·直出</span></button>
                 </div>
             </div>
         </div>
@@ -201,14 +201,13 @@ function getFilename() {
     return (title ? title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') : 'export') + '.pdf';
 }
 
-function makeWhiteHtml(html) {
-    var whiteCss = '<style>html,body,div,section,main,article,aside,header,footer,nav,ul,ol,li,table,tr,td,th,form,fieldset,span,p,h1,h2,h3,h4,h5,h6,a,blockquote,pre,code,figure,figcaption,details,summary{background:#ffffff!important;background-color:#ffffff!important;background-image:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style>';
-    return html.replace('</head>', whiteCss + '</head>').replace(/<body[^>]*>/, function(m) { return m + '<div style="background:#fff!important;color:#000!important;">'; }).replace('</body>', '</div></body>');
+*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style>';
+    return html.replace('</head>', whiteCss + '</head>').replace(/<body[^>]*>/, function(m) { return m + '<div style="">'; }).replace('</body>', '</div></body>');
 }
 
 function createRenderIframe(html, width, callback) {
     var iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + width + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:#fff;';
+    iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + width + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
     document.body.appendChild(iframe);
     var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     iframeDoc.open();
@@ -219,38 +218,6 @@ function createRenderIframe(html, width, callback) {
 
 function removeIframe(iframe) {
     try { document.body.removeChild(iframe); } catch(e) {}
-}
-
-function forceWhiteOnDoc(iframeDoc) {
-    try {
-        iframeDoc.querySelectorAll('*').forEach(function(el) {
-            var computed = iframe.contentWindow.getComputedStyle(el);
-            var bg = computed.backgroundColor;
-            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                var match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                if (match) {
-                    var r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
-                    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                    if (lum < 0.5) {
-                        el.style.setProperty('background', '#ffffff', 'important');
-                        el.style.setProperty('background-color', '#ffffff', 'important');
-                        el.style.setProperty('background-image', 'none', 'important');
-                    }
-                }
-            }
-            var bgImage = computed.backgroundImage;
-            if (bgImage && bgImage !== 'none') { el.style.setProperty('background-image', 'none', 'important'); }
-            var color = computed.color;
-            if (color) {
-                var cMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                if (cMatch) {
-                    var cr = parseInt(cMatch[1]), cg = parseInt(cMatch[2]), cb = parseInt(cMatch[3]);
-                    var cLum = (0.299 * cr + 0.587 * cg + 0.114 * cb) / 255;
-                    if (cLum > 0.8) { el.style.setProperty('color', '#333333', 'important'); }
-                }
-            }
-        });
-    } catch(e) {}
 }
 
 function canvasToPdfPages(canvas, jsPDFConstructor) {
@@ -303,11 +270,9 @@ async function exportMethod1() {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var canvas = await html2canvas(iframeBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
                 var jsPDF = window.jspdf.jsPDF;
@@ -328,11 +293,9 @@ async function exportMethod2() {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof html2pdf === 'undefined') { showToast('html2pdf.js 未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var opt = {margin: 10, filename: getFilename(), image: {type: 'jpeg', quality: 0.95}, html2canvas: {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794}, jsPDF: {unit: 'mm', format: 'a4', orientation: 'portrait'}, pagebreak: {mode: ['avoid-all', 'css', 'legacy']}};
                 await html2pdf().set(opt).from(iframeBody).save();
@@ -351,11 +314,9 @@ async function exportMethod3() {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof PDFLib === 'undefined' || typeof html2canvas === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var canvas = await html2canvas(iframeBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
                 var imgData = canvas.toDataURL('image/png');
@@ -399,11 +360,9 @@ async function exportMethod4() {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof modernScreenshot === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, backgroundColor: '#ffffff', width: 794});
                 var jsPDF = window.jspdf.jsPDF;
@@ -423,10 +382,9 @@ function exportMethod5() {
     try {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
-        whiteHtml = whiteHtml.replace('</head>', printCss + '</head>');
-        createRenderIframe(whiteHtml, 794, function(iframe) {
+                var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
+        html = html.replace('</head>', printCss + '</head>');
+        createRenderIframe(html, 794, function(iframe) {
             try {
                 iframe.contentWindow.focus();
                 iframe.contentWindow.print();
@@ -443,12 +401,11 @@ function exportMethod6() {
     try {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
-        whiteHtml = whiteHtml.replace('</head>', printCss + '</head>');
+                var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
+        html = html.replace('</head>', printCss + '</head>');
         var printWin = window.open('', '_blank');
         if (!printWin) { showToast('弹窗被拦截', 'error'); return; }
-        printWin.document.write(whiteHtml);
+        printWin.document.write(html);
         printWin.document.close();
         printWin.onload = function() { printWin.print(); setTimeout(function() { printWin.close(); }, 500); };
         setStatus('方案6: 打印窗口已打开');
@@ -462,11 +419,9 @@ async function exportMethod7() {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var canvas = await html2canvas(iframeBody, {scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
                 var imgData = canvas.toDataURL('image/png', 1.0);
@@ -486,16 +441,14 @@ async function exportMethod7() {
 
 // ==================== 方案8: 纯Canvas绘制 ====================
 async function exportMethod8() {
-    setStatus('方案8: 纯Canvas绘制 生成中...'); showToast('方案8: Canvas API直绘', 'info');
+    setStatus('方案8: 纯Canvas绘制 生成中...'); showToast('方案8: 所见即所得·直绘', 'info');
     try {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        createRenderIframe(whiteHtml, 794, async function(iframe) {
+                createRenderIframe(html, 794, async function(iframe) {
             try {
                 var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                forceWhiteOnDoc(iframeDoc);
                 var iframeBody = iframeDoc.body;
                 var scrollHeight = iframeBody.scrollHeight || iframeBody.offsetHeight || 1000;
                 var canvas = document.createElement('canvas');
@@ -524,23 +477,21 @@ async function exportMethod9() {
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
         var outerIframe = document.createElement('iframe');
-        outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:#fff;';
+        outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
         document.body.appendChild(outerIframe);
         var outerDoc = outerIframe.contentDocument || outerIframe.contentWindow.document;
         outerDoc.open();
-        outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;background:#fff!important;color:#000!important;}</style></head><body></body></html>');
+        outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;}</style></head><body></body></html>');
         outerDoc.close();
         await new Promise(function(r) { setTimeout(r, 100); });
         var innerIframe = outerDoc.createElement('iframe');
-        innerIframe.style.cssText = 'width:794px;border:none;background:#fff;';
+        innerIframe.style.cssText = 'width:794px;border:none;';
         outerDoc.body.appendChild(innerIframe);
         var innerDoc = innerIframe.contentDocument || innerIframe.contentWindow.document;
         innerDoc.open();
-        var whiteHtml = makeWhiteHtml(html);
-        innerDoc.write(whiteHtml);
+                innerDoc.write(html);
         innerDoc.close();
         await new Promise(function(r) { setTimeout(r, 800); });
-        try { forceWhiteOnDoc(innerDoc); } catch(e) {}
         var innerBody = innerDoc.body;
         var canvas = await html2canvas(innerBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
         var jsPDF = window.jspdf.jsPDF;
@@ -554,20 +505,18 @@ async function exportMethod9() {
 
 // ==================== 方案10: srcdoc直出 ====================
 async function exportMethod10() {
-    setStatus('方案10: srcdoc直出 生成中...'); showToast('方案10: 编辑器源码直出', 'info');
+    setStatus('方案10: srcdoc直出 生成中...'); showToast('方案10: 所见即所得·直出', 'info');
     try {
         var html = getHtmlContent();
         if (!html.trim()) { showToast('内容为空', 'error'); return; }
         if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-        var whiteHtml = makeWhiteHtml(html);
-        var renderFrame = document.createElement('iframe');
-        renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:#fff;';
+                var renderFrame = document.createElement('iframe');
+        renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
         document.body.appendChild(renderFrame);
-        renderFrame.srcdoc = whiteHtml;
+        renderFrame.srcdoc = html;
         renderFrame.onload = async function() {
             try {
                 var doc = renderFrame.contentDocument || renderFrame.contentWindow.document;
-                forceWhiteOnDoc(doc);
                 await new Promise(function(r) { setTimeout(r, 300); });
                 var body = doc.body;
                 var canvas = await html2canvas(body, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
