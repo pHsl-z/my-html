@@ -1772,8 +1772,8 @@
     <!-- 隐藏的文件输入元素 -->
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
         const previewFrame = document.getElementById('previewFrame');
@@ -3440,7 +3440,7 @@
             document.body.appendChild(modal);
         }
 
-        function exportToPdf() {
+        async function exportToPdf() {
             const content = htmlEditor.value.trim();
             if (!content) {
                 showToast('请先输入内容', 'error');
@@ -3453,7 +3453,7 @@
                     return;
                 }
 
-                if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+                if (typeof PDFLib === 'undefined' || typeof html2canvas === 'undefined') {
                     showToast('PDF库加载中，请稍后重试', 'error');
                     return;
                 }
@@ -3463,118 +3463,114 @@
                 const pageSize = PDF_PAGE_SIZES[pdfPageSize] || PDF_PAGE_SIZES.a4;
                 const orientation = pdfOrientation;
                 const margin = pdfMargin;
-                
+
                 const pageWidthMm = orientation === 'l' ? pageSize.height : pageSize.width;
                 const pageHeightMm = orientation === 'l' ? pageSize.width : pageSize.height;
                 const contentWidthMm = pageWidthMm - margin * 2;
                 const contentHeightMm = pageHeightMm - margin * 2;
-                
-                const container = document.createElement('div');
-                const containerWidthPx = Math.round(contentWidthMm * 3.7795275591);
-                container.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#000;line-height:1.6;z-index:-1;';
-                
-                const previewStyles = previewDoc.querySelectorAll('style');
-                const styleHtml = Array.from(previewStyles).map(s => s.outerHTML).join('');
-                container.innerHTML = styleHtml + previewDoc.body.innerHTML;
-                document.body.appendChild(container);
 
-                container.querySelectorAll('*').forEach(function(el) {
-                    const computed = window.getComputedStyle(el);
-                    const bg = computed.backgroundColor;
-                    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-                        const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                        if (match) {
-                            const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
-                            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                            if (lum < 0.5) {
-                                el.style.setProperty('background', '#ffffff', 'important');
-                                el.style.setProperty('background-color', '#ffffff', 'important');
-                                el.style.setProperty('background-image', 'none', 'important');
-                            }
-                        }
-                    }
-                    const bgImage = computed.backgroundImage;
-                    if (bgImage && bgImage !== 'none') {
-                        el.style.setProperty('background-image', 'none', 'important');
-                    }
-                    const color = computed.color;
-                    if (color) {
-                        const cMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                        if (cMatch) {
-                            const cr = parseInt(cMatch[1]), cg = parseInt(cMatch[2]), cb = parseInt(cMatch[3]);
-                            const cLum = (0.299 * cr + 0.587 * cg + 0.114 * cb) / 255;
-                            if (cLum > 0.8) {
-                                el.style.setProperty('color', '#333333', 'important');
-                            }
-                        }
-                    }
-                });
+                const containerWidthPx = Math.round(contentWidthMm * 3.7795275591);
 
                 const title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || 'export';
                 const filename = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') + '.pdf';
 
-                html2canvas(container, {
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:transparent;';
+                document.body.appendChild(iframe);
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(content);
+                iframeDoc.close();
+
+                await new Promise(r => setTimeout(r, 800));
+
+                try {
+                    const contentHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight || 1000;
+                    iframe.style.height = contentHeight + 'px';
+                } catch(e) {}
+
+                const iframeBody = iframeDoc.body;
+                const canvas = await html2canvas(iframeBody, {
                     scale: 2,
                     useCORS: true,
                     logging: false,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: null,
                     width: containerWidthPx,
                     windowWidth: containerWidthPx
-                }).then(canvas => {
-                    const { jsPDF } = window.jspdf;
-                    const imgWidthMm = contentWidthMm;
-                    const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
-                    const pdf = new jsPDF(orientation, 'mm', pdfPageSize);
-                    let positionMm = 0;
-                    let remainingHeightMm = imgHeightMm;
-
-                    while (remainingHeightMm > 0) {
-                        const sourceY = positionMm * (canvas.width / imgWidthMm);
-                        const sourceHeight = contentHeightMm * (canvas.width / imgWidthMm);
-                        const pageCanvas = document.createElement('canvas');
-                        pageCanvas.width = canvas.width;
-                        pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
-                        if (pageCanvas.height <= 0) break;
-                        const ctx = pageCanvas.getContext('2d');
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-                        ctx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
-
-                        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-                        if (positionMm > 0) pdf.addPage();
-                        const pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
-                        pdf.addImage(pageImgData, 'JPEG', margin, margin, imgWidthMm, pageImgHeightMm);
-
-                        remainingHeightMm -= contentHeightMm;
-                        positionMm += contentHeightMm;
-                    }
-
-                    const pdfBlob = pdf.output('blob');
-
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], filename, { type: 'application/pdf' })] })) {
-                        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                        navigator.share({
-                            files: [file],
-                            title: title
-                        }).then(() => {
-                            showToast('PDF导出成功', 'success');
-                        }).catch(err => {
-                            if (err.name !== 'AbortError') {
-                                pdf.save(filename);
-                            }
-                        });
-                    } else {
-                        pdf.save(filename);
-                        showToast('PDF导出成功', 'success');
-                    }
-                    try { document.body.removeChild(container); } catch(e) {}
-                }).catch(err => {
-                    showToast('PDF生成失败', 'error');
-                    try { document.body.removeChild(container); } catch(e) {}
                 });
+
+                try { document.body.removeChild(iframe); } catch(e) {}
+
+                const pageWidthPt = pageWidthMm * 2.83465;
+                const pageHeightPt = pageHeightMm * 2.83465;
+                const marginPt = margin * 2.83465;
+                const contentWidthPt = pageWidthPt - marginPt * 2;
+                const contentHeightPt = pageHeightPt - marginPt * 2;
+
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                const imgAspect = canvas.width / canvas.height;
+                const renderWidth = contentWidthPt;
+                const renderHeight = renderWidth / imgAspect;
+                const scale = canvas.width / renderWidth;
+                let yOffset = 0;
+                const totalContentHeight = renderHeight;
+
+                while (yOffset < totalContentHeight) {
+                    const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
+                    const sliceHeight = Math.min(contentHeightPt, totalContentHeight - yOffset);
+                    const sourceY = yOffset * scale;
+                    const sourceHeight = sliceHeight * scale;
+
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = canvas.width;
+                    sliceCanvas.height = Math.round(sourceHeight);
+                    const ctx = sliceCanvas.getContext('2d');
+                    ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, Math.round(sourceHeight), 0, 0, canvas.width, Math.round(sourceHeight));
+
+                    const sliceData = sliceCanvas.toDataURL('image/png');
+                    const sliceBytes = await fetch(sliceData).then(r => r.arrayBuffer());
+                    const sliceImg = await pdfDoc.embedPng(sliceBytes);
+                    page.drawImage(sliceImg, {
+                        x: marginPt,
+                        y: pageHeightPt - marginPt - sliceHeight,
+                        width: renderWidth,
+                        height: sliceHeight
+                    });
+
+                    yOffset += contentHeightPt;
+                }
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
+                    const file = new File([blob], filename, { type: 'application/pdf' });
+                    navigator.share({
+                        files: [file],
+                        title: title
+                    }).then(() => {
+                        showToast('PDF导出成功', 'success');
+                    }).catch(err => {
+                        if (err.name !== 'AbortError') {
+                            fallbackDownload(blob, filename);
+                        }
+                    });
+                } else {
+                    fallbackDownload(blob, filename);
+                }
             } catch (error) {
-                showToast('导出失败，请重试', 'error');
+                showToast('导出失败: ' + error.message, 'error');
             }
+        }
+
+        function fallbackDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('PDF导出成功', 'success');
         }
 
         // 打印预览函数 - 优化iOS Safari兼容性
