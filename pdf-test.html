@@ -4,14 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HTML → PDF 方案对比测试</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.39/dist/index.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;}
-        :root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#333;--text:#e6e6e6;--text2:#999;--accent:#4a9eff;--accent2:#3d8bfd;--success:#28a745;--error:#dc3545;--radius:10px;}
+        :root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#333;--text:#e6e6e6;--text2:#999;--accent:#4a9eff;--success:#28a745;--error:#dc3545;--warning:#e67e22;--radius:10px;}
         html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
         .app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
         .header{padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;}
@@ -23,516 +18,141 @@
         .panel-header{padding:6px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
         .panel-header .label{color:var(--text);font-weight:600;}
         #htmlEditor{flex:1;width:100%;background:#111;color:#d4d4d4;border:none;padding:12px;font-family:"SF Mono","Fira Code",Menlo,Monaco,monospace;font-size:12px;line-height:1.5;resize:none;outline:none;tab-size:2;}
-        #previewFrame{flex:1;width:100%;border:none;}
-        .templates-bar{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
-        .templates-bar h3{font-size:11px;color:var(--text2);margin-bottom:6px;}
-        .templates-scroll{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-        .templates-scroll::-webkit-scrollbar{height:4px;}
-        .templates-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-        .tpl-btn{flex-shrink:0;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:4px;}
-        .tpl-btn:hover{border-color:var(--accent);background:rgba(74,158,255,.1);}
-        .tpl-btn:active{transform:scale(.96);}
+        #previewFrame{flex:1;width:100%;border:none;background:#fff;}
+        .templates-bar{padding:6px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+        .templates-bar h3{font-size:10px;color:var(--text2);margin-bottom:4px;}
+        .templates-scroll{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+        .tpl-btn{flex-shrink:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:10px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:3px;}
+        .tpl-btn:hover{border-color:var(--accent);}
         .tpl-btn.active{border-color:var(--accent);background:rgba(74,158,255,.15);color:var(--accent);}
-        .tpl-btn .icon{font-size:13px;}
-        .methods-bar{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;overflow-y:auto;max-height:200px;}
-        .methods-bar h3{font-size:11px;color:var(--text2);margin-bottom:6px;position:sticky;top:0;background:var(--surface);z-index:1;}
-        .methods-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
-        .method-btn{padding:6px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:10px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;line-height:1.3;}
-        .method-btn:hover{border-color:var(--accent);background:rgba(74,158,255,.1);}
-        .method-btn:active{transform:scale(.97);}
-        .method-btn .num{display:inline-block;width:16px;height:16px;line-height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:9px;margin-right:3px;}
-        .method-btn .desc{display:block;font-size:8px;color:var(--text2);margin-top:1px;}
-        .method-btn.reliable{border-color:#28a745;}
-        .method-btn.reliable .num{background:#28a745;}
-        .status-bar{padding:5px 12px;background:var(--surface2);border-top:1px solid var(--border);font-size:11px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-        .status-bar .status-dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px;}
+        .methods-bar{padding:6px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+        .methods-bar h3{font-size:10px;color:var(--text2);margin-bottom:4px;}
+        .methods-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+        .method-btn{padding:5px 3px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:9px;font-weight:500;cursor:pointer;text-align:center;line-height:1.3;}
+        .method-btn:hover{border-color:var(--accent);}
+        .method-btn .num{display:inline-block;width:14px;height:14px;line-height:14px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;margin-right:2px;}
+        .method-btn .desc{display:block;font-size:7px;color:var(--text2);margin-top:1px;}
+        .method-btn.ready{border-color:var(--success);}
+        .method-btn.ready .num{background:var(--success);}
+        .method-btn.missing{border-color:var(--warning);}
+        .method-btn.missing .num{background:var(--warning);}
+        .method-btn.selected{outline:2px solid var(--accent);outline-offset:-2px;}
+        .bottom-panel{background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;max-height:180px;overflow-y:auto;}
+        .panel-tabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;}
+        .panel-tab{padding:6px 14px;font-size:11px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;}
+        .panel-tab:hover{color:var(--text);}
+        .panel-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+        .panel-content{padding:8px 12px;font-size:11px;line-height:1.6;}
+        .lib-card{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface2);}
+        .lib-card .lib-icon{font-size:20px;}
+        .lib-card .lib-info{flex:1;min-width:0;}
+        .lib-card .lib-name{font-weight:600;color:var(--text);font-size:12px;}
+        .lib-card .lib-desc{font-size:10px;color:var(--text2);margin-top:1px;}
+        .lib-card .lib-size{font-size:10px;color:var(--warning);font-weight:500;}
+        .lib-card .lib-status{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;}
+        .lib-card .lib-status.loaded{background:rgba(40,167,69,.15);color:var(--success);}
+        .lib-card .lib-status.unloaded{background:rgba(231,76,60,.15);color:var(--error);}
+        .lib-load-btn{padding:4px 12px;border:1px solid var(--accent);border-radius:5px;background:transparent;color:var(--accent);font-size:10px;cursor:pointer;white-space:nowrap;}
+        .lib-load-btn:hover{background:var(--accent);color:#fff;}
+        .load-all-btn{padding:6px 16px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer;font-weight:500;}
+        .load-all-btn:hover{background:#3d8bfd;}
+        .status-bar{padding:4px 12px;background:var(--surface2);border-top:1px solid var(--border);font-size:10px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+        .status-bar .status-dot{width:5px;height:5px;border-radius:50%;background:var(--success);display:inline-block;margin-right:5px;}
         .toast-container{position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:8px;}
         .toast{padding:10px 16px;border-radius:var(--radius);font-size:13px;color:#fff;animation:toastIn .3s ease;max-width:320px;word-break:break-word;}
-        .toast.info{background:var(--accent2);}
+        .toast.info{background:var(--accent);}
         .toast.success{background:var(--success);}
         .toast.error{background:var(--error);}
-        .toast.warning{background:#e67e22;}
+        .toast.warning{background:var(--warning);}
         @keyframes toastIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
-        @media(max-width:768px){.main{flex-direction:column;}.editor-panel,.preview-panel{width:100%;height:50%;}.editor-panel{border-right:none;border-bottom:1px solid var(--border);}.methods-grid{grid-template-columns:repeat(2,1fr);}}
+        @media(max-width:768px){.main{flex-direction:column;}.editor-panel,.preview-panel{width:100%;height:50%;}.editor-panel{border-right:none;border-bottom:1px solid var(--border);}.methods-grid{grid-template-columns:repeat(3,1fr);}}
     </style>
 </head>
 <body>
 <div class="app">
-    <div class="header">
-        <h1>HTML → PDF 方案对比测试</h1>
-        <span class="badge">10 方案 · 14 模板</span>
-    </div>
+    <div class="header"><h1>HTML → PDF 方案对比测试</h1><span class="badge">10方案·14模板</span></div>
     <div class="main">
         <div class="editor-panel">
             <div class="panel-header"><span class="label">HTML 编辑器</span><span id="charCount" style="font-size:10px;">0 字符</span></div>
             <textarea id="htmlEditor" spellcheck="false"></textarea>
-            <div class="templates-bar">
-                <h3>📋 预制文档模板（点击加载）：</h3>
-                <div class="templates-scroll" id="templatesScroll"></div>
-            </div>
+            <div class="templates-bar"><h3>📋 预制模板：</h3><div class="templates-scroll" id="templatesScroll"></div></div>
         </div>
         <div class="preview-panel">
             <div class="panel-header"><span class="label">实时预览</span><span id="currentTpl" style="font-size:10px;color:var(--accent);"></span></div>
             <iframe id="previewFrame"></iframe>
-            <div class="methods-bar">
-                <h3>🔧 导出方案（🟢=可靠 🟡=一般 🔴=有限制）：</h3>
-                <div class="methods-grid">
-                    <button class="method-btn reliable" onclick="exportMethod1()"><span class="num">1</span>iframe渲染+jsPDF<span class="desc">🟢 所见即所得·最可靠</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod2()"><span class="num">2</span>html2pdf.js<span class="desc">🟢 所见即所得·分页</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod3()"><span class="num">3</span>pdf-lib+Canvas<span class="desc">🟢 所见即所得·底层</span></button>
-                    <button class="method-btn reliable" onclick="exportMethod4()"><span class="num">4</span>modern-screenshot<span class="desc">🟢 所见即所得·高质量</span></button>
-                    <button class="method-btn" onclick="exportMethod5()"><span class="num">5</span>iframe打印<span class="desc">🟡 所见即所得·打印</span></button>
-                    <button class="method-btn" onclick="exportMethod6()"><span class="num">6</span>新窗口打印<span class="desc">🟡 所见即所得·弹窗</span></button>
-                    <button class="method-btn" onclick="exportMethod7()"><span class="num">7</span>图片导出PDF<span class="desc">🟢 所见即所得·高清</span></button>
-                    <button class="method-btn" onclick="exportMethod8()"><span class="num">8</span>纯Canvas绘制<span class="desc">🟡 所见即所得·直绘</span></button>
-                    <button class="method-btn" onclick="exportMethod9()"><span class="num">9</span>双iframe隔离<span class="desc">🟢 所见即所得·双重隔离</span></button>
-                    <button class="method-btn" onclick="exportMethod10()"><span class="num">10</span>srcdoc直出<span class="desc">🟢 所见即所得·直出</span></button>
-                </div>
-            </div>
+            <div class="methods-bar"><h3>🔧 导出方案（🟢=库已加载 🟡=需加载库）：</h3><div class="methods-grid" id="methodsGrid"></div></div>
         </div>
+    </div>
+    <div class="bottom-panel">
+        <div class="panel-tabs">
+            <div class="panel-tab active" data-tab="libs" onclick="switchTab('libs')">📦 库管理</div>
+            <div class="panel-tab" data-tab="method" onclick="switchTab('method')">ℹ️ 方案详情</div>
+        </div>
+        <div class="panel-content" id="panelContent"></div>
     </div>
     <div class="status-bar"><span><span class="status-dot"></span>就绪</span><span id="statusText">选择模板 → 预览 → 选择方案导出</span></div>
 </div>
 <div class="toast-container" id="toastContainer"></div>
-
 <script>
-var htmlEditor = document.getElementById('htmlEditor');
-var previewFrame = document.getElementById('previewFrame');
-var charCount = document.getElementById('charCount');
-var statusText = document.getElementById('statusText');
-var currentTpl = document.getElementById('currentTpl');
-var templatesScroll = document.getElementById('templatesScroll');
+var htmlEditor=document.getElementById('htmlEditor'),previewFrame=document.getElementById('previewFrame'),charCount=document.getElementById('charCount'),statusText=document.getElementById('statusText'),currentTpl=document.getElementById('currentTpl'),templatesScroll=document.getElementById('templatesScroll'),methodsGrid=document.getElementById('methodsGrid'),panelContent=document.getElementById('panelContent');
+var activeTab='libs',selectedMethod=null;
+var LIBS={jspdf:{name:'jsPDF',icon:'📄',url:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',size:'~280KB',desc:'纯JS PDF生成库，支持文本/图片/分页。最流行的浏览器端PDF方案。',check:function(){return typeof window.jspdf!=='undefined';}},html2canvas:{name:'html2canvas',icon:'📸',url:'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',size:'~120KB',desc:'DOM→Canvas截图库。支持CSS渐变/阴影，但backdrop-filter等部分CSS支持有限。',check:function(){return typeof html2canvas!=='undefined';}},html2pdf:{name:'html2pdf.js',icon:'📦',url:'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js',size:'~400KB',desc:'html2canvas+jsPDF封装库，自带分页。内含jsPDF和html2canvas。',check:function(){return typeof html2pdf!=='undefined';}},pdflib:{name:'pdf-lib',icon:'🔧',url:'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',size:'~250KB',desc:'底层PDF操作库，可创建/修改PDF。不依赖html2canvas。',check:function(){return typeof PDFLib!=='undefined';}},mscreenshot:{name:'modern-screenshot',icon:'🖼️',url:'https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.39/dist/index.min.js',size:'~50KB',desc:'新一代DOM截图库，对CSS渐变/backdrop-filter等现代CSS支持更好。',check:function(){return typeof modernScreenshot!=='undefined';}}};
+var libLoading={};
+var METHODS=[{id:1,name:'iframe+jsPDF',libs:['jspdf','html2canvas'],desc:'iframe渲染→html2canvas截图→jsPDF分页。最可靠的基础方案。'},{id:2,name:'html2pdf.js',libs:['html2pdf'],desc:'封装库方案，自带分页。加载html2pdf即可（内含jsPDF+html2canvas）。'},{id:3,name:'pdf-lib+Canvas',libs:['pdflib','html2canvas'],desc:'pdf-lib替代jsPDF，更底层PDF控制。PNG嵌入质量更高。'},{id:4,name:'modern-screenshot',libs:['jspdf','mscreenshot'],desc:'modern-screenshot替代html2canvas，对CSS渐变/backdrop-filter支持更好。'},{id:5,name:'iframe打印',libs:[],desc:'隐藏iframe触发浏览器打印。无需任何库！最轻量方案。'},{id:6,name:'新窗口打印',libs:[],desc:'新窗口打开HTML触发打印。无需任何库！可能被弹窗拦截。'},{id:7,name:'高清图片PDF',libs:['jspdf','html2canvas'],desc:'3倍分辨率截图→PDF。文件更大但更清晰。'},{id:8,name:'Canvas直绘',libs:['jspdf','html2canvas'],desc:'预分配Canvas尺寸，html2canvas直接渲染到指定Canvas。'},{id:9,name:'双iframe隔离',libs:['jspdf','html2canvas'],desc:'外层iframe包裹内层iframe，双重隔离环境渲染。'},{id:10,name:'srcdoc直出',libs:['jspdf','html2canvas'],desc:'iframe.srcdoc加载HTML，最简洁的渲染方式。'}];
+var TEMPLATES=[{id:'math',icon:'📐',name:'数学练习题'},{id:'chinese',icon:'📝',name:'语文生字词'},{id:'poster',icon:'🎨',name:'活动海报'},{id:'legal',icon:'⚖️',name:'法律文书'},{id:'resume',icon:'👤',name:'个人简历'},{id:'invoice',icon:'🧾',name:'发票收据'},{id:'contract',icon:'📜',name:'合同模板'},{id:'exam',icon:'📋',name:'考试试卷'},{id:'recipe',icon:'🍳',name:'美食食谱'},{id:'meeting',icon:'📅',name:'会议纪要'},{id:'paper',icon:'🎓',name:'学术论文'},{id:'schedule',icon:'🗓️',name:'课程表'},{id:'dark',icon:'🌙',name:'深色背景'},{id:'gradient',icon:'🌈',name:'渐变背景'}];
+var SAMPLES={};
+SAMPLES.math='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>数学练习题</title><style>body{font-family:"Times New Roman",serif;padding:40px;max-width:800px;margin:0 auto;color:#333;}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:25px;}.header h1{font-size:22px;}.question{margin-bottom:22px;line-height:1.8;}.answer-line{border-bottom:1px solid #999;width:200px;display:inline-block;margin:0 5px;}.box{border:1px solid #ccc;padding:10px;border-radius:4px;margin-top:8px;}.footer{margin-top:30px;text-align:center;font-size:12px;color:#999;border-top:1px solid #ccc;padding-top:10px;}</style></head><body><div class="header"><h1>八年级数学期中练习题</h1><p>考试时间：90分钟 | 满分：100分</p></div><div class="question"><strong>一、选择题</strong>（每题3分）</div><div class="question">1. 一元二次方程 x²-4x+3=0 的根为（  ）<br>A. x₁=1,x₂=3  B. x₁=-1,x₂=-3</div><div class="question"><strong>二、填空题</strong></div><div class="question">4. 方程 x²=9 的解为<span class="answer-line"></span></div><div class="question"><strong>三、解答题</strong></div><div class="question">7. 解方程：x²-5x+6=0</div><div class="footer">命题人：数学教研组 | 2026年</div></body></html>';
+SAMPLES.chinese='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>语文生字词</title><style>body{font-family:"KaiTi",serif;padding:40px;max-width:800px;margin:0 auto;color:#333;background:#fff;}.header{text-align:center;border-bottom:3px double #8B4513;padding-bottom:15px;margin-bottom:25px;}.header h1{font-size:24px;color:#8B4513;letter-spacing:4px;}.word-table{width:100%;border-collapse:collapse;}.word-table th{background:#F5DEB3;color:#8B4513;padding:8px;border:1px solid #D2B48C;}.word-table td{padding:8px;border:1px solid #D2B48C;text-align:center;}.pinyin{color:#B22222;font-size:13px;}.idiom-box{display:inline-block;border:2px solid #8B4513;border-radius:8px;padding:8px 16px;margin:5px;font-size:18px;color:#8B4513;background:#FFF8DC;}</style></head><body><div class="header"><h1>语文生字生词练习</h1></div><table class="word-table"><tr><th>生字</th><th>拼音</th><th>部首</th><th>组词</th></tr><tr><td style="font-size:22px;">澜</td><td class="pinyin">lán</td><td>氵</td><td>波澜</td></tr></table><span class="idiom-box">波澜壮阔</span><span class="idiom-box">峰峦雄伟</span></body></html>';
+SAMPLES.poster='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>校园音乐节海报</title><style>body{margin:0;padding:0;font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 50%,#f093fb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}.poster{width:600px;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);border-radius:24px;padding:50px 40px;text-align:center;color:#fff;border:1px solid rgba(255,255,255,0.3);box-shadow:0 25px 50px rgba(0,0,0,0.3);}.poster h1{font-size:48px;font-weight:900;margin-bottom:8px;text-shadow:0 4px 20px rgba(0,0,0,0.3);}.poster .subtitle{font-size:20px;opacity:0.9;margin-bottom:30px;letter-spacing:3px;}.poster .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:25px 0;text-align:left;}.poster .info-item{background:rgba(255,255,255,0.1);border-radius:12px;padding:15px;}.poster .info-item .label{font-size:11px;opacity:0.7;}.poster .info-item .value{font-size:16px;font-weight:700;}.poster .artist{background:rgba(255,255,255,0.15);border-radius:20px;padding:6px 18px;font-size:14px;display:inline-block;margin:4px;border:1px solid rgba(255,255,255,0.2);}</style></head><body><div class="poster"><h1>星河音乐节</h1><div class="subtitle">GALAXY MUSIC FESTIVAL</div><div class="info-grid"><div class="info-item"><div class="label">日期</div><div class="value">5月17-18日</div></div><div class="info-item"><div class="label">时间</div><div class="value">18:00-23:00</div></div><div class="info-item"><div class="label">地点</div><div class="value">星光体育场</div></div><div class="info-item"><div class="label">舞台</div><div class="value">3大主题舞台</div></div></div><div><span class="artist">星际乐队</span><span class="artist">月光组合</span><span class="artist">银河之声</span></div></div></body></html>';
+SAMPLES.legal='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>律师函</title><style>body{font-family:"SimSun",serif;padding:50px 60px;max-width:800px;margin:0 auto;color:#000;line-height:2;}.header{text-align:center;margin-bottom:40px;}.header h1{font-size:26px;letter-spacing:6px;}.header .firm{font-size:14px;border-top:2px solid #000;border-bottom:1px solid #000;padding:8px 0;margin-top:10px;}.title{text-align:center;font-size:20px;font-weight:bold;margin-bottom:30px;letter-spacing:4px;}.content{text-indent:2em;margin-bottom:15px;font-size:15px;}.highlight{font-weight:bold;text-decoration:underline;}.stamp{display:inline-block;border:3px solid #c00;color:#c00;padding:5px 15px;border-radius:50%;font-size:14px;font-weight:bold;transform:rotate(-15deg);margin-left:10px;opacity:0.7;}</style></head><body><div class="header"><h1>律 师 函</h1><div class="firm">XX律师事务所</div></div><div class="title">关于要求支付工程款的律师函</div><div class="content">合同编号：<span class="highlight">GZ-2025-0315</span>，合同总价人民币<span class="highlight">叁佰伍拾万元整</span>。</div><div class="content">请于收到本函之日起<span class="highlight">十五个工作日</span>内支付剩余工程款。</div><div style="text-align:right;margin-top:40px;"><div>XX律师事务所<span class="stamp">律师函</span></div><div>2026年4月28日</div></div></body></html>';
+SAMPLES.resume='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>个人简历</title><style>body{font-family:"Microsoft YaHei",sans-serif;padding:0;margin:0;color:#333;background:#fff;}.page{max-width:800px;margin:0 auto;padding:40px;}.header{display:flex;gap:25px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2c3e50;}.avatar{width:90px;height:90px;border-radius:50%;background:#2c3e50;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;flex-shrink:0;}.header-info h1{font-size:24px;color:#2c3e50;margin-bottom:5px;}.section h2{font-size:14px;color:#2c3e50;border-left:3px solid #3498db;padding-left:10px;margin-bottom:12px;}.section .item{margin-bottom:12px;padding-left:13px;}.section .item-header{display:flex;justify-content:space-between;}.section .item-header .name{font-weight:bold;}.section .item-header .date{font-size:12px;color:#999;}.section .item ul{margin:4px 0 0 15px;font-size:13px;line-height:1.7;color:#555;}.skill-tag{background:#ecf0f1;color:#2c3e50;padding:4px 12px;border-radius:12px;font-size:12px;display:inline-block;margin:2px;}.skill-tag.hl{background:#3498db;color:#fff;}.bar-group{margin:8px 0;}.bar-label{font-size:12px;display:flex;justify-content:space-between;margin-bottom:3px;}.bar{height:6px;background:#ecf0f1;border-radius:3px;overflow:hidden;}.bar-fill{height:100%;background:linear-gradient(90deg,#3498db,#2ecc71);border-radius:3px;}</style></head><body><div class="page"><div class="header"><div class="avatar">陈</div><div class="header-info"><h1>陈思远</h1><div style="color:#7f8c8d;">高级前端工程师</div></div></div><div class="section"><h2>工作经历</h2><div class="item"><div class="item-header"><span class="name">高级前端工程师</span><span class="date">2023-至今</span></div><ul><li>主导前端架构升级</li><li>搭建微服务体系</li></ul></div></div><div class="section"><h2>技能</h2><span class="skill-tag hl">React</span><span class="skill-tag hl">Vue3</span><span class="skill-tag hl">TypeScript</span><div class="bar-group"><div class="bar-label"><span>JavaScript</span><span>95%</span></div><div class="bar"><div class="bar-fill" style="width:95%"></div></div></div></div></div></body></html>';
+SAMPLES.invoice='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>增值税电子发票</title><style>body{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:750px;margin:0 auto;color:#000;background:#fff;}.invoice{border:2px solid #c00;padding:30px;position:relative;}.invoice-title{text-align:center;font-size:22px;color:#c00;margin:15px 0 20px;letter-spacing:4px;font-weight:bold;}.info-row{display:flex;margin-bottom:10px;font-size:13px;}.info-row .label{width:80px;color:#666;}.info-row .value{flex:1;border-bottom:1px solid #eee;}.items-table{width:100%;border-collapse:collapse;margin:15px 0;font-size:12px;}.items-table th{background:#f8f8f8;border:1px solid #ddd;padding:8px;text-align:center;color:#666;}.items-table td{border:1px solid #ddd;padding:8px;text-align:center;}.total-row{display:flex;justify-content:flex-end;margin:10px 0;font-size:14px;}.total-row .amount{font-size:20px;color:#c00;font-weight:bold;}.stamp{position:absolute;right:40px;bottom:80px;border:3px solid #c00;color:#c00;padding:8px 20px;border-radius:50%;font-size:14px;font-weight:bold;transform:rotate(-20deg);opacity:0.5;}</style></head><body><div class="invoice"><div class="invoice-title">增值税电子普通发票</div><div class="info-row"><div class="label">购买方：</div><div class="value">XX科技有限公司</div></div><table class="items-table"><tr><th>货物名称</th><th>单位</th><th>数量</th><th>金额</th><th>税率</th><th>税额</th></tr><tr><td>软件开发服务</td><td>项</td><td>1</td><td>85,849.06</td><td>6%</td><td>5,150.94</td></tr></table><div class="total-row">价税合计：¥ <span class="amount">122,000.00</span></div><div class="stamp">发票专用章</div></div></body></html>';
+SAMPLES.contract='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>房屋租赁合同</title><style>body{font-family:"SimSun",serif;padding:40px 50px;max-width:800px;margin:0 auto;color:#000;line-height:2;font-size:14px;}.title{text-align:center;font-size:22px;font-weight:bold;margin-bottom:30px;letter-spacing:6px;}.blank{display:inline-block;border-bottom:1px solid #333;min-width:120px;margin:0 5px;}.sign-line{border-bottom:1px solid #333;display:inline-block;width:150px;margin-left:5px;}</style></head><body><div class="title">房屋租赁合同</div><p><strong>出租方：</strong><span class="blank">XX物业管理有限公司</span></p><p><strong>承租方：</strong><span class="blank">XX科技有限公司</span></p><p>月租金人民币<span class="blank">叁万贰仟元整</span>，按季度支付。</p><div style="margin-top:50px;display:flex;justify-content:space-between;"><div>甲方签名：<span class="sign-line"></span></div><div>乙方签名：<span class="sign-line"></span></div></div></body></html>';
+SAMPLES.exam='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>期末考试试卷</title><style>body{font-family:"SimSun",serif;padding:30px 40px;max-width:800px;margin:0 auto;color:#000;line-height:1.8;}.exam-header{text-align:center;margin-bottom:20px;}.exam-header h1{font-size:20px;letter-spacing:4px;}.student-info{display:flex;justify-content:space-between;border:1px solid #000;padding:8px 15px;margin-bottom:20px;font-size:13px;}.student-info .line{display:inline-block;width:80px;border-bottom:1px solid #000;}.score-table{width:100%;border-collapse:collapse;margin-bottom:20px;text-align:center;font-size:13px;}.score-table th,.score-table td{border:1px solid #000;padding:6px 10px;}.score-table th{background:#f0f0f0;}.section-title{font-size:15px;font-weight:bold;margin:20px 0 10px;border-bottom:2px solid #000;}.question{margin-bottom:15px;font-size:14px;}.answer-space{height:80px;border-bottom:1px dashed #ccc;margin:10px 0;}</style></head><body><div class="exam-header"><h1>2025-2026学年度第二学期期末考试</h1><div style="font-size:13px;color:#666;">高二英语 | 120分钟 | 满分150分</div></div><div class="student-info"><span>姓名：<span class="line"></span></span><span>班级：<span class="line"></span></span></div><table class="score-table"><tr><th>题型</th><th>听力</th><th>阅读</th><th>写作</th><th>总分</th></tr><tr><th>满分</th><td>30</td><td>70</td><td>50</td><td>150</td></tr></table><div class="section-title">阅读理解（40分）</div><div class="question">21. What is the main concern about AI?<br>A. Its cost  B. Its ethical implications</div><div class="section-title">书面表达（30分）</div><div class="answer-space"></div></body></html>';
+SAMPLES.recipe='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>美食食谱</title><style>body{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333;background:#fff;}.recipe-card{border:1px solid #e8e8e8;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);}.recipe-hero{background:linear-gradient(135deg,#ff6b6b,#ee5a24);padding:30px;color:#fff;text-align:center;}.recipe-hero h1{font-size:28px;}.recipe-body{padding:25px 30px;}.section h2{font-size:16px;color:#ee5a24;border-left:4px solid #ee5a24;padding-left:10px;margin-bottom:12px;}.ingredient-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}.ingredient-item{display:flex;justify-content:space-between;padding:8px 12px;background:#fef5f0;border-radius:8px;font-size:13px;}.ingredient-item .amount{color:#ee5a24;font-weight:bold;}.step{display:flex;gap:12px;margin-bottom:15px;}.step-num{width:28px;height:28px;border-radius:50%;background:#ee5a24;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;flex-shrink:0;}.step-content{flex:1;font-size:14px;line-height:1.7;color:#555;}.tip-box{background:#fff8e1;border-left:4px solid #ffc107;padding:12px 15px;border-radius:0 8px 8px 0;font-size:13px;margin-top:15px;}</style></head><body><div class="recipe-card"><div class="recipe-hero"><h1>红烧肉</h1><div style="opacity:0.8;">Braised Pork Belly</div><div style="margin-top:15px;font-size:13px;">90分钟 | 中等难度 | 4人份</div></div><div class="recipe-body"><div class="section"><h2>食材清单</h2><div class="ingredient-grid"><div class="ingredient-item"><span>五花肉</span><span class="amount">500g</span></div><div class="ingredient-item"><span>冰糖</span><span class="amount">30g</span></div></div></div><div class="section"><h2>烹饪步骤</h2><div class="step"><div class="step-num">1</div><div class="step-content">五花肉切块焯水，加料酒去腥。</div></div><div class="step"><div class="step-num">2</div><div class="step-content">小火熬冰糖至琥珀色，放入肉翻炒。</div></div><div class="step"><div class="step-num">3</div><div class="step-content">加葱姜八角，加热水，小火炖60分钟。</div></div><div class="step"><div class="step-num">4</div><div class="step-content">大火收汁，出锅撒葱花。</div></div></div><div class="tip-box">小贴士：炒糖色一定要小火。</div></div></div></body></html>';
+SAMPLES.meeting='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>会议纪要</title><style>body{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:800px;margin:0 auto;color:#333;}.doc-title{text-align:center;font-size:22px;font-weight:bold;color:#1a5276;margin-bottom:5px;}.meta-table{width:100%;border-collapse:collapse;margin-bottom:25px;font-size:13px;}.meta-table td{padding:8px 12px;border:1px solid #ddd;}.meta-table .label{background:#f0f4f8;color:#5d6d7e;width:100px;font-weight:bold;}.divider{height:2px;background:linear-gradient(90deg,#1a5276,#3498db,transparent);margin:20px 0;}.section h2{font-size:15px;color:#1a5276;border-left:3px solid #3498db;padding-left:10px;margin-bottom:10px;}.action-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}.action-table th{background:#1a5276;color:#fff;padding:8px;text-align:left;}.action-table td{padding:8px;border:1px solid #ddd;}.priority-high{color:#e74c3c;font-weight:bold;}</style></head><body><div class="doc-title">会议纪要</div><table class="meta-table"><tr><td class="label">会议主题</td><td>Q2产品迭代计划评审</td><td class="label">编号</td><td>RD-2026-0428</td></tr></table><div class="divider"></div><div class="section"><h2>决议事项</h2><table class="action-table"><tr><th>序号</th><th>事项</th><th>负责人</th><th>优先级</th></tr><tr><td>1</td><td>移动端性能优化</td><td>赵XX</td><td class="priority-high">高</td></tr></table></div></body></html>';
+SAMPLES.paper='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>学术论文</title><style>body{font-family:"Times New Roman","SimSun",serif;padding:40px 60px;max-width:800px;margin:0 auto;color:#000;line-height:1.8;font-size:14px;}.paper-title{text-align:center;font-size:20px;font-weight:bold;margin-bottom:8px;}.authors{text-align:center;font-size:13px;margin-bottom:20px;}.abstract{background:#f8f9fa;padding:15px 20px;border-radius:4px;margin:20px 0;font-size:13px;}.keywords span{display:inline-block;border:1px solid #ddd;padding:2px 8px;border-radius:3px;margin:2px;background:#f8f9fa;font-size:12px;}h2{font-size:15px;margin:25px 0 10px;border-bottom:1px solid #ddd;padding-bottom:5px;}p{text-indent:2em;margin:8px 0;}.formula{text-align:center;margin:15px 0;font-style:italic;font-size:15px;}.data-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}.data-table th{background:#f0f0f0;border:1px solid #ccc;padding:6px;text-align:center;}.data-table td{border:1px solid #ccc;padding:6px;text-align:center;}</style></head><body><div class="paper-title">基于深度学习的自然语言处理技术在智能客服系统中的应用研究</div><div class="authors">陈思远 王晓明 李华</div><div class="abstract"><strong>摘要：</strong>本文提出了基于预训练语言模型与知识图谱融合的智能客服系统，意图识别准确率达94.7%。</div><div class="keywords"><strong>关键词：</strong><span>深度学习</span><span>自然语言处理</span><span>智能客服</span></div><h2>1 引言</h2><p>智能客服系统在电商、金融等领域广泛应用。</p><h2>2 方法</h2><div class="formula">P(a|s) = softmax(W * [h_t; k_t; c_t] + b)</div><h2>3 实验</h2><table class="data-table"><tr><th>方法</th><th>准确率(%)</th><th>F1(%)</th></tr><tr><td>Rule-based</td><td>78.3</td><td>72.1</td></tr><tr><td><strong>Ours</strong></td><td><strong>94.7</strong></td><td><strong>92.4</strong></td></tr></table></body></html>';
+SAMPLES.schedule='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>课程表</title><style>body{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:800px;margin:0 auto;color:#333;}.schedule-title{text-align:center;font-size:22px;font-weight:bold;color:#2c3e50;margin-bottom:20px;}.schedule-table{width:100%;border-collapse:collapse;font-size:13px;}.schedule-table th{background:#2c3e50;color:#fff;padding:10px 8px;text-align:center;border:1px solid #1a252f;}.schedule-table td{border:1px solid #ddd;padding:8px 6px;text-align:center;height:50px;}.time-col{background:#f8f9fa;font-size:11px;color:#666;font-weight:bold;}.course{padding:3px 6px;border-radius:4px;font-size:11px;font-weight:bold;display:inline-block;}.c-math{background:#e8f4fd;color:#2980b9;border-left:3px solid #2980b9;}.c-chinese{background:#fdf2e8;color:#e67e22;border-left:3px solid #e67e22;}.c-english{background:#eafaf1;color:#27ae60;border-left:3px solid #27ae60;}.c-physics{background:#f9ebea;color:#c0392b;border-left:3px solid #c0392b;}.c-chemistry{background:#f4ecf7;color:#8e44ad;border-left:3px solid #8e44ad;}.c-pe{background:#fdedec;color:#e74c3c;border-left:3px solid #e74c3c;}.lunch{background:#fef9e7;color:#d4ac0d;font-size:12px;font-weight:bold;}</style></head><body><div class="schedule-title">2025-2026学年课程表</div><table class="schedule-table"><tr><th>节次</th><th>时间</th><th>周一</th><th>周二</th><th>周三</th><th>周四</th><th>周五</th></tr><tr><td class="time-col">1</td><td class="time-col">8:00</td><td><span class="course c-math">数学</span></td><td><span class="course c-english">英语</span></td><td><span class="course c-physics">物理</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-chemistry">化学</span></td></tr><tr><td class="time-col">2</td><td class="time-col">8:55</td><td><span class="course c-english">英语</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-physics">物理</span></td><td><span class="course c-math">数学</span></td></tr><tr><td class="time-col">3</td><td class="time-col">10:00</td><td><span class="course c-physics">物理</span></td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-english">英语</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-english">英语</span></td></tr><tr><td colspan="7" class="lunch">午餐 & 午休</td></tr><tr><td class="time-col">5</td><td class="time-col">14:00</td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-pe">体育</span></td></tr></table></body></html>';
+SAMPLES.dark='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>深色背景</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#1a1a2e;color:#e6e6e6;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}h1{color:#4a9eff;margin-bottom:20px;font-size:28px;}p{line-height:1.8;margin-bottom:16px;color:#ccc;}.card{background:#16213e;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #2a3a5e;}.card h2{color:#7ec8e3;margin-bottom:12px;}.highlight{color:#ffc107;font-weight:bold;}</style></head><body><h1>深色主题页面</h1><div class="card"><h2>关于此测试</h2><p>这是一个<span class="highlight">深色背景</span>页面，PDF应保持深色背景。</p></div><div class="card"><h2>预期效果</h2><p>所见即所得：深色背景在PDF中也应为深色。</p></div></body></html>';
+SAMPLES.gradient='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>渐变背景</title><style>body{background:linear-gradient(180deg,#0f0c29,#302b63,#24243e);color:#fff;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}h1{font-size:32px;margin-bottom:24px;}.box{background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-radius:16px;padding:24px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.2);}.box p{line-height:1.8;}.gradient-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#f093fb,#f5576c,#4facfe);margin:16px 0;}</style></head><body><h1>渐变背景测试</h1><div class="gradient-bar"></div><div class="box"><p>CSS渐变背景+毛玻璃效果，PDF应保持原样。</p></div><div class="box"><p>渐变条和半透明卡片都应完整保留。</p></div></body></html>';
 
-var TEMPLATES = [
-    {id:'math',icon:'📐',name:'数学练习题'},{id:'chinese',icon:'📝',name:'语文生字词'},
-    {id:'poster',icon:'🎨',name:'活动海报'},{id:'legal',icon:'⚖️',name:'法律文书'},
-    {id:'resume',icon:'👤',name:'个人简历'},{id:'invoice',icon:'🧾',name:'发票收据'},
-    {id:'contract',icon:'📜',name:'合同模板'},{id:'exam',icon:'📋',name:'考试试卷'},
-    {id:'recipe',icon:'🍳',name:'美食食谱'},{id:'meeting',icon:'📅',name:'会议纪要'},
-    {id:'paper',icon:'🎓',name:'学术论文'},{id:'schedule',icon:'🗓️',name:'课程表'},
-    {id:'dark',icon:'🌙',name:'深色背景'},{id:'gradient',icon:'🌈',name:'渐变背景'}
-];
-
-var SAMPLES = {};
-
-SAMPLES.math = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>数学练习题</title>\n<style>\nbody{font-family:"Times New Roman",serif;padding:40px;max-width:800px;margin:0 auto;color:#333;}\n.header{text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:25px;}\n.header h1{font-size:22px;margin-bottom:5px;}\n.header p{font-size:13px;color:#666;}\n.info{display:flex;justify-content:space-between;margin-bottom:20px;font-size:13px;border-bottom:1px dashed #ccc;padding-bottom:10px;}\n.question{margin-bottom:22px;line-height:1.8;}\n.question .q-num{font-weight:bold;margin-right:5px;}\n.question .q-score{float:right;font-size:12px;color:#999;}\n.answer-line{border-bottom:1px solid #999;width:200px;display:inline-block;margin:0 5px;}\n.grid-4{display:grid;grid-template-columns:1fr 1fr;gap:15px;}\n.box{border:1px solid #ccc;padding:10px;border-radius:4px;margin-top:8px;}\n.footer{margin-top:30px;text-align:center;font-size:12px;color:#999;border-top:1px solid #ccc;padding-top:10px;}\n</style></head><body>\n<div class="header">\n<h1>八年级数学期中练习题</h1>\n<p>考试时间：90分钟 | 满分：100分</p>\n</div>\n<div class="info">\n<span>姓名：__________</span>\n<span>班级：__________</span>\n<span>学号：__________</span>\n<span>得分：__________</span>\n</div>\n<div class="question"><span class="q-num">一、选择题</span><span class="q-score">（每题3分，共18分）</span></div>\n<div class="question">\n1. 下列各式中，属于一元二次方程的是（  ）<br>\nA. x² + 2x - 1 &nbsp;&nbsp; B. x² + 2x = 1 &nbsp;&nbsp; C. x² + 1/x = 0 &nbsp;&nbsp; D. x² + y² = 1\n</div>\n<div class="question">\n2. 一元二次方程 x² - 4x + 3 = 0 的两个根为（  ）<br>\nA. x₁=1, x₂=3 &nbsp;&nbsp; B. x₁=-1, x₂=-3 &nbsp;&nbsp; C. x₁=1, x₂=-3 &nbsp;&nbsp; D. x₁=-1, x₂=3\n</div>\n<div class="question"><span class="q-num">二、填空题</span><span class="q-score">（每题3分，共18分）</span></div>\n<div class="question">4. 方程 x² = 9 的解为<span class="answer-line"></span></div>\n<div class="question">5. 若关于 x 的方程 x² + 2x + k = 0 有两个不相等的实数根，则 k 的取值范围是<span class="answer-line"></span></div>\n<div class="question"><span class="q-num">三、解答题</span><span class="q-score">（共64分）</span></div>\n<div class="question">7.（10分）解下列方程：<br><div class="grid-4"><div class="box">(1) x² - 5x + 6 = 0</div><div class="box">(2) 2x² + 3x - 2 = 0</div></div></div>\n<div class="footer">命题人：数学教研组 | 审核人：教务处 | 2026年春季学期</div>\n</body></html>';
-
-SAMPLES.chinese = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>语文生字词练习</title>\n<style>\nbody{font-family:"KaiTi","STKaiti",serif;padding:40px;max-width:800px;margin:0 auto;color:#333;background:#fff;}\n.header{text-align:center;border-bottom:3px double #8B4513;padding-bottom:15px;margin-bottom:25px;}\n.header h1{font-size:24px;color:#8B4513;letter-spacing:4px;}\n.header p{font-size:13px;color:#999;}\n.section{margin-bottom:25px;}\n.section h2{font-size:16px;color:#8B4513;border-left:4px solid #8B4513;padding-left:10px;margin-bottom:12px;}\n.word-table{width:100%;border-collapse:collapse;margin-bottom:15px;}\n.word-table th{background:#F5DEB3;color:#8B4513;padding:8px 12px;text-align:center;font-size:14px;border:1px solid #D2B48C;}\n.word-table td{padding:8px 12px;border:1px solid #D2B48C;text-align:center;font-size:15px;}\n.word-table tr:nth-child(even){background:#FFF8DC;}\n.pinyin{color:#B22222;font-size:13px;}\n.idiom-box{display:inline-block;border:2px solid #8B4513;border-radius:8px;padding:8px 16px;margin:5px;font-size:18px;color:#8B4513;background:#FFF8DC;}\n.note{background:#FFF8DC;border:1px solid #D2B48C;border-radius:6px;padding:12px;margin:10px 0;font-size:13px;line-height:1.8;}\n</style></head><body>\n<div class="header"><h1>语文生字生词练习</h1><p>五年级下册 · 第三单元</p></div>\n<div class="section"><h2>一、生字认读</h2>\n<table class="word-table"><tr><th>生字</th><th>拼音</th><th>部首</th><th>笔画</th><th>组词</th><th>组词</th></tr>\n<tr><td style="font-size:22px;">澜</td><td class="pinyin">lán</td><td>氵</td><td>15画</td><td>波澜</td><td>巨澜</td></tr>\n<tr><td style="font-size:22px;">瑕</td><td class="pinyin">xiá</td><td>王</td><td>13画</td><td>瑕疵</td><td>无瑕</td></tr>\n<tr><td style="font-size:22px;">翡</td><td class="pinyin">fěi</td><td>羽</td><td>14画</td><td>翡翠</td><td>翡帷</td></tr>\n</table></div>\n<div class="section"><h2>二、成语积累</h2>\n<div style="text-align:center;"><span class="idiom-box">波澜壮阔</span><span class="idiom-box">峰峦雄伟</span><span class="idiom-box">连绵不断</span></div>\n<div class="note"><strong>词语解释：</strong><br>· 波澜壮阔：比喻声势雄壮浩大。<br>· 峰峦雄伟：山峰连绵，气势雄伟。</div></div>\n</body></html>';
-
-SAMPLES.poster = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>校园音乐节海报</title>\n<style>\nbody{margin:0;padding:0;font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 50%,#f093fb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}\n.poster{width:600px;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);border-radius:24px;padding:50px 40px;text-align:center;color:#fff;border:1px solid rgba(255,255,255,0.3);box-shadow:0 25px 50px rgba(0,0,0,0.3);}\n.poster h1{font-size:48px;font-weight:900;margin-bottom:8px;text-shadow:0 4px 20px rgba(0,0,0,0.3);}\n.poster .subtitle{font-size:20px;opacity:0.9;margin-bottom:30px;letter-spacing:3px;}\n.poster .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:25px 0;text-align:left;}\n.poster .info-item{background:rgba(255,255,255,0.1);border-radius:12px;padding:15px;}\n.poster .info-item .label{font-size:11px;opacity:0.7;}\n.poster .info-item .value{font-size:16px;font-weight:700;}\n.poster .artist{background:rgba(255,255,255,0.15);border-radius:20px;padding:6px 18px;font-size:14px;display:inline-block;margin:4px;border:1px solid rgba(255,255,255,0.2);}\n</style></head><body>\n<div class="poster">\n<h1>星河音乐节</h1>\n<div class="subtitle">GALAXY MUSIC FESTIVAL</div>\n<div class="info-grid">\n<div class="info-item"><div class="label">日期</div><div class="value">5月17日-18日</div></div>\n<div class="info-item"><div class="label">时间</div><div class="value">18:00 - 23:00</div></div>\n<div class="info-item"><div class="label">地点</div><div class="value">星光体育场</div></div>\n<div class="info-item"><div class="label">舞台</div><div class="value">3大主题舞台</div></div>\n</div>\n<div><span class="artist">星际乐队</span><span class="artist">月光组合</span><span class="artist">银河之声</span><span class="artist">极光乐团</span></div>\n</div></body></html>';
-
-SAMPLES.legal = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>律师函</title>\n<style>\nbody{font-family:"SimSun","宋体",serif;padding:50px 60px;max-width:800px;margin:0 auto;color:#000;line-height:2;}\n.header{text-align:center;margin-bottom:40px;}\n.header h1{font-size:26px;letter-spacing:6px;}\n.header .firm{font-size:14px;color:#333;border-top:2px solid #000;border-bottom:1px solid #000;padding:8px 0;margin-top:10px;}\n.title{text-align:center;font-size:20px;font-weight:bold;margin-bottom:30px;letter-spacing:4px;}\n.content{text-indent:2em;margin-bottom:15px;font-size:15px;}\n.highlight{font-weight:bold;text-decoration:underline;}\n.seal{text-align:right;margin-top:40px;line-height:1.8;}\n.stamp{display:inline-block;border:3px solid #c00;color:#c00;padding:5px 15px;border-radius:50%;font-size:14px;font-weight:bold;transform:rotate(-15deg);margin-left:10px;opacity:0.7;}\n</style></head><body>\n<div class="header"><h1>律 师 函</h1><div class="firm">XX律师事务所</div></div>\n<div class="title">关于要求支付工程款的律师函</div>\n<div class="content">XX律师事务所接受XX建筑装饰工程有限公司的委托，就贵司拖欠委托人工程款一事，特致函如下：</div>\n<div class="content"><strong>一、基本事实</strong></div>\n<div class="content">2025年3月15日，委托人与贵司签订了《施工合同》（合同编号：<span class="highlight">GZ-2025-0315</span>），合同总价为人民币<span class="highlight">叁佰伍拾万元整</span>。</div>\n<div class="content"><strong>二、律师要求</strong></div>\n<div class="content">请贵司于收到本函之日起<span class="highlight">十五个工作日</span>内支付剩余工程款。</div>\n<div class="seal"><div>XX律师事务所<span class="stamp">律师函</span></div><div>2026年4月28日</div></div>\n</body></html>';
-
-SAMPLES.resume = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>个人简历</title>\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:0;margin:0;color:#333;background:#fff;}\n.page{max-width:800px;margin:0 auto;padding:40px;}\n.header{display:flex;gap:25px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2c3e50;}\n.avatar{width:90px;height:90px;border-radius:50%;background:#2c3e50;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;flex-shrink:0;}\n.header-info h1{font-size:24px;color:#2c3e50;margin-bottom:5px;}\n.contact{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#666;margin-top:10px;}\n.section{margin-bottom:20px;}\n.section h2{font-size:14px;color:#2c3e50;border-left:3px solid #3498db;padding-left:10px;margin-bottom:12px;}\n.section .item{margin-bottom:12px;padding-left:13px;}\n.section .item-header{display:flex;justify-content:space-between;margin-bottom:4px;}\n.section .item-header .name{font-weight:bold;}\n.section .item-header .date{font-size:12px;color:#999;}\n.section .item ul{margin:4px 0 0 15px;font-size:13px;line-height:1.7;color:#555;}\n.skill-tag{background:#ecf0f1;color:#2c3e50;padding:4px 12px;border-radius:12px;font-size:12px;display:inline-block;margin:2px;}\n.skill-tag.hl{background:#3498db;color:#fff;}\n.bar-group{margin:8px 0;}\n.bar-label{font-size:12px;display:flex;justify-content:space-between;margin-bottom:3px;}\n.bar{height:6px;background:#ecf0f1;border-radius:3px;overflow:hidden;}\n.bar-fill{height:100%;background:linear-gradient(90deg,#3498db,#2ecc71);border-radius:3px;}\n</style></head><body>\n<div class="page">\n<div class="header"><div class="avatar">陈</div><div class="header-info"><h1>陈思远</h1><div style="color:#7f8c8d;">高级前端工程师 · 5年经验</div><div class="contact"><span>138-0000-8888</span><span>chensiyuan@email.com</span><span>广州市天河区</span></div></div></div>\n<div class="section"><h2>工作经历</h2><div class="item"><div class="item-header"><span class="name">高级前端工程师</span><span class="date">2023.03 - 至今</span></div><ul><li>主导前端架构升级，Vue2迁移至Vue3+TypeScript</li><li>搭建微服务体系，支撑10+业务模块独立部署</li></ul></div></div>\n<div class="section"><h2>专业技能</h2><div><span class="skill-tag hl">React</span><span class="skill-tag hl">Vue3</span><span class="skill-tag hl">TypeScript</span><span class="skill-tag">Node.js</span><span class="skill-tag">Webpack/Vite</span></div><div class="bar-group"><div class="bar-label"><span>JavaScript/TypeScript</span><span>95%</span></div><div class="bar"><div class="bar-fill" style="width:95%"></div></div></div></div>\n</div></body></html>';
-
-SAMPLES.invoice = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>增值税电子发票</title>\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:750px;margin:0 auto;color:#000;background:#fff;}\n.invoice{border:2px solid #c00;padding:30px;position:relative;}\n.invoice-title{text-align:center;font-size:22px;color:#c00;margin:15px 0 20px;letter-spacing:4px;font-weight:bold;}\n.info-row{display:flex;margin-bottom:10px;font-size:13px;}\n.info-row .label{width:80px;color:#666;flex-shrink:0;}\n.info-row .value{flex:1;border-bottom:1px solid #eee;}\n.items-table{width:100%;border-collapse:collapse;margin:15px 0;font-size:12px;}\n.items-table th{background:#f8f8f8;border:1px solid #ddd;padding:8px 6px;text-align:center;color:#666;}\n.items-table td{border:1px solid #ddd;padding:8px 6px;text-align:center;}\n.total-row{display:flex;justify-content:flex-end;margin:10px 0;font-size:14px;}\n.total-row .amount{font-size:20px;color:#c00;font-weight:bold;}\n.stamp{position:absolute;right:40px;bottom:80px;border:3px solid #c00;color:#c00;padding:8px 20px;border-radius:50%;font-size:14px;font-weight:bold;transform:rotate(-20deg);opacity:0.5;}\n</style></head><body>\n<div class="invoice">\n<div class="invoice-title">增值税电子普通发票</div>\n<div class="info-row"><div class="label">购买方：</div><div class="value">XX科技有限公司</div></div>\n<div class="info-row"><div class="label">纳税人识别号：</div><div class="value">91440101MA5XXXXX8K</div></div>\n<table class="items-table"><tr><th>货物名称</th><th>单位</th><th>数量</th><th>金额</th><th>税率</th><th>税额</th></tr>\n<tr><td>软件开发服务</td><td>项</td><td>1</td><td>85,849.06</td><td>6%</td><td>5,150.94</td></tr>\n<tr><td>系统运维服务</td><td>年</td><td>1</td><td>18,867.92</td><td>6%</td><td>1,132.08</td></tr></table>\n<div class="total-row">价税合计：¥ <span class="amount">122,000.00</span></div>\n<div class="stamp">发票专用章</div>\n</div></body></html>';
-
-SAMPLES.contract = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>房屋租赁合同</title>\n<style>\nbody{font-family:"SimSun","宋体",serif;padding:40px 50px;max-width:800px;margin:0 auto;color:#000;line-height:2;font-size:14px;}\n.title{text-align:center;font-size:22px;font-weight:bold;margin-bottom:30px;letter-spacing:6px;}\n.parties{margin-bottom:20px;border:1px solid #ccc;padding:15px;border-radius:4px;background:#fafafa;}\n.parties .role{font-weight:bold;}\n.article{margin-bottom:18px;}\n.article .art-title{font-weight:bold;margin-bottom:5px;}\n.article p{text-indent:2em;margin:5px 0;}\n.blank{display:inline-block;border-bottom:1px solid #333;min-width:120px;margin:0 5px;}\n.sign-area{margin-top:50px;display:flex;justify-content:space-between;}\n.sign-line{border-bottom:1px solid #333;display:inline-block;width:150px;margin-left:5px;}\n</style></head><body>\n<div class="title">房屋租赁合同</div>\n<div class="parties"><p><span class="role">出租方（甲方）：</span><span class="blank">XX物业管理有限公司</span></p><p><span class="role">承租方（乙方）：</span><span class="blank">XX科技有限公司</span></p></div>\n<div class="article"><div class="art-title">第一条 租赁房屋基本情况</div><p>甲方将坐落于<span class="blank">广州市天河区XX路88号</span>的房屋出租给乙方，建筑面积<span class="blank">320平方米</span>。</p></div>\n<div class="article"><div class="art-title">第二条 租金</div><p>月租金为人民币<span class="blank">叁万贰仟元整</span>，按季度支付。</p></div>\n<div class="sign-area"><div><p><strong>甲方：</strong></p><p>签名：<span class="sign-line"></span></p></div><div><p><strong>乙方：</strong></p><p>签名：<span class="sign-line"></span></p></div></div>\n</body></html>';
-
-SAMPLES.exam = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>期末考试试卷</title>\n<style>\nbody{font-family:"SimSun","宋体",serif;padding:30px 40px;max-width:800px;margin:0 auto;color:#000;line-height:1.8;}\n.exam-header{text-align:center;margin-bottom:20px;}\n.exam-header h1{font-size:20px;letter-spacing:4px;}\n.student-info{display:flex;justify-content:space-between;border:1px solid #000;padding:8px 15px;margin-bottom:20px;font-size:13px;}\n.student-info .line{display:inline-block;width:80px;border-bottom:1px solid #000;}\n.score-table{width:100%;border-collapse:collapse;margin-bottom:20px;text-align:center;font-size:13px;}\n.score-table th,.score-table td{border:1px solid #000;padding:6px 10px;}\n.score-table th{background:#f0f0f0;}\n.section-title{font-size:15px;font-weight:bold;margin:20px 0 10px;border-bottom:2px solid #000;}\n.question{margin-bottom:15px;font-size:14px;}\n.options{margin:5px 0 5px 2em;line-height:2;}\n.answer-space{height:80px;border-bottom:1px dashed #ccc;margin:10px 0;}\n</style></head><body>\n<div class="exam-header"><h1>2025-2026学年度第二学期期末考试</h1><div style="font-size:13px;color:#666;">高二英语试卷 | 考试时间：120分钟 | 满分：150分</div></div>\n<div class="student-info"><span>姓名：<span class="line"></span></span><span>班级：<span class="line"></span></span><span>考号：<span class="line"></span></span></div>\n<table class="score-table"><tr><th>题型</th><th>听力</th><th>阅读</th><th>完形</th><th>写作</th><th>总分</th></tr><tr><th>满分</th><td>30</td><td>40</td><td>30</td><td>50</td><td>150</td></tr></table>\n<div class="section-title">第二部分：阅读理解（满分40分）</div>\n<div class="question"><p>Read the following passage and answer the questions below.</p><p style="font-style:italic;color:#444;margin:8px 0;">The rapid development of artificial intelligence has transformed various industries...</p></div>\n<div class="question">21. According to the passage, what is the main concern about AI?<br><div class="options">A. Its cost<br>B. Its ethical implications<br>C. Its technical complexity<br>D. Its environmental impact</div></div>\n<div class="section-title">第五部分：书面表达（满分30分）</div>\n<div class="question"><p>假定你是李华，请给你的英国笔友Tom写一封回信。</p></div>\n<div class="answer-space"></div><div class="answer-space"></div>\n</body></html>';
-
-SAMPLES.recipe = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>美食食谱</title>\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333;background:#fff;}\n.recipe-card{border:1px solid #e8e8e8;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);}\n.recipe-hero{background:linear-gradient(135deg,#ff6b6b,#ee5a24);padding:30px;color:#fff;text-align:center;}\n.recipe-hero h1{font-size:28px;margin-bottom:5px;}\n.recipe-body{padding:25px 30px;}\n.section{margin-bottom:22px;}\n.section h2{font-size:16px;color:#ee5a24;margin-bottom:12px;border-left:4px solid #ee5a24;padding-left:10px;}\n.ingredient-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}\n.ingredient-item{display:flex;justify-content:space-between;padding:8px 12px;background:#fef5f0;border-radius:8px;font-size:13px;}\n.ingredient-item .amount{color:#ee5a24;font-weight:bold;}\n.step{display:flex;gap:12px;margin-bottom:15px;}\n.step-num{width:28px;height:28px;border-radius:50%;background:#ee5a24;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;flex-shrink:0;}\n.step-content{flex:1;font-size:14px;line-height:1.7;color:#555;}\n.tip-box{background:#fff8e1;border-left:4px solid #ffc107;padding:12px 15px;border-radius:0 8px 8px 0;font-size:13px;margin-top:15px;}\n</style></head><body>\n<div class="recipe-card"><div class="recipe-hero"><h1>红烧肉</h1><div style="opacity:0.8;">Braised Pork Belly</div><div style="margin-top:15px;font-size:13px;">90分钟 | 中等难度 | 4人份</div></div>\n<div class="recipe-body"><div class="section"><h2>食材清单</h2><div class="ingredient-grid"><div class="ingredient-item"><span>五花肉</span><span class="amount">500g</span></div><div class="ingredient-item"><span>冰糖</span><span class="amount">30g</span></div><div class="ingredient-item"><span>生抽</span><span class="amount">2勺</span></div><div class="ingredient-item"><span>老抽</span><span class="amount">1勺</span></div></div></div>\n<div class="section"><h2>烹饪步骤</h2><div class="step"><div class="step-num">1</div><div class="step-content">五花肉切块焯水，加入料酒去腥，捞出沥干。</div></div><div class="step"><div class="step-num">2</div><div class="step-content">小火熬冰糖至琥珀色，放入五花肉翻炒上色。</div></div><div class="step"><div class="step-num">3</div><div class="step-content">加入葱姜八角，倒入热水，小火炖煮60分钟。</div></div><div class="step"><div class="step-num">4</div><div class="step-content">大火收汁，出锅撒上葱花。</div></div></div>\n<div class="tip-box">小贴士：炒糖色一定要小火，糖色变琥珀色时立即下肉，否则会发苦。</div>\n</div></div></body></html>';
-
-SAMPLES.meeting = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>会议纪要</title>\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:800px;margin:0 auto;color:#333;}\n.doc-title{text-align:center;font-size:22px;font-weight:bold;color:#1a5276;margin-bottom:5px;}\n.doc-subtitle{text-align:center;font-size:14px;color:#7f8c8d;margin-bottom:25px;}\n.meta-table{width:100%;border-collapse:collapse;margin-bottom:25px;font-size:13px;}\n.meta-table td{padding:8px 12px;border:1px solid #ddd;}\n.meta-table .label{background:#f0f4f8;color:#5d6d7e;width:100px;font-weight:bold;}\n.divider{height:2px;background:linear-gradient(90deg,#1a5276,#3498db,transparent);margin:20px 0;}\n.section{margin-bottom:20px;}\n.section h2{font-size:15px;color:#1a5276;border-left:3px solid #3498db;padding-left:10px;margin-bottom:10px;}\n.section li{font-size:13px;line-height:1.8;color:#555;}\n.action-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}\n.action-table th{background:#1a5276;color:#fff;padding:8px;text-align:left;}\n.action-table td{padding:8px;border:1px solid #ddd;}\n.priority-high{color:#e74c3c;font-weight:bold;}\n</style></head><body>\n<div class="doc-title">会议纪要</div><div class="doc-subtitle">XX科技有限公司 · 产品研发部</div>\n<table class="meta-table"><tr><td class="label">会议主题</td><td>Q2产品迭代计划评审会</td><td class="label">会议编号</td><td>RD-2026-0428</td></tr><tr><td class="label">会议时间</td><td>2026年4月28日 14:00-16:30</td><td class="label">会议地点</td><td>3楼A会议室</td></tr></table>\n<div class="divider"></div>\n<div class="section"><h2>一、会议议题</h2><ol><li>Q1产品数据回顾与复盘</li><li>Q2核心功能迭代方案评审</li></ol></div>\n<div class="section"><h2>二、决议事项</h2><table class="action-table"><tr><th>序号</th><th>事项</th><th>负责人</th><th>截止日期</th><th>优先级</th></tr><tr><td>1</td><td>移动端性能优化方案</td><td>赵XX</td><td>5月10日</td><td class="priority-high">高</td></tr><tr><td>2</td><td>智能推荐算法POC</td><td>刘XX</td><td>5月15日</td><td class="priority-high">高</td></tr></table></div>\n</body></html>';
-
-SAMPLES.paper = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>学术论文</title>\n<style>\nbody{font-family:"Times New Roman","SimSun",serif;padding:40px 60px;max-width:800px;margin:0 auto;color:#000;line-height:1.8;font-size:14px;}\n.paper-title{text-align:center;font-size:20px;font-weight:bold;margin-bottom:8px;line-height:1.4;}\n.authors{text-align:center;font-size:13px;margin-bottom:5px;}\n.affiliations{text-align:center;font-size:11px;color:#666;margin-bottom:20px;}\n.abstract{background:#f8f9fa;padding:15px 20px;border-radius:4px;margin:20px 0;font-size:13px;line-height:1.8;}\n.keywords span{display:inline-block;border:1px solid #ddd;padding:2px 8px;border-radius:3px;margin:2px;background:#f8f9fa;font-size:12px;}\nh2{font-size:15px;margin:25px 0 10px;border-bottom:1px solid #ddd;padding-bottom:5px;}\np{text-indent:2em;margin:8px 0;}\n.formula{text-align:center;margin:15px 0;font-style:italic;font-size:15px;}\n.data-table{width:100%;border-collapse:collapse;margin:10px 0 20px;font-size:12px;}\n.data-table th{background:#f0f0f0;border:1px solid #ccc;padding:6px 10px;text-align:center;}\n.data-table td{border:1px solid #ccc;padding:6px 10px;text-align:center;}\n.ref{font-size:12px;line-height:1.8;margin:5px 0;padding-left:2em;text-indent:-2em;}\n</style></head><body>\n<div class="paper-title">基于深度学习的自然语言处理技术在智能客服系统中的应用研究</div>\n<div class="authors">陈思远 王晓明 李华</div>\n<div class="affiliations">华南理工大学 中山大学 XX科技有限公司</div>\n<div class="abstract"><strong>摘要：</strong>本文提出了一种基于预训练语言模型与知识图谱融合的智能客服系统架构，意图识别准确率达到94.7%，用户满意度提升23.5%。</div>\n<div class="keywords"><strong>关键词：</strong> <span>深度学习</span> <span>自然语言处理</span> <span>智能客服</span> <span>预训练模型</span></div>\n<h2>1 引言</h2>\n<p>智能客服系统作为人工智能技术的重要应用场景，近年来在电商、金融、医疗等领域得到广泛应用。</p>\n<h2>2 方法</h2>\n<p>本文提出的系统架构包含三个核心模块：</p>\n<div class="formula">P(a|s) = softmax(W * [h_t; k_t; c_t] + b)</div>\n<h2>3 实验</h2>\n<table class="data-table"><tr><th>方法</th><th>准确率(%)</th><th>F1(%)</th><th>响应时间(ms)</th></tr><tr><td>Rule-based</td><td>78.3</td><td>72.1</td><td>45</td></tr><tr><td>BERT-base</td><td>93.1</td><td>90.7</td><td>280</td></tr><tr><td><strong>Ours</strong></td><td><strong>94.7</strong></td><td><strong>92.4</strong></td><td>310</td></tr></table>\n<h2>参考文献</h2>\n<div class="ref">[1] Chen Q, et al. Enhanced LSTM for NLI. ACL, 2017.</div>\n<div class="ref">[2] Zhang J, et al. Recent advances in NLP pre-training. AI Review, 2023.</div>\n</body></html>';
-
-SAMPLES.schedule = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>课程表</title>\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px;max-width:800px;margin:0 auto;color:#333;}\n.schedule-title{text-align:center;font-size:22px;font-weight:bold;color:#2c3e50;margin-bottom:20px;}\n.schedule-table{width:100%;border-collapse:collapse;font-size:13px;}\n.schedule-table th{background:#2c3e50;color:#fff;padding:10px 8px;text-align:center;border:1px solid #1a252f;}\n.schedule-table td{border:1px solid #ddd;padding:8px 6px;text-align:center;vertical-align:middle;height:55px;}\n.schedule-table .time-col{background:#f8f9fa;font-size:11px;color:#666;width:70px;font-weight:bold;}\n.schedule-table .period{background:#ecf0f1;font-size:11px;color:#7f8c8d;}\n.course{padding:3px 6px;border-radius:4px;font-size:11px;font-weight:bold;display:inline-block;}\n.c-math{background:#e8f4fd;color:#2980b9;border-left:3px solid #2980b9;}\n.c-chinese{background:#fdf2e8;color:#e67e22;border-left:3px solid #e67e22;}\n.c-english{background:#eafaf1;color:#27ae60;border-left:3px solid #27ae60;}\n.c-physics{background:#f9ebea;color:#c0392b;border-left:3px solid #c0392b;}\n.c-chemistry{background:#f4ecf7;color:#8e44ad;border-left:3px solid #8e44ad;}\n.c-pe{background:#fdedec;color:#e74c3c;border-left:3px solid #e74c3c;}\n.c-self{color:#999;}\n.lunch{background:#fef9e7;color:#d4ac0d;font-size:12px;font-weight:bold;}\n</style></head><body>\n<div class="schedule-title">2025-2026学年第二学期课程表</div>\n<table class="schedule-table"><tr><th>节次</th><th>时间</th><th>周一</th><th>周二</th><th>周三</th><th>周四</th><th>周五</th></tr>\n<tr><td class="period">1</td><td class="time-col">8:00</td><td><span class="course c-math">数学</span></td><td><span class="course c-english">英语</span></td><td><span class="course c-physics">物理</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-chemistry">化学</span></td></tr>\n<tr><td class="period">2</td><td class="time-col">8:55</td><td><span class="course c-english">英语</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-math">数学</span></td><td><span class="course c-physics">物理</span></td><td><span class="course c-math">数学</span></td></tr>\n<tr><td class="period">3</td><td class="time-col">10:00</td><td><span class="course c-physics">物理</span></td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-english">英语</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-english">英语</span></td></tr>\n<tr><td class="period">4</td><td class="time-col">10:55</td><td><span class="course c-chinese">语文</span></td><td><span class="course c-physics">物理</span></td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-english">英语</span></td><td><span class="course c-chinese">语文</span></td></tr>\n<tr><td colspan="7" class="lunch">午餐 & 午休 11:40 - 14:00</td></tr>\n<tr><td class="period">5</td><td class="time-col">14:00</td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-chinese">语文</span></td><td><span class="course c-chemistry">化学</span></td><td><span class="course c-pe">体育</span></td></tr>\n<tr><td class="period">6</td><td class="time-col">14:55</td><td><span class="course c-pe">体育</span></td><td><span class="course c-self">自习</span></td><td><span class="course c-self">自习</span></td><td><span class="course c-self">自习</span></td><td><span class="course c-self">班会</span></td></tr>\n</table>\n</body></html>';
-
-SAMPLES.dark = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>深色背景测试</title>\n<style>\n*{margin:0;padding:0;box-sizing:border-box;}\nbody{background:#1a1a2e;color:#e6e6e6;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}\nh1{color:#4a9eff;margin-bottom:20px;font-size:28px;}\np{line-height:1.8;margin-bottom:16px;color:#ccc;}\n.card{background:#16213e;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #2a3a5e;}\n.card h2{color:#7ec8e3;margin-bottom:12px;}\n.highlight{color:#ffc107;font-weight:bold;}\n</style></head><body>\n<h1>深色主题页面</h1>\n<div class="card"><h2>关于此测试</h2><p>这是一个使用<span class="highlight">深色背景</span>的 HTML 页面，用于测试 PDF 导出时背景色的处理。</p><p>如果导出的 PDF 背景是黑色的，说明该方案未能正确处理深色背景。</p></div>\n<div class="card"><h2>预期效果</h2><p>理想的 PDF 应该是白色背景 + 深色文字，方便打印和阅读。</p></div>\n</body></html>';
-
-SAMPLES.gradient = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>渐变背景测试</title>\n<style>\nbody{background:linear-gradient(180deg,#0f0c29,#302b63,#24243e);color:#fff;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}\nh1{font-size:32px;margin-bottom:24px;}\n.box{background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-radius:16px;padding:24px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.2);}\n.box p{line-height:1.8;}\n.gradient-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#f093fb,#f5576c,#4facfe);margin:16px 0;}\n</style></head><body>\n<h1>渐变背景测试</h1>\n<div class="gradient-bar"></div>\n<div class="box"><p>此页面使用 CSS 渐变作为背景，这是 PDF 导出中最难处理的情况之一。</p></div>\n<div class="box"><p>如果 PDF 中渐变被移除并替换为白色背景，说明该方案能正确处理渐变。</p></div>\n</body></html>';
-
-var activeTplId = null;
-
-function buildTemplateButtons() {
-    TEMPLATES.forEach(function(tpl) {
-        var btn = document.createElement('button');
-        btn.className = 'tpl-btn';
-        btn.dataset.id = tpl.id;
-        btn.innerHTML = '<span class="icon">' + tpl.icon + '</span>' + tpl.name;
-        btn.onclick = function() { loadSample(tpl.id); };
-        templatesScroll.appendChild(btn);
-    });
-}
-
-function loadSample(name) {
-    htmlEditor.value = SAMPLES[name] || '';
-    activeTplId = name;
-    document.querySelectorAll('.tpl-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.id === name); });
-    var tpl = TEMPLATES.find(function(t) { return t.id === name; });
-    currentTpl.textContent = tpl ? tpl.icon + ' ' + tpl.name : '';
-    updatePreview();
-}
-
-function updatePreview() {
-    var code = htmlEditor.value;
-    charCount.textContent = code.length + ' 字符';
-    try {
-        if ('srcdoc' in previewFrame) { previewFrame.srcdoc = code; }
-        else { var doc = previewFrame.contentDocument; doc.open(); doc.write(code); doc.close(); }
-    } catch(e) { previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code); }
-}
-
-htmlEditor.addEventListener('input', function() {
-    clearTimeout(htmlEditor._timer);
-    htmlEditor._timer = setTimeout(updatePreview, 300);
-    charCount.textContent = htmlEditor.value.length + ' 字符';
-    activeTplId = null;
-    document.querySelectorAll('.tpl-btn').forEach(function(b) { b.classList.remove('active'); });
-    currentTpl.textContent = '自定义编辑中...';
-});
-
-function showToast(msg, type) {
-    type = type || 'info';
-    var t = document.createElement('div');
-    t.className = 'toast ' + type;
-    t.textContent = msg;
-    document.getElementById('toastContainer').appendChild(t);
-    setTimeout(function() { t.remove(); }, 3000);
-}
-function setStatus(text) { statusText.textContent = text; }
-
-function getHtmlContent() { return htmlEditor.value; }
-
-function getFilename() {
-    var content = htmlEditor.value;
-    var title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
-    return (title ? title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') : 'export') + '.pdf';
-}
-
-*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}</style>';
-    return html.replace('</head>', whiteCss + '</head>').replace(/<body[^>]*>/, function(m) { return m + '<div style="">'; }).replace('</body>', '</div></body>');
-}
-
-function createRenderIframe(html, width, callback) {
-    var iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + width + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
-    document.body.appendChild(iframe);
-    var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    iframeDoc.open();
-    iframeDoc.write(html);
-    iframeDoc.close();
-    setTimeout(function() { callback(iframe); }, 800);
-}
-
-function removeIframe(iframe) {
-    try { document.body.removeChild(iframe); } catch(e) {}
-}
-
-function canvasToPdfPages(canvas, jsPDFConstructor) {
-    var imgWidthMm = 190;
-    var imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
-    var pdf = new jsPDFConstructor('p', 'mm', 'a4');
-    var positionMm = 0;
-    var pageHeightMm = 277;
-    var remainingHeightMm = imgHeightMm;
-    while (remainingHeightMm > 0) {
-        var sourceY = positionMm * (canvas.width / imgWidthMm);
-        var sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
-        var pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
-        if (pageCanvas.height <= 0) break;
-        var ctx = pageCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, Math.round(sourceY), pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
-        var pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-        if (positionMm > 0) pdf.addPage();
-        var pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
-        pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
-        remainingHeightMm -= pageHeightMm;
-        positionMm += pageHeightMm;
-    }
-    return pdf;
-}
-
-function downloadBlob(blob, filename) {
-    if (navigator.share && navigator.canShare && navigator.canShare({files: [new File([blob], filename, {type: blob.type})]})) {
-        var file = new File([blob], filename, {type: blob.type});
-        navigator.share({files: [file], title: filename}).then(function() { showToast('导出成功', 'success'); }).catch(function(err) { if (err.name !== 'AbortError') fallbackDownload(blob, filename); });
-    } else { fallbackDownload(blob, filename); }
-}
-
-function fallbackDownload(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-    showToast('PDF导出成功', 'success');
-}
-
-// ==================== 方案1: iframe渲染 + jsPDF ====================
-async function exportMethod1() {
-    setStatus('方案1: iframe渲染+jsPDF 生成中...'); showToast('方案1: 开始生成', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') { showToast('库未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var canvas = await html2canvas(iframeBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
-                var jsPDF = window.jspdf.jsPDF;
-                var pdf = canvasToPdfPages(canvas, jsPDF);
-                var pdfBlob = pdf.output('blob');
-                downloadBlob(pdfBlob, getFilename());
-                removeIframe(iframe);
-                setStatus('方案1: 导出完成');
-            } catch(e) { showToast('方案1失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案1: 失败'); }
-        });
-    } catch(e) { showToast('方案1失败: ' + e.message, 'error'); setStatus('方案1: 失败'); }
-}
-
-// ==================== 方案2: html2pdf.js ====================
-async function exportMethod2() {
-    setStatus('方案2: html2pdf.js 生成中...'); showToast('方案2: 开始生成', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof html2pdf === 'undefined') { showToast('html2pdf.js 未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var opt = {margin: 10, filename: getFilename(), image: {type: 'jpeg', quality: 0.95}, html2canvas: {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794}, jsPDF: {unit: 'mm', format: 'a4', orientation: 'portrait'}, pagebreak: {mode: ['avoid-all', 'css', 'legacy']}};
-                await html2pdf().set(opt).from(iframeBody).save();
-                showToast('方案2: 导出成功', 'success');
-                removeIframe(iframe);
-                setStatus('方案2: 导出完成');
-            } catch(e) { showToast('方案2失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案2: 失败'); }
-        });
-    } catch(e) { showToast('方案2失败: ' + e.message, 'error'); setStatus('方案2: 失败'); }
-}
-
-// ==================== 方案3: pdf-lib + Canvas ====================
-async function exportMethod3() {
-    setStatus('方案3: pdf-lib+Canvas 生成中...'); showToast('方案3: 开始生成', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof PDFLib === 'undefined' || typeof html2canvas === 'undefined') { showToast('库未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var canvas = await html2canvas(iframeBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
-                var imgData = canvas.toDataURL('image/png');
-                var imgBytes = await fetch(imgData).then(function(r) { return r.arrayBuffer(); });
-                var pdfDoc = await PDFLib.PDFDocument.create();
-                var pageWidth = 595.28, pageHeight = 841.89, margin = 28.35;
-                var contentWidth = pageWidth - margin * 2, contentHeight = pageHeight - margin * 2;
-                var imgAspect = canvas.width / canvas.height;
-                var renderWidth = contentWidth, renderHeight = renderWidth / imgAspect;
-                var yOffset = 0, totalContentHeight = renderHeight, scale = canvas.width / renderWidth;
-                while (yOffset < totalContentHeight) {
-                    var page = pdfDoc.addPage([pageWidth, pageHeight]);
-                    page.drawRectangle({x: 0, y: 0, width: pageWidth, height: pageHeight, color: PDFLib.rgb(1, 1, 1)});
-                    var sliceHeight = Math.min(contentHeight, totalContentHeight - yOffset);
-                    var sourceY = yOffset * scale, sourceHeight = sliceHeight * scale;
-                    var sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = canvas.width; sliceCanvas.height = Math.round(sourceHeight);
-                    var ctx = sliceCanvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-                    ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, Math.round(sourceHeight), 0, 0, canvas.width, Math.round(sourceHeight));
-                    var sliceData = sliceCanvas.toDataURL('image/png');
-                    var sliceBytes = await fetch(sliceData).then(function(r) { return r.arrayBuffer(); });
-                    var sliceImg = await pdfDoc.embedPng(sliceBytes);
-                    page.drawImage(sliceImg, {x: margin, y: pageHeight - margin - sliceHeight, width: renderWidth, height: sliceHeight});
-                    yOffset += contentHeight;
-                }
-                var pdfBytes = await pdfDoc.save();
-                var blob = new Blob([pdfBytes], {type: 'application/pdf'});
-                downloadBlob(blob, getFilename());
-                removeIframe(iframe);
-                setStatus('方案3: 导出完成');
-            } catch(e) { showToast('方案3失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案3: 失败'); }
-        });
-    } catch(e) { showToast('方案3失败: ' + e.message, 'error'); setStatus('方案3: 失败'); }
-}
-
-// ==================== 方案4: modern-screenshot ====================
-async function exportMethod4() {
-    setStatus('方案4: modern-screenshot 生成中...'); showToast('方案4: 开始生成', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof modernScreenshot === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, backgroundColor: '#ffffff', width: 794});
-                var jsPDF = window.jspdf.jsPDF;
-                var pdf = canvasToPdfPages(canvas, jsPDF);
-                var pdfBlob = pdf.output('blob');
-                downloadBlob(pdfBlob, getFilename());
-                removeIframe(iframe);
-                setStatus('方案4: 导出完成');
-            } catch(e) { showToast('方案4失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案4: 失败'); }
-        });
-    } catch(e) { showToast('方案4失败: ' + e.message, 'error'); setStatus('方案4: 失败'); }
-}
-
-// ==================== 方案5: iframe打印 ====================
-function exportMethod5() {
-    setStatus('方案5: iframe打印 调用中...'); showToast('方案5: 隐藏iframe打印', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-                var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
-        html = html.replace('</head>', printCss + '</head>');
-        createRenderIframe(html, 794, function(iframe) {
-            try {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-                setTimeout(function() { removeIframe(iframe); }, 2000);
-                setStatus('方案5: 打印已触发');
-            } catch(e) { showToast('方案5失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案5: 失败'); }
-        });
-    } catch(e) { showToast('方案5失败: ' + e.message, 'error'); setStatus('方案5: 失败'); }
-}
-
-// ==================== 方案6: 新窗口打印 ====================
-function exportMethod6() {
-    setStatus('方案6: 新窗口打印 调用中...'); showToast('方案6: 新窗口+白底CSS', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-                var printCss = '<style>@media print{@page{margin:10mm;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}</style>';
-        html = html.replace('</head>', printCss + '</head>');
-        var printWin = window.open('', '_blank');
-        if (!printWin) { showToast('弹窗被拦截', 'error'); return; }
-        printWin.document.write(html);
-        printWin.document.close();
-        printWin.onload = function() { printWin.print(); setTimeout(function() { printWin.close(); }, 500); };
-        setStatus('方案6: 打印窗口已打开');
-    } catch(e) { showToast('方案6失败: ' + e.message, 'error'); setStatus('方案6: 失败'); }
-}
-
-// ==================== 方案7: 图片导出PDF ====================
-async function exportMethod7() {
-    setStatus('方案7: 图片导出PDF 生成中...'); showToast('方案7: PNG→PDF', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var canvas = await html2canvas(iframeBody, {scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
-                var imgData = canvas.toDataURL('image/png', 1.0);
-                var jsPDF = window.jspdf.jsPDF;
-                var pdf = new jsPDF('p', 'mm', 'a4');
-                var imgWidthMm = 190;
-                var imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 10, 10, imgWidthMm, Math.min(imgHeightMm, 277));
-                var pdfBlob = pdf.output('blob');
-                downloadBlob(pdfBlob, getFilename());
-                removeIframe(iframe);
-                setStatus('方案7: 导出完成');
-            } catch(e) { showToast('方案7失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案7: 失败'); }
-        });
-    } catch(e) { showToast('方案7失败: ' + e.message, 'error'); setStatus('方案7: 失败'); }
-}
-
-// ==================== 方案8: 纯Canvas绘制 ====================
-async function exportMethod8() {
-    setStatus('方案8: 纯Canvas绘制 生成中...'); showToast('方案8: 所见即所得·直绘', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-                createRenderIframe(html, 794, async function(iframe) {
-            try {
-                var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                var iframeBody = iframeDoc.body;
-                var scrollHeight = iframeBody.scrollHeight || iframeBody.offsetHeight || 1000;
-                var canvas = document.createElement('canvas');
-                canvas.width = 794 * 2;
-                canvas.height = scrollHeight * 2;
-                var ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                var rendered = await html2canvas(iframeBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794, canvas: canvas});
-                var jsPDF = window.jspdf.jsPDF;
-                var pdf = canvasToPdfPages(rendered, jsPDF);
-                var pdfBlob = pdf.output('blob');
-                downloadBlob(pdfBlob, getFilename());
-                removeIframe(iframe);
-                setStatus('方案8: 导出完成');
-            } catch(e) { showToast('方案8失败: ' + e.message, 'error'); removeIframe(iframe); setStatus('方案8: 失败'); }
-        });
-    } catch(e) { showToast('方案8失败: ' + e.message, 'error'); setStatus('方案8: 失败'); }
-}
-
-// ==================== 方案9: 双iframe隔离 ====================
-async function exportMethod9() {
-    setStatus('方案9: 双iframe隔离 生成中...'); showToast('方案9: 双重隔离白底', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-        var outerIframe = document.createElement('iframe');
-        outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
-        document.body.appendChild(outerIframe);
-        var outerDoc = outerIframe.contentDocument || outerIframe.contentWindow.document;
-        outerDoc.open();
-        outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;}</style></head><body></body></html>');
-        outerDoc.close();
-        await new Promise(function(r) { setTimeout(r, 100); });
-        var innerIframe = outerDoc.createElement('iframe');
-        innerIframe.style.cssText = 'width:794px;border:none;';
-        outerDoc.body.appendChild(innerIframe);
-        var innerDoc = innerIframe.contentDocument || innerIframe.contentWindow.document;
-        innerDoc.open();
-                innerDoc.write(html);
-        innerDoc.close();
-        await new Promise(function(r) { setTimeout(r, 800); });
-        var innerBody = innerDoc.body;
-        var canvas = await html2canvas(innerBody, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
-        var jsPDF = window.jspdf.jsPDF;
-        var pdf = canvasToPdfPages(canvas, jsPDF);
-        var pdfBlob = pdf.output('blob');
-        downloadBlob(pdfBlob, getFilename());
-        removeIframe(outerIframe);
-        setStatus('方案9: 导出完成');
-    } catch(e) { showToast('方案9失败: ' + e.message, 'error'); setStatus('方案9: 失败'); }
-}
-
-// ==================== 方案10: srcdoc直出 ====================
-async function exportMethod10() {
-    setStatus('方案10: srcdoc直出 生成中...'); showToast('方案10: 所见即所得·直出', 'info');
-    try {
-        var html = getHtmlContent();
-        if (!html.trim()) { showToast('内容为空', 'error'); return; }
-        if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { showToast('库未加载', 'error'); return; }
-                var renderFrame = document.createElement('iframe');
-        renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
-        document.body.appendChild(renderFrame);
-        renderFrame.srcdoc = html;
-        renderFrame.onload = async function() {
-            try {
-                var doc = renderFrame.contentDocument || renderFrame.contentWindow.document;
-                await new Promise(function(r) { setTimeout(r, 300); });
-                var body = doc.body;
-                var canvas = await html2canvas(body, {scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', width: 794, windowWidth: 794});
-                var jsPDF = window.jspdf.jsPDF;
-                var pdf = canvasToPdfPages(canvas, jsPDF);
-                var pdfBlob = pdf.output('blob');
-                downloadBlob(pdfBlob, getFilename());
-                removeIframe(renderFrame);
-                setStatus('方案10: 导出完成');
-            } catch(e) { showToast('方案10失败: ' + e.message, 'error'); removeIframe(renderFrame); setStatus('方案10: 失败'); }
-        };
-    } catch(e) { showToast('方案10失败: ' + e.message, 'error'); setStatus('方案10: 失败'); }
-}
-
-buildTemplateButtons();
-loadSample('math');
+function buildTemplateButtons(){TEMPLATES.forEach(function(tpl){var btn=document.createElement('button');btn.className='tpl-btn';btn.dataset.id=tpl.id;btn.innerHTML='<span>'+tpl.icon+'</span>'+tpl.name;btn.onclick=function(){loadSample(tpl.id);};templatesScroll.appendChild(btn);});}
+function loadSample(name){htmlEditor.value=SAMPLES[name]||'';document.querySelectorAll('.tpl-btn').forEach(function(b){b.classList.toggle('active',b.dataset.id===name);});var tpl=TEMPLATES.find(function(t){return t.id===name;});currentTpl.textContent=tpl?tpl.icon+' '+tpl.name:'';updatePreview();}
+function updatePreview(){var code=htmlEditor.value;charCount.textContent=code.length+' 字符';try{if('srcdoc' in previewFrame){previewFrame.srcdoc=code;}else{var doc=previewFrame.contentDocument;doc.open();doc.write(code);doc.close();}}catch(e){previewFrame.src='data:text/html;charset=utf-8,'+encodeURIComponent(code);}}
+htmlEditor.addEventListener('input',function(){clearTimeout(htmlEditor._timer);htmlEditor._timer=setTimeout(updatePreview,300);charCount.textContent=htmlEditor.value.length+' 字符';currentTpl.textContent='自定义编辑中...';});
+function showToast(msg,type){type=type||'info';var t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(function(){t.remove();},3000);}
+function setStatus(text){statusText.textContent=text;}
+function getHtmlContent(){return htmlEditor.value;}
+function getFilename(){var content=htmlEditor.value;var title=(content.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1];return(title?title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g,'_'):'export')+'.pdf';}
+function isLibLoaded(id){return LIBS[id]&&LIBS[id].check();}
+function isMethodReady(method){return method.libs.every(function(lid){return isLibLoaded(lid);});}
+function loadLib(id){if(isLibLoaded(id)){showToast(LIBS[id].name+' 已加载','success');return Promise.resolve();}if(libLoading[id]){showToast(LIBS[id].name+' 正在加载中...','warning');return libLoading[id];}showToast('正在加载 '+LIBS[id].name+'...','info');libLoading[id]=new Promise(function(resolve,reject){var s=document.createElement('script');s.src=LIBS[id].url;s.onload=function(){libLoading[id]=null;showToast(LIBS[id].name+' 加载成功','success');refreshUI();resolve();};s.onerror=function(){libLoading[id]=null;showToast(LIBS[id].name+' 加载失败','error');refreshUI();reject();};document.head.appendChild(s);});return libLoading[id];}
+function loadLibsForMethod(method){return Promise.all(method.libs.map(function(lid){return loadLib(lid);}));}
+function loadAllLibs(){return Promise.all(Object.keys(LIBS).map(function(id){return loadLib(id);}));}
+function buildMethodsGrid(){methodsGrid.innerHTML='';METHODS.forEach(function(m){var btn=document.createElement('button');btn.className='method-btn';btn.id='methodBtn'+m.id;btn.onclick=function(){selectMethod(m.id);};var ready=isMethodReady(m);btn.innerHTML='<span class="num">'+m.id+'</span>'+m.name+'<span class="desc">'+(ready?'🟢':'🟡')+(m.libs.length===0?'免库':'需'+m.libs.length+'库')+'</span>';if(ready)btn.classList.add('ready');else btn.classList.add('missing');methodsGrid.appendChild(btn);});}
+function refreshUI(){buildMethodsGrid();renderPanel();}
+function selectMethod(id){selectedMethod=id;document.querySelectorAll('.method-btn').forEach(function(b){b.classList.remove('selected');});var btn=document.getElementById('methodBtn'+id);if(btn)btn.classList.add('selected');switchTab('method');renderPanel();var method=METHODS.find(function(m){return m.id===id;});if(method&&!isMethodReady(method)){loadLibsForMethod(method).then(function(){showToast('方案'+id+'所需库已全部加载','success');doExport(id);}).catch(function(){showToast('部分库加载失败','error');});}else if(method&&isMethodReady(method)){doExport(id);}}
+function switchTab(tab){activeTab=tab;document.querySelectorAll('.panel-tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===tab);});renderPanel();}
+function renderPanel(){if(activeTab==='libs')renderLibsPanel();else renderMethodPanel();}
+function renderLibsPanel(){var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:12px;font-weight:600;color:var(--text);">📦 库文件管理</span><button class="load-all-btn" onclick="loadAllLibs().then(function(){refreshUI();})">一键加载全部</button></div>';Object.keys(LIBS).forEach(function(id){var lib=LIBS[id];var loaded=isLibLoaded(id);html+='<div class="lib-card"><div class="lib-icon">'+lib.icon+'</div><div class="lib-info"><div class="lib-name">'+lib.name+'</div><div class="lib-desc">'+lib.desc+'</div><div class="lib-size">'+lib.size+'</div></div><span class="lib-status '+(loaded?'loaded':'unloaded')+'">'+(loaded?'✅ 已加载':'❌ 未加载')+'</span>';if(!loaded)html+='<button class="lib-load-btn" onclick="loadLib(\''+id+'\').then(function(){refreshUI();})">加载</button>';html+='</div>';});panelContent.innerHTML=html;}
+function renderMethodPanel(){if(!selectedMethod){panelContent.innerHTML='<div style="text-align:center;padding:20px;color:var(--text2);">点击上方方案按钮查看详情并导出</div>';return;}var m=METHODS.find(function(m){return m.id===selectedMethod;});var ready=isMethodReady(m);var html='<div style="margin-bottom:8px;"><strong style="color:var(--accent);">方案'+m.id+'：'+m.name+'</strong></div><div style="font-size:11px;color:var(--text2);margin-bottom:8px;">'+m.desc+'</div>';if(m.libs.length>0){html+='<div style="margin-bottom:8px;font-size:11px;"><strong>依赖库：</strong>';m.libs.forEach(function(lid){var loaded=isLibLoaded(lid);html+='<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;margin:2px;'+(loaded?'background:rgba(40,167,69,.15);color:#28a745;border:1px solid rgba(40,167,69,.3);':'background:rgba(231,76,60,.15);color:#dc3545;border:1px solid rgba(231,76,60,.3);')+'">'+LIBS[lid].icon+' '+LIBS[lid].name+(loaded?' ✅':' ❌')+'</span>';});html+='</div>';}else{html+='<div style="margin-bottom:8px;font-size:11px;"><strong>依赖库：</strong><span style="background:rgba(40,167,69,.15);color:#28a745;padding:2px 8px;border-radius:4px;font-size:10px;">无需任何库 🎉</span></div>';}html+='<div>';if(ready){html+='<button class="load-all-btn" onclick="doExport('+m.id+')">🚀 立即导出</button>';}else{html+='<button class="load-all-btn" onclick="loadLibsForMethod(METHODS.find(function(x){return x.id==='+m.id+';})).then(function(){refreshUI();doExport('+m.id+');})">📥 先加载库再导出</button>';}html+='</div>';panelContent.innerHTML=html;}
+function createRenderIframe(html,width,callback){var iframe=document.createElement('iframe');iframe.style.cssText='position:fixed;left:0;top:0;width:'+width+'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(iframe);var iframeDoc=iframe.contentDocument||iframe.contentWindow.document;iframeDoc.open();iframeDoc.write(html);iframeDoc.close();setTimeout(function(){callback(iframe);},800);}
+function removeIframe(iframe){try{document.body.removeChild(iframe);}catch(e){}}
+function canvasToPdfPages(canvas,jsPDFConstructor){var imgWidthMm=190;var imgHeightMm=(canvas.height*imgWidthMm)/canvas.width;var pdf=new jsPDFConstructor('p','mm','a4');var positionMm=0,pageHeightMm=277,remainingHeightMm=imgHeightMm;while(remainingHeightMm>0){var sourceY=positionMm*(canvas.width/imgWidthMm);var sourceHeight=pageHeightMm*(canvas.width/imgWidthMm);var pageCanvas=document.createElement('canvas');pageCanvas.width=canvas.width;pageCanvas.height=Math.min(Math.round(sourceHeight),canvas.height-Math.round(sourceY));if(pageCanvas.height<=0)break;var ctx=pageCanvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);ctx.drawImage(canvas,0,Math.round(sourceY),canvas.width,pageCanvas.height,0,0,canvas.width,pageCanvas.height);var pageImgData=pageCanvas.toDataURL('image/jpeg',0.95);if(positionMm>0)pdf.addPage();var pageImgHeightMm=(pageCanvas.height*imgWidthMm)/canvas.width;pdf.addImage(pageImgData,'JPEG',10,10,imgWidthMm,pageImgHeightMm);remainingHeightMm-=pageHeightMm;positionMm+=pageHeightMm;}return pdf;}
+function downloadBlob(blob,filename){if(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File([blob],filename,{type:blob.type})]})){var file=new File([blob],filename,{type:blob.type});navigator.share({files:[file],title:filename}).then(function(){showToast('导出成功','success');}).catch(function(err){if(err.name!=='AbortError')fallbackDownload(blob,filename);});}else{fallbackDownload(blob,filename);}}
+function fallbackDownload(blob,filename){var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);showToast('PDF导出成功','success');}
+async function doExport(id){var method=METHODS.find(function(m){return m.id===id;});if(!method)return;if(!isMethodReady(method)){showToast('请先加载所需库','error');return;}var html=getHtmlContent();if(!html.trim()){showToast('内容为空','error');return;}setStatus('方案'+id+': '+method.name+' 生成中...');showToast('方案'+id+': 开始生成','info');try{switch(id){case 1:await exportIframeJsPDF(html);break;case 2:await exportHtml2Pdf(html);break;case 3:await exportPdfLibCanvas(html);break;case 4:await exportModernScreenshot(html);break;case 5:exportIframePrint(html);break;case 6:exportNewWindowPrint(html);break;case 7:await exportHighResImagePdf(html);break;case 8:await exportCanvasDirect(html);break;case 9:await exportDoubleIframe(html);break;case 10:await exportSrcdoc(html);break;}setStatus('方案'+id+': 导出完成');}catch(e){showToast('方案'+id+'失败: '+e.message,'error');setStatus('方案'+id+': 失败');}}
+async function exportIframeJsPDF(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=canvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+async function exportHtml2Pdf(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var opt={margin:10,filename:getFilename(),image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['avoid-all','css','legacy']}};await html2pdf().set(opt).from(iframeBody).save();showToast('导出成功','success');removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+async function exportPdfLibCanvas(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var imgData=canvas.toDataURL('image/png');var imgBytes=await fetch(imgData).then(function(r){return r.arrayBuffer();});var pdfDoc=await PDFLib.PDFDocument.create();var pageWidth=595.28,pageHeight=841.89,margin=28.35;var contentWidth=pageWidth-margin*2,contentHeight=pageHeight-margin*2;var imgAspect=canvas.width/canvas.height;var renderWidth=contentWidth,renderHeight=renderWidth/imgAspect;var yOffset=0,totalContentHeight=renderHeight,scale=canvas.width/renderWidth;while(yOffset<totalContentHeight){var page=pdfDoc.addPage([pageWidth,pageHeight]);var sliceHeight=Math.min(contentHeight,totalContentHeight-yOffset);var sourceY=yOffset*scale,sourceHeight=sliceHeight*scale;var sliceCanvas=document.createElement('canvas');sliceCanvas.width=canvas.width;sliceCanvas.height=Math.round(sourceHeight);var ctx=sliceCanvas.getContext('2d');ctx.drawImage(canvas,0,Math.round(sourceY),canvas.width,Math.round(sourceHeight),0,0,canvas.width,Math.round(sourceHeight));var sliceData=sliceCanvas.toDataURL('image/png');var sliceBytes=await fetch(sliceData).then(function(r){return r.arrayBuffer();});var sliceImg=await pdfDoc.embedPng(sliceBytes);page.drawImage(sliceImg,{x:margin,y:pageHeight-margin-sliceHeight,width:renderWidth,height:sliceHeight});yOffset+=contentHeight;}var pdfBytes=await pdfDoc.save();downloadBlob(new Blob([pdfBytes],{type:'application/pdf'}),getFilename());removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+async function exportModernScreenshot(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await modernScreenshot.domToCanvas(iframeBody,{scale:2,width:794});var pdf=canvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+function exportIframePrint(html){createRenderIframe(html,794,function(iframe){try{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(function(){removeIframe(iframe);},2000);}catch(e){showToast('打印失败: '+e.message,'error');removeIframe(iframe);}});}
+function exportNewWindowPrint(html){var printWin=window.open('','_blank');if(!printWin){showToast('弹窗被拦截','error');return;}printWin.document.write(html);printWin.document.close();printWin.onload=function(){printWin.print();setTimeout(function(){printWin.close();},500);};}
+async function exportHighResImagePdf(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:3,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=canvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+async function exportCanvasDirect(html){createRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var scrollHeight=iframeBody.scrollHeight||iframeBody.offsetHeight||1000;var canvas=document.createElement('canvas');canvas.width=794*2;canvas.height=scrollHeight*2;var ctx=canvas.getContext('2d');var rendered=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794,canvas:canvas});var pdf=canvasToPdfPages(rendered,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());removeIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(iframe);}});}
+async function exportDoubleIframe(html){var outerIframe=document.createElement('iframe');outerIframe.style.cssText='position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(outerIframe);var outerDoc=outerIframe.contentDocument||outerIframe.contentWindow.document;outerDoc.open();outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;}</style></head><body></body></html>');outerDoc.close();await new Promise(function(r){setTimeout(r,100);});var innerIframe=outerDoc.createElement('iframe');innerIframe.style.cssText='width:794px;border:none;';outerDoc.body.appendChild(innerIframe);var innerDoc=innerIframe.contentDocument||innerIframe.contentWindow.document;innerDoc.open();innerDoc.write(html);innerDoc.close();await new Promise(function(r){setTimeout(r,800);});try{var innerBody=innerDoc.body;var canvas=await html2canvas(innerBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=canvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());}catch(e){showToast('导出失败: '+e.message,'error');}removeIframe(outerIframe);}
+async function exportSrcdoc(html){var renderFrame=document.createElement('iframe');renderFrame.style.cssText='position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(renderFrame);renderFrame.srcdoc=html;renderFrame.onload=async function(){try{var doc=renderFrame.contentDocument;await new Promise(function(r){setTimeout(r,300);});var body=doc.body;var canvas=await html2canvas(body,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=canvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename());removeIframe(renderFrame);}catch(e){showToast('导出失败: '+e.message,'error');removeIframe(renderFrame);}};}
+buildTemplateButtons();loadSample('math');refreshUI();
 </script>
 </body>
 </html>
