@@ -2894,7 +2894,7 @@
             try {
                 if (navigator.clipboard && navigator.clipboard.readText) {
                     const text = await navigator.clipboard.readText();
-                    if (text) {
+                    if (text && text.trim()) {
                         htmlEditor.value = text;
                         htmlEditor.focus();
                         updatePreview();
@@ -2909,82 +2909,70 @@
             }
 
             try {
-                const hiddenInput = document.createElement('textarea');
-                hiddenInput.setAttribute('readonly', '');
-                hiddenInput.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
-                document.body.appendChild(hiddenInput);
-                hiddenInput.focus();
-                const pasteSucceeded = document.execCommand('paste');
-                
-                if (pasteSucceeded && hiddenInput.value) {
-                    htmlEditor.value = hiddenInput.value;
+                const ta = document.createElement('textarea');
+                ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;z-index:-1;';
+                document.body.appendChild(ta);
+                ta.focus();
+                document.execCommand('paste');
+                await new Promise(r => setTimeout(r, 100));
+                if (ta.value && ta.value.trim()) {
+                    htmlEditor.value = ta.value;
                     htmlEditor.focus();
                     updatePreview();
                     updateCharCount();
                     showToast('已从剪贴板粘贴', 'success');
                     pasteBtn.classList.add('pasting');
                     setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
-                    document.body.removeChild(hiddenInput);
+                    document.body.removeChild(ta);
                     return;
                 }
-                document.body.removeChild(hiddenInput);
+                document.body.removeChild(ta);
             } catch (err) {
             }
 
+            showToast('请长按编辑器粘贴，或复制内容后重试', 'info');
+        }
+
+        async function autoPasteOnLoad() {
             try {
-                const hiddenInput = document.createElement('textarea');
-                hiddenInput.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:80%;max-width:300px;height:120px;z-index:100001;background:#2a2a2a;color:#fff;border:1px solid #3a3a3a;border-radius:8px;padding:12px;font-size:14px;font-family:monospace;resize:none;outline:none;';
-                
+                if (!navigator.clipboard || !navigator.clipboard.readText) return;
+                const text = await navigator.clipboard.readText();
+                if (!text || !text.trim()) return;
+                if (text.trim().length < 5) return;
+                if (htmlEditor.value.trim()) return;
+
                 const overlay = document.createElement('div');
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;display:flex;justify-content:center;align-items:center;';
-                
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;justify-content:center;align-items:center;';
                 const dialog = document.createElement('div');
                 dialog.style.cssText = 'background:#2a2a2a;border:1px solid #3a3a3a;border-radius:12px;padding:20px;max-width:340px;width:90%;text-align:center;';
-                
-                const title = document.createElement('p');
-                title.textContent = '请粘贴内容到下方输入框';
-                title.style.cssText = 'color:#e6e6e6;margin:0 0 12px;font-size:15px;';
-                
-                hiddenInput.placeholder = '长按此处粘贴...';
-                
+                const msg = document.createElement('p');
+                msg.style.cssText = 'color:#e6e6e6;margin:0 0 16px;font-size:15px;line-height:1.6;';
+                const preview = text.trim().substring(0, 80).replace(/</g, '&lt;');
+                msg.innerHTML = '检测到剪贴板内容：<br><span style="color:#999;font-size:12px;word-break:break-all;">' + preview + (text.trim().length > 80 ? '...' : '') + '</span><br><br>是否粘贴到编辑器？';
                 const btnGroup = document.createElement('div');
-                btnGroup.style.cssText = 'display:flex;gap:10px;justify-content:center;margin-top:12px;';
-                
+                btnGroup.style.cssText = 'display:flex;gap:10px;justify-content:center;';
                 const cancelBtn = document.createElement('button');
                 cancelBtn.textContent = '取消';
                 cancelBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:1px solid #3a3a3a;background:#404040;color:#fff;font-size:14px;cursor:pointer;';
                 cancelBtn.onclick = function() { document.body.removeChild(overlay); };
-                
                 const confirmBtn = document.createElement('button');
-                confirmBtn.textContent = '确定';
+                confirmBtn.textContent = '粘贴';
                 confirmBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:14px;cursor:pointer;font-weight:500;';
                 confirmBtn.onclick = function() {
-                    const val = hiddenInput.value;
-                    if (val.trim()) {
-                        htmlEditor.value = val;
-                        htmlEditor.focus();
-                        updatePreview();
-                        updateCharCount();
-                        showToast('已从剪贴板粘贴', 'success');
-                        pasteBtn.classList.add('pasting');
-                        setTimeout(() => pasteBtn.classList.remove('pasting'), 600);
-                    }
+                    htmlEditor.value = text;
+                    htmlEditor.focus();
+                    updatePreview();
+                    updateCharCount();
+                    showToast('已从剪贴板粘贴', 'success');
                     document.body.removeChild(overlay);
                 };
-                
                 btnGroup.appendChild(cancelBtn);
                 btnGroup.appendChild(confirmBtn);
-                dialog.appendChild(title);
-                dialog.appendChild(hiddenInput);
+                dialog.appendChild(msg);
                 dialog.appendChild(btnGroup);
                 overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
-                
-                setTimeout(function() { hiddenInput.focus(); }, 100);
-                return;
             } catch (err) {
-                htmlEditor.focus();
-                showToast('请长按编辑器区域，选择"粘贴"', 'info');
             }
         }
 
@@ -3490,16 +3478,30 @@
                 } catch(e) {}
 
                 const iframeBody = iframeDoc.body;
+                const actualHeight = Math.max(
+                    iframeDoc.documentElement.scrollHeight,
+                    iframeDoc.body.scrollHeight,
+                    iframeDoc.body.offsetHeight,
+                    iframeDoc.body.clientHeight
+                );
+                iframe.style.height = (actualHeight + 50) + 'px';
+
+                await new Promise(r => setTimeout(r, 200));
+
                 const canvas = await html2canvas(iframeBody, {
                     scale: 2,
                     useCORS: true,
                     logging: false,
                     backgroundColor: null,
                     width: containerWidthPx,
-                    windowWidth: containerWidthPx
+                    windowWidth: containerWidthPx,
+                    height: actualHeight,
+                    windowHeight: actualHeight
                 });
 
                 try { document.body.removeChild(iframe); } catch(e) {}
+
+                const trimmedCanvas = trimCanvasBlank(canvas);
 
                 const pageWidthPt = pageWidthMm * 2.83465;
                 const pageHeightPt = pageHeightMm * 2.83465;
@@ -3508,24 +3510,24 @@
                 const contentHeightPt = pageHeightPt - marginPt * 2;
 
                 const pdfDoc = await PDFLib.PDFDocument.create();
-                const imgAspect = canvas.width / canvas.height;
+                const imgAspect = trimmedCanvas.width / trimmedCanvas.height;
                 const renderWidth = contentWidthPt;
                 const renderHeight = renderWidth / imgAspect;
-                const scale = canvas.width / renderWidth;
+                const pxToPt = trimmedCanvas.width / renderWidth;
                 let yOffset = 0;
                 const totalContentHeight = renderHeight;
 
                 while (yOffset < totalContentHeight) {
                     const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
                     const sliceHeight = Math.min(contentHeightPt, totalContentHeight - yOffset);
-                    const sourceY = yOffset * scale;
-                    const sourceHeight = sliceHeight * scale;
+                    const sourceY = Math.round(yOffset * pxToPt);
+                    const sourceHeight = Math.round(sliceHeight * pxToPt);
 
                     const sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = canvas.width;
-                    sliceCanvas.height = Math.round(sourceHeight);
+                    sliceCanvas.width = trimmedCanvas.width;
+                    sliceCanvas.height = sourceHeight;
                     const ctx = sliceCanvas.getContext('2d');
-                    ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, Math.round(sourceHeight), 0, 0, canvas.width, Math.round(sourceHeight));
+                    ctx.drawImage(trimmedCanvas, 0, sourceY, trimmedCanvas.width, sourceHeight, 0, 0, trimmedCanvas.width, sourceHeight);
 
                     const sliceData = sliceCanvas.toDataURL('image/png');
                     const sliceBytes = await fetch(sliceData).then(r => r.arrayBuffer());
@@ -3571,6 +3573,45 @@
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             showToast('PDF导出成功', 'success');
+        }
+
+        function trimCanvasBlank(canvas) {
+            const ctx = canvas.getContext('2d');
+            const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let bottom = canvas.height;
+            let top = 0;
+            const threshold = 10;
+
+            outer:
+            for (let y = canvas.height - 1; y >= 0; y--) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+                    if (pixels[i + 3] > threshold || pixels[i] > threshold || pixels[i + 1] > threshold || pixels[i + 2] > threshold) {
+                        bottom = y + 1;
+                        break outer;
+                    }
+                }
+            }
+
+            outer:
+            for (let y = 0; y < bottom; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+                    if (pixels[i + 3] > threshold || pixels[i] > threshold || pixels[i + 1] > threshold || pixels[i + 2] > threshold) {
+                        top = y;
+                        break outer;
+                    }
+                }
+            }
+
+            if (bottom <= top) return canvas;
+
+            const trimHeight = bottom - top;
+            const trimmed = document.createElement('canvas');
+            trimmed.width = canvas.width;
+            trimmed.height = trimHeight;
+            trimmed.getContext('2d').drawImage(canvas, 0, top, canvas.width, trimHeight, 0, 0, canvas.width, trimHeight);
+            return trimmed;
         }
 
         // 打印预览函数 - 优化iOS Safari兼容性
@@ -3881,6 +3922,8 @@
                 if (!htmlEditor.value.trim()) {
                     loadFromLocalStorage();
                 }
+                
+                setTimeout(autoPasteOnLoad, 500);
                 
                 loadHistory();
                 
