@@ -303,6 +303,16 @@
             border-color: #138496;
         }
 
+        .btn-warning {
+            background: #e67e22;
+            border-color: #e67e22;
+        }
+
+        .btn-warning:hover {
+            background: #d35400;
+            border-color: #d35400;
+        }
+
         /* 下拉菜单样式 */
         .dropdown {
             position: relative;
@@ -1734,6 +1744,18 @@
                                 <span class="icon">💾</span>
                                 导出HTML
                             </button>
+                            <button class="btn btn-success dropdown-item" onclick="showDocxExportPanel();closePreviewDropdown();" id="exportDocxBtn">
+                                <span class="icon">📝</span>
+                                导出Word/DOCX
+                            </button>
+                            <button class="btn btn-info dropdown-item" onclick="showPdfExportPanel();closePreviewDropdown();" id="exportPdfBtn">
+                                <span class="icon">📄</span>
+                                PDF多方案导出
+                            </button>
+                            <button class="btn btn-secondary dropdown-item" onclick="showTemplatePanel();closePreviewDropdown();" id="templateBtn">
+                                <span class="icon">📋</span>
+                                模板
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1748,7 +1770,7 @@
                     </button>
                     <button class="btn btn-primary" onclick="exportToPdf()" id="downloadBtn">
                         <span class="icon">📄</span>
-                        导出
+                        导出PDF
                     </button>
                 </div>
             </div>
@@ -1774,6 +1796,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="templates-data.js"></script>
     <script>
         const htmlEditor = document.getElementById('htmlEditor');
         const previewFrame = document.getElementById('previewFrame');
@@ -1810,6 +1833,115 @@
         let pdfPageSize = 'a4';
         let pdfOrientation = 'p';
         let pdfMargin = 10;
+        
+        var _htmlDocxJsFn = null;
+        var _htmlToDocxFn = null;
+        var _docShiftFn = null;
+        var docxLibLoading = {};
+        
+        var DOCX_EXPORT_CONFIG = {
+            pageSize: 'A4',
+            orientation: 'portrait',
+            marginTop: 1440,
+            marginRight: 1440,
+            marginBottom: 1440,
+            marginLeft: 1440,
+            fontName: 'Microsoft YaHei',
+            fontSize: 24
+        };
+        
+        var DOCX_LIBS = {
+            docx: {
+                name: 'docx.js (dolanmiu)',
+                icon: '📄',
+                url: 'https://unpkg.com/docx@8.5.0/build/index.umd.js',
+                size: '~350KB',
+                desc: '最流行的DOCX生成库，声明式API，功能最全面。',
+                check: function() { return typeof docx !== 'undefined'; }
+            },
+            htmlDocxJs: {
+                name: 'html-docx-js',
+                icon: '🔄',
+                url: 'https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js',
+                size: '~50KB',
+                desc: 'altchunks方式嵌入HTML，简单快速，仅Word可用。',
+                check: function() { return _htmlDocxJsFn !== null; }
+            },
+            htmlToDocx: {
+                name: 'html-to-docx',
+                icon: '🔧',
+                url: 'https://cdn.jsdelivr.net/npm/html-to-docx@1.8.0/dist/html-to-docx.umd.js',
+                size: '~200KB',
+                desc: '专业HTML转DOCX，保留样式/表格/图片，兼容性最好。',
+                check: function() { return _htmlToDocxFn !== null; }
+            },
+            docShift: {
+                name: 'DocShift',
+                icon: '🔀',
+                url: 'https://cdn.jsdelivr.net/npm/docshift@1.0.2/dist/docshift.min.js',
+                size: '~240KB',
+                desc: '纯客户端HTML↔DOCX双向转换库，保留样式映射。',
+                check: function() { return _docShiftFn !== null; }
+            },
+            fileSaver: {
+                name: 'FileSaver.js',
+                icon: '💾',
+                url: 'https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js',
+                size: '~5KB',
+                desc: '文件保存工具库，触发浏览器下载。',
+                check: function() { return typeof saveAs !== 'undefined'; }
+            }
+        };
+        
+        var DOCX_METHODS = [
+            {id:1, name:'html-to-docx ⭐', libs:['htmlToDocx','fileSaver'], format:'docx', desc:'推荐首选。专业HTML→DOCX原生转换，保留样式/表格/图片。'},
+            {id:2, name:'html-docx-js', libs:['htmlDocxJs','fileSaver'], format:'docx', desc:'altchunks方式，简单快速。⚠️仅Word可用。'},
+            {id:3, name:'DocShift', libs:['docShift','fileSaver'], format:'docx', desc:'新一代双向转换库，样式映射保留好。'},
+            {id:4, name:'docx.js 声明式', libs:['docx','fileSaver'], format:'docx', desc:'声明式API手动构建文档，功能最强大。'},
+            {id:5, name:'docx.js+HTML解析', libs:['docx','fileSaver'], format:'docx', desc:'解析HTML DOM树映射为docx.js元素，保留基本结构。'},
+            {id:6, name:'HTML另存为.doc', libs:[], format:'doc', desc:'Word MIME类型保存，保留CSS样式，无需任何库！'},
+            {id:7, name:'富文本复制', libs:[], format:'clipboard', desc:'复制富文本到剪贴板，粘贴到Word保留格式，无需任何库！'},
+            {id:8, name:'打印/另存', libs:[], format:'print', desc:'浏览器打印功能，可打印到PDF或另存。'}
+        ];
+        
+        function isDocxLibLoaded(id) { return DOCX_LIBS[id] && DOCX_LIBS[id].check(); }
+        function isDocxMethodReady(method) { return method.libs.every(function(lid) { return isDocxLibLoaded(lid); }); }
+        
+        function loadDocxLib(id) {
+            if (isDocxLibLoaded(id)) return Promise.resolve();
+            if (docxLibLoading[id]) return docxLibLoading[id];
+            showToast('正在加载 ' + DOCX_LIBS[id].name + '...', 'info');
+            docxLibLoading[id] = new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = DOCX_LIBS[id].url;
+                s.onload = function() {
+                    docxLibLoading[id] = null;
+                    if (id === 'htmlDocxJs') {
+                        _htmlDocxJsFn = window.htmlDocx;
+                        delete window.htmlDocx;
+                    } else if (id === 'htmlToDocx') {
+                        _htmlToDocxFn = window.HTMLtoDOCX;
+                        delete window.HTMLtoDOCX;
+                    } else if (id === 'docShift') {
+                        _docShiftFn = window.DocShift;
+                        delete window.DocShift;
+                    }
+                    showToast(DOCX_LIBS[id].name + ' 加载成功', 'success');
+                    resolve();
+                };
+                s.onerror = function() {
+                    docxLibLoading[id] = null;
+                    showToast(DOCX_LIBS[id].name + ' 加载失败', 'error');
+                    reject();
+                };
+                document.head.appendChild(s);
+            });
+            return docxLibLoading[id];
+        }
+        
+        function loadDocxLibsForMethod(method) {
+            return Promise.all(method.libs.map(function(lid) { return loadDocxLib(lid); }));
+        }
         
         const PDF_PAGE_SIZES = {
             a4: { width: 210, height: 297 },
@@ -2470,6 +2602,9 @@
                             <button class="btn btn-sm btn-secondary" onclick="downloadAsFile()" style="flex: 1; justify-content: center;">下载文件</button>
                             <button class="btn btn-sm btn-secondary" onclick="copyAsDataUrl()" style="flex: 1; justify-content: center;">Data URL</button>
                             <button class="btn btn-sm btn-success" onclick="exportToPdf()" style="flex: 1; justify-content: center;">📄 导出PDF</button>
+                            <button class="btn btn-sm btn-success" onclick="showDocxExportPanel()" style="flex: 1; justify-content: center;">📝 导出Word</button>
+                            <button class="btn btn-sm btn-info" onclick="showPdfExportPanel()" style="flex: 1; justify-content: center;">📄 PDF多方案</button>
+                            <button class="btn btn-sm btn-secondary" onclick="showTemplatePanel()" style="flex: 1; justify-content: center;">📋 模板</button>
                         </div>
                     </div>
                     <div style="background: #1a1a1a; border-radius: 8px; padding: 16px; border: 1px solid #2a2a2a;">
@@ -2563,6 +2698,61 @@
                                 <button class="btn btn-sm btn-primary" onclick="saveModalPdfMargin()">保存</button>
                             </div>
                             <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置PDF页边距，0表示无边距，默认10mm。</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">📝 DOCX导出设置</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">纸张大小：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalDocxPageSize" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="A4">A4</option>
+                                    <option value="Letter">Letter</option>
+                                    <option value="Legal">Legal</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalDocxPageSize()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置DOCX导出的纸张大小，默认A4。</p>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">页面方向：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalDocxOrientation" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="portrait">纵向</option>
+                                    <option value="landscape">横向</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalDocxOrientation()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置DOCX导出的页面方向，默认纵向。</p>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">字体：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalDocxFontName" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="Microsoft YaHei">微软雅黑</option>
+                                    <option value="SimSun">宋体</option>
+                                    <option value="SimHei">黑体</option>
+                                    <option value="KaiTi">楷体</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Arial">Arial</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalDocxFontName()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置DOCX导出的字体，影响方案4/5。</p>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">正文字号：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <select id="modalDocxFontSize" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 120px;">
+                                    <option value="21">小五 (9pt)</option>
+                                    <option value="24">五号 (10.5pt)</option>
+                                    <option value="28">小四 (12pt)</option>
+                                    <option value="30">四号 (14pt)</option>
+                                </select>
+                                <button class="btn btn-sm btn-primary" onclick="saveModalDocxFontSize()">保存</button>
+                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置DOCX导出的正文字号，影响方案4/5。</p>
                         </div>
                     </div>
                     
@@ -2846,7 +3036,14 @@
              saveModalShareBaseUrl();
              saveModalAutoSaveInterval();
              saveModalMaxHistoryRecords();
-             alert('所有设置已应用！');
+             saveModalPdfPageSize();
+             saveModalPdfOrientation();
+             saveModalPdfMargin();
+             saveModalDocxPageSize();
+             saveModalDocxOrientation();
+             saveModalDocxFontName();
+             saveModalDocxFontSize();
+             showToast('所有设置已应用', 'success');
          }
          
          function loadModalSettings() {
@@ -2877,6 +3074,18 @@
              
              const modalPdfMargin = document.getElementById('modalPdfMargin');
              if (modalPdfMargin) modalPdfMargin.value = pdfMargin;
+             
+             var modalDocxPageSize = document.getElementById('modalDocxPageSize');
+             if (modalDocxPageSize) modalDocxPageSize.value = DOCX_EXPORT_CONFIG.pageSize;
+             
+             var modalDocxOrientation = document.getElementById('modalDocxOrientation');
+             if (modalDocxOrientation) modalDocxOrientation.value = DOCX_EXPORT_CONFIG.orientation;
+             
+             var modalDocxFontName = document.getElementById('modalDocxFontName');
+             if (modalDocxFontName) modalDocxFontName.value = DOCX_EXPORT_CONFIG.fontName;
+             
+             var modalDocxFontSize = document.getElementById('modalDocxFontSize');
+             if (modalDocxFontSize) modalDocxFontSize.value = DOCX_EXPORT_CONFIG.fontSize;
          }
         
         // 关闭下拉菜单
@@ -3544,22 +3753,7 @@
 
                 const pdfBytes = await pdfDoc.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
-                    const file = new File([blob], filename, { type: 'application/pdf' });
-                    navigator.share({
-                        files: [file],
-                        title: title
-                    }).then(() => {
-                        showToast('PDF导出成功', 'success');
-                    }).catch(err => {
-                        if (err.name !== 'AbortError') {
-                            fallbackDownload(blob, filename);
-                        }
-                    });
-                } else {
-                    fallbackDownload(blob, filename);
-                }
+                fallbackDownload(blob, filename);
             } catch (error) {
                 showToast('导出失败: ' + error.message, 'error');
             }
@@ -3572,7 +3766,804 @@
             a.download = filename;
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('导出成功', 'success');
+        }
+
+        function docxDownloadBlob(blob, filename) {
+            if (typeof saveAs !== 'undefined') {
+                saveAs(blob, filename);
+                showToast('导出成功：' + filename, 'success');
+            } else {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+                showToast('导出成功：' + filename, 'success');
+            }
+        }
+
+        function docxHtmlToText(html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+        }
+
+        function docxWrapHtml(html) {
+            if (/<html/i.test(html)) return html;
+            return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + html + '</body></html>';
+        }
+
+        function docxGetOrientation() {
+            return DOCX_EXPORT_CONFIG.orientation || 'portrait';
+        }
+
+        function docxGetMargins() {
+            return {
+                top: DOCX_EXPORT_CONFIG.marginTop,
+                right: DOCX_EXPORT_CONFIG.marginRight,
+                bottom: DOCX_EXPORT_CONFIG.marginBottom,
+                left: DOCX_EXPORT_CONFIG.marginLeft,
+                header: 720,
+                footer: 720,
+                gutter: 0
+            };
+        }
+
+        function docxGetFilename(ext) {
+            ext = ext || 'docx';
+            var content = htmlEditor.value;
+            var title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+            return (title ? title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') : 'export') + '.' + ext;
+        }
+
+        async function exportDocx(methodId) {
+            var method = DOCX_METHODS.find(function(m) { return m.id === methodId; });
+            if (!method) { showToast('未知导出方案', 'error'); return; }
+            var html = htmlEditor.value.trim();
+            if (!html) { showToast('请先输入内容', 'error'); return; }
+            if (method.libs.length > 0 && !isDocxMethodReady(method)) {
+                showToast('正在加载所需库...', 'info');
+                try {
+                    await loadDocxLibsForMethod(method);
+                } catch(e) {
+                    showToast('库加载失败，请重试', 'error');
+                    return;
+                }
+            }
+            showToast('方案' + methodId + ': ' + method.name + ' 生成中...', 'info');
+            try {
+                switch(methodId) {
+                    case 1: await docxExportHtmlToDocx(html); break;
+                    case 2: await docxExportHtmlDocxJs(html); break;
+                    case 3: await docxExportDocShift(html); break;
+                    case 4: await docxExportDocxJs(html); break;
+                    case 5: await docxExportDocxJsParsed(html); break;
+                    case 6: docxExportHtmlAsDoc(html); break;
+                    case 7: await docxExportRichCopy(html); break;
+                    case 8: docxExportPrintPreview(html); break;
+                }
+            } catch(e) {
+                showToast('导出失败: ' + e.message, 'error');
+            }
+        }
+
+        async function docxExportHtmlToDocx(html) {
+            var fullHtml = docxWrapHtml(html);
+            var opts = {
+                orientation: docxGetOrientation(),
+                margins: docxGetMargins(),
+                table: { row: { cantSplit: true } },
+                footer: false,
+                header: false
+            };
+            var result = await _htmlToDocxFn(fullHtml, null, opts);
+            var blob = new Blob([result], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            docxDownloadBlob(blob, docxGetFilename('docx'));
+        }
+
+        async function docxExportHtmlDocxJs(html) {
+            var fullHtml = docxWrapHtml(html);
+            var opts = { orientation: docxGetOrientation(), margins: docxGetMargins() };
+            var converted = _htmlDocxJsFn.asBlob(fullHtml, opts);
+            var blob = new Blob([converted], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            docxDownloadBlob(blob, docxGetFilename('docx'));
+            showToast('提示：html-docx-js使用altchunks，仅Word可正常打开', 'warning');
+        }
+
+        async function docxExportDocShift(html) {
+            var fullHtml = docxWrapHtml(html);
+            var result = await _docShiftFn.toDocx(fullHtml);
+            var blob = new Blob([result], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            docxDownloadBlob(blob, docxGetFilename('docx'));
+        }
+
+        async function docxExportDocxJs(html) {
+            var text = docxHtmlToText(html);
+            var titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            var title = titleMatch ? titleMatch[1] : '导出文档';
+            var paragraphs = text.split('\n').filter(function(l) { return l.trim().length > 0; });
+            var children = [];
+            children.push(new docx.Paragraph({
+                children: [new docx.TextRun({ text: title, bold: true, size: 48, font: DOCX_EXPORT_CONFIG.fontName })],
+                alignment: docx.AlignmentType.CENTER,
+                spacing: { after: 400 }
+            }));
+            children.push(new docx.Paragraph({ children: [] }));
+            paragraphs.forEach(function(l) {
+                children.push(new docx.Paragraph({
+                    children: [new docx.TextRun({ text: l, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName })],
+                    spacing: { after: 120 }
+                }));
+            });
+            var doc = new docx.Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: docxGetOrientation() === 'landscape' ?
+                                { width: 16838, height: 11906, orientation: docx.PageOrientation.LANDSCAPE } :
+                                { width: 11906, height: 16838 },
+                            margin: { top: DOCX_EXPORT_CONFIG.marginTop, bottom: DOCX_EXPORT_CONFIG.marginBottom, left: DOCX_EXPORT_CONFIG.marginLeft, right: DOCX_EXPORT_CONFIG.marginRight }
+                        }
+                    },
+                    children: children
+                }]
+            });
+            var blob = await docx.Packer.toBlob(doc);
+            docxDownloadBlob(blob, docxGetFilename('docx'));
+            showToast('提示：docx.js声明式方案仅导出纯文本，HTML样式已丢失', 'warning');
+        }
+
+        async function docxExportDocxJsParsed(html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html.replace(/<!DOCTYPE[^>]*>/i, '').replace(/<html[^>]*>/i, '').replace(/<\/html>/i, '').replace(/<head[^>]*>[\s\S]*?<\/head>/i, '').replace(/<body[^>]*>/i, '<div>').replace(/<\/body>/i, '</div>');
+            var titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            var title = titleMatch ? titleMatch[1] : '导出文档';
+            var children = [];
+            children.push(new docx.Paragraph({
+                children: [new docx.TextRun({ text: title, bold: true, size: 48, font: DOCX_EXPORT_CONFIG.fontName })],
+                alignment: docx.AlignmentType.CENTER,
+                spacing: { after: 400 }
+            }));
+
+            function processNode(node) {
+                if (node.nodeType === 3) {
+                    var txt = node.textContent.trim();
+                    if (txt) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: txt, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName })], spacing: { after: 120 } }));
+                    return;
+                }
+                if (node.nodeType !== 1) return;
+                var tag = node.tagName.toLowerCase();
+                if (tag === 'style' || tag === 'script' || tag === 'meta' || tag === 'link' || tag === 'head') return;
+                if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
+                    var sizes = { h1: 48, h2: 36, h3: 28, h4: 24, h5: 21, h6: 18 };
+                    children.push(new docx.Paragraph({
+                        children: [new docx.TextRun({ text: node.textContent, bold: true, size: sizes[tag] || 28, font: DOCX_EXPORT_CONFIG.fontName })],
+                        spacing: { before: 240, after: 120 }
+                    }));
+                } else if (tag === 'p') {
+                    var runs = [];
+                    node.childNodes.forEach(function(cn) {
+                        if (cn.nodeType === 3) {
+                            var t = cn.textContent;
+                            if (t) runs.push(new docx.TextRun({ text: t, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName }));
+                        } else if (cn.nodeType === 1) {
+                            var ct = cn.tagName.toLowerCase();
+                            if (ct === 'strong' || ct === 'b') runs.push(new docx.TextRun({ text: cn.textContent, bold: true, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName }));
+                            else if (ct === 'em' || ct === 'i') runs.push(new docx.TextRun({ text: cn.textContent, italics: true, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName }));
+                            else if (ct === 'u') runs.push(new docx.TextRun({ text: cn.textContent, underline: { type: docx.UnderlineType.SINGLE }, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName }));
+                            else runs.push(new docx.TextRun({ text: cn.textContent, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName }));
+                        }
+                    });
+                    if (runs.length > 0) children.push(new docx.Paragraph({ children: runs, spacing: { after: 120 } }));
+                } else if (tag === 'table') {
+                    var rows = node.querySelectorAll('tr');
+                    var tableRows = [];
+                    rows.forEach(function(row) {
+                        var cells = row.querySelectorAll('th,td');
+                        var tableCells = [];
+                        cells.forEach(function(cell) {
+                            tableCells.push(new docx.TableCell({
+                                children: [new docx.Paragraph({ children: [new docx.TextRun({ text: cell.textContent, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName, bold: cell.tagName.toLowerCase() === 'th' })] })],
+                                width: { size: Math.floor(9000 / Math.max(cells.length, 1)), type: docx.WidthType.DXA }
+                            }));
+                        });
+                        if (tableCells.length > 0) tableRows.push(new docx.TableRow({ children: tableCells }));
+                    });
+                    if (tableRows.length > 0) children.push(new docx.Table({ rows: tableRows, width: { size: 100, type: docx.WidthType.PERCENTAGE } }));
+                } else if (tag === 'ul' || tag === 'ol') {
+                    var items = node.querySelectorAll(':scope > li');
+                    items.forEach(function(li, i) {
+                        children.push(new docx.Paragraph({
+                            children: [new docx.TextRun({ text: (tag === 'ol' ? (i + 1) + '. ' : '• ') + li.textContent, size: DOCX_EXPORT_CONFIG.fontSize, font: DOCX_EXPORT_CONFIG.fontName })],
+                            spacing: { after: 60 },
+                            indent: { left: 720 }
+                        }));
+                    });
+                } else if (tag === 'br') {
+                    children.push(new docx.Paragraph({ children: [] }));
+                } else {
+                    node.childNodes.forEach(function(cn) { processNode(cn); });
+                }
+            }
+
+            tmp.childNodes.forEach(function(cn) { processNode(cn); });
+
+            var doc = new docx.Document({
+                sections: [{
+                    properties: {
+                        page: {
+                            size: docxGetOrientation() === 'landscape' ?
+                                { width: 16838, height: 11906, orientation: docx.PageOrientation.LANDSCAPE } :
+                                { width: 11906, height: 16838 },
+                            margin: { top: DOCX_EXPORT_CONFIG.marginTop, bottom: DOCX_EXPORT_CONFIG.marginBottom, left: DOCX_EXPORT_CONFIG.marginLeft, right: DOCX_EXPORT_CONFIG.marginRight }
+                        }
+                    },
+                    children: children
+                }]
+            });
+            var blob = await docx.Packer.toBlob(doc);
+            docxDownloadBlob(blob, docxGetFilename('docx'));
+        }
+
+        function docxExportHtmlAsDoc(html) {
+            var fullHtml = docxWrapHtml(html);
+            var wordHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]--><style>' +
+                '@page { size: ' + DOCX_EXPORT_CONFIG.pageSize + '; margin: ' + (DOCX_EXPORT_CONFIG.marginTop / 1440 * 2.54).toFixed(2) + 'cm ' + (DOCX_EXPORT_CONFIG.marginRight / 1440 * 2.54).toFixed(2) + 'cm ' + (DOCX_EXPORT_CONFIG.marginBottom / 1440 * 2.54).toFixed(2) + 'cm ' + (DOCX_EXPORT_CONFIG.marginLeft / 1440 * 2.54).toFixed(2) + 'cm; }' +
+                'body { font-family: "' + DOCX_EXPORT_CONFIG.fontName + '", sans-serif; font-size: ' + (DOCX_EXPORT_CONFIG.fontSize / 2).toFixed(1) + 'pt; }' +
+                '</style></head><body>' + fullHtml.replace(/<!DOCTYPE[^>]*>/i, '').replace(/<html[^>]*>/i, '').replace(/<\/html>/i, '').replace(/<head[^>]*>[\s\S]*?<\/head>/i, '').replace(/<body[^>]*>/i, '').replace(/<\/body>/i, '') + '</body></html>';
+            var blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
+            docxDownloadBlob(blob, docxGetFilename('doc'));
+            showToast('提示：.doc格式实际为Word兼容HTML，Word/WPS可直接打开', 'info');
+        }
+
+        async function docxExportRichCopy(html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            tmp.style.cssText = 'position:fixed;left:-9999px;top:0;';
+            document.body.appendChild(tmp);
+            try {
+                var htmlContent = tmp.innerHTML;
+                var textContent = tmp.textContent || tmp.innerText || '';
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({
+                            'text/html': new Blob([htmlContent], { type: 'text/html' }),
+                            'text/plain': new Blob([textContent], { type: 'text/plain' })
+                        })
+                    ]);
+                    showToast('已复制富文本到剪贴板，可直接粘贴到Word/WPS', 'success');
+                } else {
+                    var range = document.createRange();
+                    range.selectNodeContents(tmp);
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    document.execCommand('copy');
+                    sel.removeAllRanges();
+                    showToast('已复制到剪贴板（兼容模式），可直接粘贴到Word', 'success');
+                }
+            } catch(e) {
+                showToast('复制失败: ' + e.message, 'error');
+            } finally {
+                document.body.removeChild(tmp);
+            }
+        }
+
+        function docxExportPrintPreview(html) {
+            var printWin = window.open('', '_blank');
+            if (!printWin) { showToast('弹窗被拦截，请允许弹窗后重试', 'error'); return; }
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.onload = function() { printWin.print(); };
+            showToast('已打开打印预览，可选择"打印到PDF"或"另存为"', 'success');
+        }
+
+        function showDocxExportPanel() {
+            var methodCards = DOCX_METHODS.map(function(m) {
+                var ready = isDocxMethodReady(m);
+                var libNames = m.libs.map(function(l) { return DOCX_LIBS[l].name.split(' ')[0]; }).join('+') || '无依赖';
+                var btnText = ready ? '🚀 导出 .' + m.format.toUpperCase() : '📥 加载并导出';
+                var btnClass = ready ? 'btn-success' : 'btn-warning';
+                return '<div style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="color:#e6e6e6;font-weight:500;font-size:13px;">' + m.id + '. ' + m.name + '</span>' +
+                        '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(43,87,151,.2);color:#5dade2;">.' + m.format + '</span>' +
+                    '</div>' +
+                    '<div style="color:#888;font-size:11px;margin-bottom:8px;line-height:1.5;">' + m.desc + '</div>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                        '<span style="font-size:10px;color:#666;">依赖：' + libNames + (ready ? ' ✅' : ' 🟡') + '</span>' +
+                        '<button class="btn btn-sm ' + btnClass + '" onclick="exportDocx(' + m.id + ');closeModal();" style="font-size:11px;padding:4px 12px;">' + btnText + '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            var configHtml = '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #2a2a2a;">' +
+                '<h4 style="color:#e6e6e6;font-size:13px;margin-bottom:10px;">⚙️ DOCX导出配置</h4>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
+                    '<div><label style="color:#888;font-size:11px;display:block;margin-bottom:4px;">纸张大小</label>' +
+                        '<select id="docxPageSize" style="width:100%;padding:6px 8px;background:#0d0d0d;border:1px solid #2a2a2a;color:#e6e6e6;font-size:12px;border-radius:4px;">' +
+                            '<option value="A4"' + (DOCX_EXPORT_CONFIG.pageSize === 'A4' ? ' selected' : '') + '>A4</option>' +
+                            '<option value="Letter"' + (DOCX_EXPORT_CONFIG.pageSize === 'Letter' ? ' selected' : '') + '>Letter</option>' +
+                            '<option value="Legal"' + (DOCX_EXPORT_CONFIG.pageSize === 'Legal' ? ' selected' : '') + '>Legal</option>' +
+                        '</select></div>' +
+                    '<div><label style="color:#888;font-size:11px;display:block;margin-bottom:4px;">页面方向</label>' +
+                        '<select id="docxOrientation" style="width:100%;padding:6px 8px;background:#0d0d0d;border:1px solid #2a2a2a;color:#e6e6e6;font-size:12px;border-radius:4px;">' +
+                            '<option value="portrait"' + (DOCX_EXPORT_CONFIG.orientation === 'portrait' ? ' selected' : '') + '>纵向</option>' +
+                            '<option value="landscape"' + (DOCX_EXPORT_CONFIG.orientation === 'landscape' ? ' selected' : '') + '>横向</option>' +
+                        '</select></div>' +
+                    '<div><label style="color:#888;font-size:11px;display:block;margin-bottom:4px;">字体</label>' +
+                        '<select id="docxFontName" style="width:100%;padding:6px 8px;background:#0d0d0d;border:1px solid #2a2a2a;color:#e6e6e6;font-size:12px;border-radius:4px;">' +
+                            '<option value="Microsoft YaHei"' + (DOCX_EXPORT_CONFIG.fontName === 'Microsoft YaHei' ? ' selected' : '') + '>微软雅黑</option>' +
+                            '<option value="SimSun"' + (DOCX_EXPORT_CONFIG.fontName === 'SimSun' ? ' selected' : '') + '>宋体</option>' +
+                            '<option value="SimHei"' + (DOCX_EXPORT_CONFIG.fontName === 'SimHei' ? ' selected' : '') + '>黑体</option>' +
+                            '<option value="KaiTi"' + (DOCX_EXPORT_CONFIG.fontName === 'KaiTi' ? ' selected' : '') + '>楷体</option>' +
+                            '<option value="Times New Roman"' + (DOCX_EXPORT_CONFIG.fontName === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option>' +
+                            '<option value="Arial"' + (DOCX_EXPORT_CONFIG.fontName === 'Arial' ? ' selected' : '') + '>Arial</option>' +
+                        '</select></div>' +
+                    '<div><label style="color:#888;font-size:11px;display:block;margin-bottom:4px;">正文字号</label>' +
+                        '<select id="docxFontSize" style="width:100%;padding:6px 8px;background:#0d0d0d;border:1px solid #2a2a2a;color:#e6e6e6;font-size:12px;border-radius:4px;">' +
+                            '<option value="21"' + (DOCX_EXPORT_CONFIG.fontSize === 21 ? ' selected' : '') + '>小五 (9pt)</option>' +
+                            '<option value="24"' + (DOCX_EXPORT_CONFIG.fontSize === 24 ? ' selected' : '') + '>五号 (10.5pt)</option>' +
+                            '<option value="28"' + (DOCX_EXPORT_CONFIG.fontSize === 28 ? ' selected' : '') + '>小四 (12pt)</option>' +
+                            '<option value="30"' + (DOCX_EXPORT_CONFIG.fontSize === 30 ? ' selected' : '') + '>四号 (14pt)</option>' +
+                        '</select></div>' +
+                '</div>' +
+                '<button class="btn btn-sm btn-primary" onclick="saveDocxConfig();" style="width:100%;justify-content:center;">保存DOCX配置</button>' +
+            '</div>';
+
+            var content = '<div style="max-height:60vh;overflow-y:auto;">' +
+                '<div style="margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">📝 DOCX/Word 导出方案</span>' +
+                        '<span style="color:#888;font-size:11px;">共8种方案</span>' +
+                    '</div>' +
+                    '<p style="color:#888;font-size:11px;line-height:1.5;">选择适合的导出方案，推荐方案1（html-to-docx）兼容性最好。</p>' +
+                '</div>' +
+                methodCards +
+                configHtml +
+            '</div>';
+            showModal('📝 导出为Word/DOCX', content);
+        }
+
+        function saveDocxConfig() {
+            var ps = document.getElementById('docxPageSize');
+            var ori = document.getElementById('docxOrientation');
+            var fn = document.getElementById('docxFontName');
+            var fs = document.getElementById('docxFontSize');
+            if (ps) DOCX_EXPORT_CONFIG.pageSize = ps.value;
+            if (ori) DOCX_EXPORT_CONFIG.orientation = ori.value;
+            if (fn) DOCX_EXPORT_CONFIG.fontName = fn.value;
+            if (fs) DOCX_EXPORT_CONFIG.fontSize = parseInt(fs.value);
+            saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
+            showToast('DOCX配置已保存', 'success');
+        }
+
+        var pdfLibLoading = {};
+        var PDF_LIBS = {
+            jspdf: {
+                name: 'jsPDF', icon: '📄',
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+                size: '~280KB',
+                desc: '纯JS PDF生成库，支持文本/图片/分页。',
+                check: function() { return typeof window.jspdf !== 'undefined'; }
+            },
+            html2canvas: {
+                name: 'html2canvas', icon: '📸',
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                size: '~120KB',
+                desc: 'DOM→Canvas截图库。',
+                check: function() { return typeof html2canvas !== 'undefined'; }
+            },
+            html2pdf: {
+                name: 'html2pdf.js', icon: '📦',
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js',
+                size: '~400KB',
+                desc: 'html2canvas+jsPDF封装库，自带分页。',
+                check: function() { return typeof html2pdf !== 'undefined'; }
+            },
+            pdflib: {
+                name: 'pdf-lib', icon: '🔧',
+                url: 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
+                size: '~250KB',
+                desc: '底层PDF操作库。',
+                check: function() { return typeof PDFLib !== 'undefined'; }
+            },
+            mscreenshot: {
+                name: 'modern-screenshot', icon: '🖼️',
+                url: 'https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.39/dist/index.min.js',
+                size: '~50KB',
+                desc: '新一代DOM截图库，对现代CSS支持更好。',
+                check: function() { return typeof modernScreenshot !== 'undefined'; }
+            }
+        };
+
+        var PDF_METHODS = [
+            {id:1, name:'iframe+jsPDF', libs:['jspdf','html2canvas'], desc:'iframe渲染→html2canvas截图→jsPDF分页。最可靠的基础方案。'},
+            {id:2, name:'html2pdf.js', libs:['html2pdf'], desc:'封装库方案，自带分页。加载html2pdf即可。'},
+            {id:3, name:'pdf-lib+Canvas', libs:['pdflib','html2canvas'], desc:'pdf-lib替代jsPDF，更底层PDF控制。PNG嵌入质量更高。'},
+            {id:4, name:'modern-screenshot', libs:['jspdf','mscreenshot'], desc:'modern-screenshot替代html2canvas，对CSS渐变/backdrop-filter支持更好。'},
+            {id:5, name:'iframe打印', libs:[], desc:'隐藏iframe触发浏览器打印。无需任何库！'},
+            {id:6, name:'新窗口打印', libs:[], desc:'新窗口打开HTML触发打印。无需任何库！'},
+            {id:7, name:'高清图片PDF', libs:['jspdf','html2canvas'], desc:'3倍分辨率截图→PDF。文件更大但更清晰。'},
+            {id:8, name:'Canvas直绘', libs:['jspdf','html2canvas'], desc:'预分配Canvas尺寸，html2canvas直接渲染到指定Canvas。'},
+            {id:9, name:'双iframe隔离', libs:['jspdf','html2canvas'], desc:'外层iframe包裹内层iframe，双重隔离环境渲染。'},
+            {id:10, name:'srcdoc直出', libs:['jspdf','html2canvas'], desc:'iframe.srcdoc加载HTML，最简洁的渲染方式。'}
+        ];
+
+        function isPdfLibLoaded(id) { return PDF_LIBS[id] && PDF_LIBS[id].check(); }
+        function isPdfMethodReady(method) { return method.libs.every(function(lid) { return isPdfLibLoaded(lid); }); }
+
+        function loadPdfLib(id) {
+            if (isPdfLibLoaded(id)) return Promise.resolve();
+            if (pdfLibLoading[id]) return pdfLibLoading[id];
+            showToast('正在加载 ' + PDF_LIBS[id].name + '...', 'info');
+            pdfLibLoading[id] = new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = PDF_LIBS[id].url;
+                s.onload = function() {
+                    pdfLibLoading[id] = null;
+                    showToast(PDF_LIBS[id].name + ' 加载成功', 'success');
+                    resolve();
+                };
+                s.onerror = function() {
+                    pdfLibLoading[id] = null;
+                    showToast(PDF_LIBS[id].name + ' 加载失败', 'error');
+                    reject();
+                };
+                document.head.appendChild(s);
+            });
+            return pdfLibLoading[id];
+        }
+
+        function loadPdfLibsForMethod(method) {
+            return Promise.all(method.libs.map(function(lid) { return loadPdfLib(lid); }));
+        }
+
+        function pdfCreateRenderIframe(html, width, callback) {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + width + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
+            document.body.appendChild(iframe);
+            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(html);
+            iframeDoc.close();
+            setTimeout(function() { callback(iframe); }, 800);
+        }
+
+        function pdfRemoveIframe(iframe) {
+            try { document.body.removeChild(iframe); } catch(e) {}
+        }
+
+        function pdfCanvasToPdfPages(canvas, jsPDFConstructor) {
+            var imgWidthMm = 190;
+            var imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+            var pdf = new jsPDFConstructor('p', 'mm', 'a4');
+            var positionMm = 0, pageHeightMm = 277, remainingHeightMm = imgHeightMm;
+            while (remainingHeightMm > 0) {
+                var sourceY = positionMm * (canvas.width / imgWidthMm);
+                var sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
+                var pageCanvas = document.createElement('canvas');
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = Math.min(Math.round(sourceHeight), canvas.height - Math.round(sourceY));
+                if (pageCanvas.height <= 0) break;
+                var ctx = pageCanvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+                var pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+                if (positionMm > 0) pdf.addPage();
+                var pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+                pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
+                remainingHeightMm -= pageHeightMm;
+                positionMm += pageHeightMm;
+            }
+            return pdf;
+        }
+
+        function pdfGetFilename() {
+            var content = htmlEditor.value;
+            var title = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+            return (title ? title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') : 'export') + '.pdf';
+        }
+
+        function pdfDownloadBlob(blob, filename) {
+            if (navigator.share && navigator.canShare && navigator.canShare({files: [new File([blob], filename, {type: blob.type})]})) {
+                var file = new File([blob], filename, {type: blob.type});
+                navigator.share({files: [file], title: filename}).then(function() {
+                    showToast('导出成功', 'success');
+                }).catch(function(err) {
+                    if (err.name !== 'AbortError') pdfFallbackDownload(blob, filename);
+                });
+            } else {
+                pdfFallbackDownload(blob, filename);
+            }
+        }
+
+        function pdfFallbackDownload(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
             showToast('PDF导出成功', 'success');
+        }
+
+        async function exportPdfMethod(methodId) {
+            var method = PDF_METHODS.find(function(m) { return m.id === methodId; });
+            if (!method) { showToast('未知PDF导出方案', 'error'); return; }
+            var html = htmlEditor.value.trim();
+            if (!html) { showToast('请先输入内容', 'error'); return; }
+            if (method.libs.length > 0 && !isPdfMethodReady(method)) {
+                showToast('正在加载所需库...', 'info');
+                try {
+                    await loadPdfLibsForMethod(method);
+                } catch(e) {
+                    showToast('库加载失败，请重试', 'error');
+                    return;
+                }
+            }
+            showToast('方案' + methodId + ': ' + method.name + ' 生成中...', 'info');
+            try {
+                switch(methodId) {
+                    case 1: await pdfExportIframeJsPDF(html); break;
+                    case 2: await pdfExportHtml2Pdf(html); break;
+                    case 3: await pdfExportPdfLibCanvas(html); break;
+                    case 4: await pdfExportModernScreenshot(html); break;
+                    case 5: pdfExportIframePrint(html); break;
+                    case 6: pdfExportNewWindowPrint(html); break;
+                    case 7: await pdfExportHighResImagePdf(html); break;
+                    case 8: await pdfExportCanvasDirect(html); break;
+                    case 9: await pdfExportDoubleIframe(html); break;
+                    case 10: await pdfExportSrcdoc(html); break;
+                }
+            } catch(e) {
+                showToast('导出失败: ' + e.message, 'error');
+            }
+        }
+
+        async function pdfExportIframeJsPDF(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
+                    pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        async function pdfExportHtml2Pdf(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var opt = {
+                        margin: 10, filename: pdfGetFilename(),
+                        image: {type: 'jpeg', quality: 0.95},
+                        html2canvas: {scale: 2, useCORS: true, logging: false, backgroundColor: null, width: 794, windowWidth: 794},
+                        jsPDF: {unit: 'mm', format: 'a4', orientation: 'portrait'},
+                        pagebreak: {mode: ['avoid-all', 'css', 'legacy']}
+                    };
+                    await html2pdf().set(opt).from(iframeBody).save();
+                    showToast('导出成功', 'success');
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        async function pdfExportPdfLibCanvas(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var imgData = canvas.toDataURL('image/png');
+                    var imgBytes = await fetch(imgData).then(function(r) { return r.arrayBuffer(); });
+                    var pdfDoc = await PDFLib.PDFDocument.create();
+                    var pageWidth = 595.28, pageHeight = 841.89, margin = 28.35;
+                    var contentWidth = pageWidth - margin * 2, contentHeight = pageHeight - margin * 2;
+                    var imgAspect = canvas.width / canvas.height;
+                    var renderWidth = contentWidth, renderHeight = renderWidth / imgAspect;
+                    var yOffset = 0, totalContentHeight = renderHeight, scale = canvas.width / renderWidth;
+                    while (yOffset < totalContentHeight) {
+                        var page = pdfDoc.addPage([pageWidth, pageHeight]);
+                        var sliceHeight = Math.min(contentHeight, totalContentHeight - yOffset);
+                        var sourceY = yOffset * scale, sourceHeight = sliceHeight * scale;
+                        var sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = canvas.width;
+                        sliceCanvas.height = Math.round(sourceHeight);
+                        var ctx = sliceCanvas.getContext('2d');
+                        ctx.drawImage(canvas, 0, Math.round(sourceY), canvas.width, Math.round(sourceHeight), 0, 0, canvas.width, Math.round(sourceHeight));
+                        var sliceData = sliceCanvas.toDataURL('image/png');
+                        var sliceBytes = await fetch(sliceData).then(function(r) { return r.arrayBuffer(); });
+                        var sliceImg = await pdfDoc.embedPng(sliceBytes);
+                        page.drawImage(sliceImg, {x: margin, y: pageHeight - margin - sliceHeight, width: renderWidth, height: sliceHeight});
+                        yOffset += contentHeight;
+                    }
+                    var pdfBytes = await pdfDoc.save();
+                    pdfDownloadBlob(new Blob([pdfBytes], {type: 'application/pdf'}), pdfGetFilename());
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        async function pdfExportModernScreenshot(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, width: 794});
+                    var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
+                    pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        function pdfExportIframePrint(html) {
+            pdfCreateRenderIframe(html, 794, function(iframe) {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                    setTimeout(function() { pdfRemoveIframe(iframe); }, 2000);
+                } catch(e) { showToast('打印失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        function pdfExportNewWindowPrint(html) {
+            var printWin = window.open('', '_blank');
+            if (!printWin) { showToast('弹窗被拦截', 'error'); return; }
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.onload = function() {
+                printWin.print();
+                setTimeout(function() { printWin.close(); }, 500);
+            };
+        }
+
+        async function pdfExportHighResImagePdf(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var canvas = await html2canvas(iframeBody, {scale:3, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
+                    pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        async function pdfExportCanvasDirect(html) {
+            pdfCreateRenderIframe(html, 794, async function(iframe) {
+                try {
+                    var iframeBody = iframe.contentDocument.body;
+                    var scrollHeight = iframeBody.scrollHeight || iframeBody.offsetHeight || 1000;
+                    var canvas = document.createElement('canvas');
+                    canvas.width = 794 * 2;
+                    canvas.height = scrollHeight * 2;
+                    var ctx = canvas.getContext('2d');
+                    var rendered = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794, canvas:canvas});
+                    var pdf = pdfCanvasToPdfPages(rendered, window.jspdf.jsPDF);
+                    pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+                    pdfRemoveIframe(iframe);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(iframe); }
+            });
+        }
+
+        async function pdfExportDoubleIframe(html) {
+            var outerIframe = document.createElement('iframe');
+            outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
+            document.body.appendChild(outerIframe);
+            var outerDoc = outerIframe.contentDocument || outerIframe.contentWindow.document;
+            outerDoc.open();
+            outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;}</style></head><body></body></html>');
+            outerDoc.close();
+            await new Promise(function(r) { setTimeout(r, 100); });
+            var innerIframe = outerDoc.createElement('iframe');
+            innerIframe.style.cssText = 'width:794px;border:none;';
+            outerDoc.body.appendChild(innerIframe);
+            var innerDoc = innerIframe.contentDocument || innerIframe.contentWindow.document;
+            innerDoc.open();
+            innerDoc.write(html);
+            innerDoc.close();
+            await new Promise(function(r) { setTimeout(r, 800); });
+            try {
+                var innerBody = innerDoc.body;
+                var canvas = await html2canvas(innerBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
+                pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+            } catch(e) { showToast('导出失败: ' + e.message, 'error'); }
+            pdfRemoveIframe(outerIframe);
+        }
+
+        async function pdfExportSrcdoc(html) {
+            var renderFrame = document.createElement('iframe');
+            renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
+            document.body.appendChild(renderFrame);
+            renderFrame.srcdoc = html;
+            renderFrame.onload = async function() {
+                try {
+                    var doc = renderFrame.contentDocument;
+                    await new Promise(function(r) { setTimeout(r, 300); });
+                    var body = doc.body;
+                    var canvas = await html2canvas(body, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
+                    pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
+                    pdfRemoveIframe(renderFrame);
+                } catch(e) { showToast('导出失败: ' + e.message, 'error'); pdfRemoveIframe(renderFrame); }
+            };
+        }
+
+        function showPdfExportPanel() {
+            var methodCards = PDF_METHODS.map(function(m) {
+                var ready = isPdfMethodReady(m);
+                var libNames = m.libs.map(function(l) { return PDF_LIBS[l].name.split(' ')[0]; }).join('+') || '无依赖';
+                var btnText = ready ? '🚀 导出PDF' : '📥 加载并导出';
+                var btnClass = ready ? 'btn-success' : 'btn-warning';
+                return '<div style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="color:#e6e6e6;font-weight:500;font-size:13px;">' + m.id + '. ' + m.name + '</span>' +
+                        '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(43,87,151,.2);color:#5dade2;">PDF</span>' +
+                    '</div>' +
+                    '<div style="color:#888;font-size:11px;margin-bottom:8px;line-height:1.5;">' + m.desc + '</div>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                        '<span style="font-size:10px;color:#666;">依赖：' + libNames + (ready ? ' ✅' : ' 🟡') + '</span>' +
+                        '<button class="btn btn-sm ' + btnClass + '" onclick="exportPdfMethod(' + m.id + ');closeModal();" style="font-size:11px;padding:4px 12px;">' + btnText + '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            var content = '<div style="max-height:60vh;overflow-y:auto;">' +
+                '<div style="margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">📄 PDF多方案导出</span>' +
+                        '<span style="color:#888;font-size:11px;">共10种方案</span>' +
+                    '</div>' +
+                    '<p style="color:#888;font-size:11px;line-height:1.5;">选择适合的PDF导出方案。方案1（iframe+jsPDF）最可靠，方案5/6无需加载任何库。</p>' +
+                '</div>' +
+                methodCards +
+            '</div>';
+            showModal('📄 PDF多方案导出', content);
+        }
+
+        function showTemplatePanel() {
+            var templateCards = DOCX_TEMPLATES.map(function(t) {
+                return '<div onclick="loadTemplate(\'' + t.id + '\');closeModal();" style="padding:14px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor=\'#5dade2\';this.style.background=\'#222\';" onmouseout="this.style.borderColor=\'#2a2a2a\';this.style.background=\'#1a1a1a\';">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span style="font-size:24px;">' + t.icon + '</span>' +
+                        '<div>' +
+                            '<div style="color:#e6e6e6;font-weight:500;font-size:13px;">' + t.name + '</div>' +
+                            '<div style="color:#666;font-size:11px;">点击加载此模板</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            var content = '<div style="max-height:60vh;overflow-y:auto;">' +
+                '<div style="margin-bottom:12px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">📋 预制模板</span>' +
+                        '<span style="color:#888;font-size:11px;">共' + DOCX_TEMPLATES.length + '个模板</span>' +
+                    '</div>' +
+                    '<p style="color:#888;font-size:11px;line-height:1.5;">选择模板快速开始编辑，所有模板均为两页A4纸内容，适合测试导出效果。</p>' +
+                '</div>' +
+                templateCards +
+            '</div>';
+            showModal('📋 预制模板', content);
+        }
+
+        function loadTemplate(id) {
+            if (SAMPLES[id]) {
+                htmlEditor.value = SAMPLES[id];
+                updatePreview();
+                var tpl = DOCX_TEMPLATES.find(function(t) { return t.id === id; });
+                showToast('已加载模板：' + (tpl ? tpl.name : id), 'success');
+            } else {
+                showToast('模板不存在', 'error');
+            }
         }
 
         function trimCanvasBlank(canvas) {
@@ -4217,6 +5208,10 @@
                     if (settings.pdfMargin !== undefined) {
                         pdfMargin = settings.pdfMargin;
                     }
+                    
+                    if (settings.docxExportConfig) {
+                        Object.assign(DOCX_EXPORT_CONFIG, settings.docxExportConfig);
+                    }
                 }
             } catch (error) {
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -4316,6 +5311,34 @@
             }
             pdfMargin = margin;
             saveSettings({ pdfMargin: margin });
+        }
+        
+        function saveModalDocxPageSize() {
+            const select = document.getElementById('modalDocxPageSize');
+            if (!select) return;
+            DOCX_EXPORT_CONFIG.pageSize = select.value;
+            saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
+        }
+        
+        function saveModalDocxOrientation() {
+            const select = document.getElementById('modalDocxOrientation');
+            if (!select) return;
+            DOCX_EXPORT_CONFIG.orientation = select.value;
+            saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
+        }
+        
+        function saveModalDocxFontName() {
+            const select = document.getElementById('modalDocxFontName');
+            if (!select) return;
+            DOCX_EXPORT_CONFIG.fontName = select.value;
+            saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
+        }
+        
+        function saveModalDocxFontSize() {
+            const select = document.getElementById('modalDocxFontSize');
+            if (!select) return;
+            DOCX_EXPORT_CONFIG.fontSize = parseInt(select.value);
+            saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
         }
         
         // 自动生成在线可访问链接（使用新的分享管理器）
