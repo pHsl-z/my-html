@@ -1825,6 +1825,40 @@
         // 分享相关变量
         const SHARE_PARAM_NAME = 'content';
         let shareBaseUrl = '';
+        var _lzString = null;
+        var _lzStringLoading = false;
+        
+        function loadLzString() {
+            if (_lzString) return Promise.resolve(_lzString);
+            if (typeof LZString !== 'undefined') { _lzString = LZString; return Promise.resolve(_lzString); }
+            if (_lzStringLoading) return new Promise(function(resolve, reject) { setTimeout(function() { loadLzString().then(resolve).catch(reject); }, 200); });
+            _lzStringLoading = true;
+            return new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
+                s.onload = function() { _lzString = window.LZString; _lzStringLoading = false; resolve(_lzString); };
+                s.onerror = function() { _lzStringLoading = false; reject(new Error('lz-string加载失败')); };
+                document.head.appendChild(s);
+            });
+        }
+        
+        function compressForUrl(content) {
+            if (_lzString) {
+                return 'lz:' + _lzString.compressToEncodedURIComponent(content);
+            }
+            return 'b64:' + btoa(encodeURIComponent(content));
+        }
+        
+        function decompressFromUrl(encoded) {
+            if (encoded.startsWith('lz:')) {
+                if (!_lzString) throw new Error('需要lz-string库来解压此链接');
+                return _lzString.decompressFromEncodedURIComponent(encoded.substring(3)) || '';
+            }
+            if (encoded.startsWith('b64:')) {
+                return decodeURIComponent(atob(encoded.substring(4)));
+            }
+            return decodeURIComponent(atob(encoded));
+        }
         
         // 自动保存相关变量
         let autoSaveInterval = 10;
@@ -2862,29 +2896,44 @@
              else { showToast('请先生成链接', 'error'); }
          }
 
-         function generateUrlShareLink() {
+         async function generateUrlShareLink() {
              const content = htmlEditor.value.trim();
              if (!content) { showToast('请先输入内容', 'error'); return; }
              try {
-                 const encoded = btoa(encodeURIComponent(content));
-                 let url = shareBaseUrl ? new URL(shareBaseUrl) : new URL(window.location.href);
-                 url.searchParams.delete(SHARE_PARAM_NAME);
-                 url.searchParams.delete('method');
-                 url.searchParams.set('method', 'base64');
-                 url.searchParams.set(SHARE_PARAM_NAME, encoded);
+                 await loadLzString();
+                 const compressed = compressForUrl(content);
+                 let baseUrl = shareBaseUrl || window.location.href.split('?')[0].split('#')[0];
+                 let url = baseUrl + '#' + compressed;
                  const linkInput = document.getElementById('modalShareLink');
-                 if (linkInput) linkInput.value = url.toString();
-                 generateQRCode(url.toString());
-                 saveShareRecord(url.toString());
-                 showToast('分享链接已生成', 'success');
-             } catch (error) { showToast('生成链接失败', 'error'); }
+                 if (linkInput) linkInput.value = url;
+                 generateQRCode(url);
+                 saveShareRecord(url);
+                 const ratio = ((1 - url.length / (baseUrl.length + btoa(encodeURIComponent(content)).length + 10)) * 100).toFixed(0);
+                 showToast('分享链接已生成（压缩' + Math.max(0, ratio) + '%）', 'success');
+             } catch (error) { showToast('生成链接失败: ' + error.message, 'error'); }
          }
 
          function nativeShare() {
              const linkInput = document.getElementById('modalShareLink');
              if (!linkInput || !linkInput.value) { showToast('请先生成链接', 'error'); return; }
              if (navigator.share) {
-                 navigator.share({ title: extractTitleFromCode(htmlEditor.value), text: '查看我的HTML代码', url: linkInput.value }).catch(() => {});
+                 var shareData = { title: extractTitleFromCode(htmlEditor.value), text: '查看我的HTML代码' };
+                 if (linkInput.value.length <= 5000) {
+                     shareData.url = linkInput.value;
+                 } else {
+                     shareData.text = linkInput.value;
+                 }
+                 navigator.share(shareData).catch(function(err) {
+                     if (err.name !== 'AbortError') {
+                         navigator.clipboard.writeText(linkInput.value)
+                             .then(function() { showToast('链接已复制到剪贴板', 'success'); })
+                             .catch(function() { showToast('分享失败，请手动复制链接', 'error'); });
+                     }
+                 });
+             } else {
+                 navigator.clipboard.writeText(linkInput.value)
+                     .then(function() { showToast('链接已复制到剪贴板', 'success'); })
+                     .catch(function() { showToast('复制失败', 'error'); });
              }
          }
 
@@ -2933,16 +2982,31 @@
              const placeholder = document.getElementById('qrcodePlaceholder');
              const canvas = document.getElementById('qrcodeCanvas');
              if (!container || !canvas) return;
-             if (text.length > 2000) { if (placeholder) placeholder.textContent = '链接过长，无法生成二维码'; return; }
+             if (text.length > 4000) {
+                 if (placeholder) {
+                     placeholder.innerHTML = '⚠️ 链接过长（' + text.length + '字符），无法生成二维码<br><span style="font-size:11px;color:#999;">请使用"复制链接"方式分享，或减少内容后重试</span>';
+                     placeholder.style.display = 'block';
+                 }
+                 container.style.display = 'none';
+                 return;
+             }
              container.style.display = 'block';
              if (placeholder) placeholder.style.display = 'none';
+             var size = text.length > 2000 ? 300 : 200;
              const ctx = canvas.getContext('2d');
-             const size = 200; canvas.width = size; canvas.height = size;
+             canvas.width = size; canvas.height = size;
              ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
              const img = new Image(); img.crossOrigin = 'anonymous';
              img.onload = function() { ctx.drawImage(img, 0, 0, size, size); };
-             img.onerror = function() { if (placeholder) { placeholder.textContent = '二维码生成失败'; placeholder.style.display = 'block'; } container.style.display = 'none'; };
-             img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(text);
+             img.onerror = function() {
+                 if (placeholder) {
+                     placeholder.innerHTML = '❌ 二维码生成失败<br><span style="font-size:11px;color:#999;">请使用"复制链接"方式分享</span>';
+                     placeholder.style.display = 'block';
+                 }
+                 container.style.display = 'none';
+             };
+             var ecLevel = text.length > 2000 ? 'L' : 'M';
+             img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&ecc=' + ecLevel + '&data=' + encodeURIComponent(text);
          }
 
          function saveShareRecord(url) {
@@ -5145,29 +5209,39 @@
         }
         
         // 从URL参数加载分享内容
-        function loadFromShareUrl() {
+        async function loadFromShareUrl() {
             try {
-                const url = new URL(window.location.href);
-                const encodedContent = url.searchParams.get(SHARE_PARAM_NAME);
-                const compressionMethod = url.searchParams.get('method') || 'base64';
-                
-                if (encodedContent) {
-                    // 根据压缩方法解码内容
-                    let content;
-                    if (compressionMethod === 'custom') {
-                        content = decompressContent(encodedContent);
-                    } else {
-                        content = decodeURIComponent(atob(encodedContent));
+                var content = null;
+                var hash = window.location.hash;
+                if (hash && hash.length > 1) {
+                    var hashData = hash.substring(1);
+                    if (hashData.startsWith('lz:') || hashData.startsWith('b64:')) {
+                        await loadLzString();
+                        content = decompressFromUrl(hashData);
                     }
-                    
+                }
+                if (!content) {
+                    var url = new URL(window.location.href);
+                    var encodedContent = url.searchParams.get(SHARE_PARAM_NAME);
+                    var compressionMethod = url.searchParams.get('method') || 'base64';
+                    if (encodedContent) {
+                        if (compressionMethod === 'custom') {
+                            content = decompressContent(encodedContent);
+                        } else {
+                            content = decodeURIComponent(atob(encodedContent));
+                        }
+                    }
+                }
+                if (content) {
                     htmlEditor.value = content;
                     updatePreview();
                     updateCharCount();
                     showToast('已加载分享内容', 'success');
-                    console.log('从分享链接加载内容成功');
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
                 }
             } catch (error) {
-                // 只在开发模式下显示分享链接加载错误
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     console.error('从分享链接加载内容失败:', error);
                 }
