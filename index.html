@@ -7,6 +7,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <meta name="mobile-web-app-capable" content="yes">
+    <script>
+    (function(){
+        var h=location.hash;
+        if(!h||h.length<2)return;
+        var d=h.substring(1);
+        if(!d.startsWith('lz:')&&!d.startsWith('b64:'))return;
+        function go(c){try{document.open();document.write(c);document.close();}catch(e){document.body.innerHTML='<pre style="padding:20px;white-space:pre-wrap;">'+c.replace(/</g,'&lt;')+'</pre>';}}
+        if(d.startsWith('b64:')){try{go(decodeURIComponent(atob(d.substring(4))));}catch(e){}return;}
+        var s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
+        s.onload=function(){try{go(LZString.decompressFromEncodedURIComponent(d.substring(3))||'');}catch(e){}};
+        document.head.appendChild(s);
+    })();
+    </script>
     <title>在线HTML5编辑器</title>
     <style>
         * {
@@ -2612,7 +2626,7 @@
                             <span style="color: #e6e6e6; font-size: 14px; font-weight: 500;">🔗 链接分享</span>
                             <span style="color: #888; font-size: 12px;">` + (hasContent ? contentSize : '无内容') + `</span>
                         </div>
-                        <p style="color: #888; font-size: 12px; margin-bottom: 12px; line-height: 1.5;">将代码编码到URL参数中，任何人打开链接即可查看</p>
+                        <p style="color: #888; font-size: 12px; margin-bottom: 12px; line-height: 1.5;">任何人打开链接即可直接查看渲染后的页面，支持交互操作</p>
                         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
                             <input type="text" id="modalShareLink" readonly placeholder="点击下方按钮生成链接" style="flex: 1; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 6px; color: #e6e6e6; font-size: 12px; outline: none; min-width: 0;">
                             <button class="btn btn-sm btn-primary" onclick="copyModalShareLink()" style="white-space: nowrap;">复制</button>
