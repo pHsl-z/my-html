@@ -13,12 +13,13 @@
         if(!h||h.length<2)return;
         var d=h.substring(1);
         if(!d.startsWith('lz:')&&!d.startsWith('b64:'))return;
-        function go(c){try{document.open();document.write(c);document.close();}catch(e){document.body.innerHTML='<pre style="padding:20px;white-space:pre-wrap;">'+c.replace(/</g,'&lt;')+'</pre>';}}
-        if(d.startsWith('b64:')){try{go(decodeURIComponent(atob(d.substring(4))));}catch(e){}return;}
-        var s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
-        s.onload=function(){try{go(LZString.decompressFromEncodedURIComponent(d.substring(3))||'');}catch(e){}};
-        document.head.appendChild(s);
+        document.documentElement.style.display='none';
+        function go(c){try{document.open();document.write(c);document.close();}catch(e){document.body.innerHTML='<pre style="padding:20px;white-space:pre-wrap;">'+c.replace(/</g,'&lt;')+'</pre>';document.documentElement.style.display='';}}
+        if(d.startsWith('b64:')){try{go(decodeURIComponent(atob(d.substring(4))));}catch(e){document.documentElement.style.display='';}return;}
+        var cdnList=['https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js','https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js','https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js'];
+        var idx=0;
+        function tryLoad(){if(idx>=cdnList.length){document.documentElement.style.display='';return;}var s=document.createElement('script');s.src=cdnList[idx];s.onload=function(){try{go(LZString.decompressFromEncodedURIComponent(d.substring(3))||'');}catch(e){document.documentElement.style.display='';}};s.onerror=function(){idx++;tryLoad();};document.head.appendChild(s);}
+        tryLoad();
     })();
     </script>
     <title>在线HTML5编辑器</title>
@@ -1825,11 +1826,6 @@
         const shareBtn = document.getElementById('shareBtn');
         const settingsBtn = document.getElementById('settingsBtn');
         const fileInput = document.getElementById('fileInput');
-        // 历史记录面板元素已移除，现在使用模态窗口
-        const settingsPanel = document.getElementById('settingsPanel');
-        const shareBaseUrlInput = document.getElementById('shareBaseUrl');
-        const autoSaveIntervalInput = document.getElementById('autoSaveInterval');
-        const maxHistoryRecordsInput = document.getElementById('maxHistoryRecords');
         
         // 历史记录相关变量
         let historyRecords = [];
@@ -1847,12 +1843,18 @@
             if (typeof LZString !== 'undefined') { _lzString = LZString; return Promise.resolve(_lzString); }
             if (_lzStringLoading) return new Promise(function(resolve, reject) { setTimeout(function() { loadLzString().then(resolve).catch(reject); }, 200); });
             _lzStringLoading = true;
+            var cdnList = ['https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js','https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js','https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js'];
+            var idx = 0;
             return new Promise(function(resolve, reject) {
-                var s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
-                s.onload = function() { _lzString = window.LZString; _lzStringLoading = false; resolve(_lzString); };
-                s.onerror = function() { _lzStringLoading = false; reject(new Error('lz-string加载失败')); };
-                document.head.appendChild(s);
+                function tryLoad() {
+                    if (idx >= cdnList.length) { _lzStringLoading = false; reject(new Error('lz-string加载失败')); return; }
+                    var s = document.createElement('script');
+                    s.src = cdnList[idx];
+                    s.onload = function() { _lzString = window.LZString; _lzStringLoading = false; resolve(_lzString); };
+                    s.onerror = function() { idx++; tryLoad(); };
+                    document.head.appendChild(s);
+                }
+                tryLoad();
             });
         }
         
@@ -1999,118 +2001,6 @@
             legal: { width: 215.9, height: 355.6 }
         };
 
-        // 默认HTML模板 - 针对移动设备优化
-        const defaultHTML = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的HTML5页面</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f5f5f7;
-            color: #1d1d1f;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            padding: 30px 20px;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        }
-        
-        h1 {
-            color: #1d1d1f;
-            margin-bottom: 20px;
-            font-size: 28px;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        p {
-            color: #86868b;
-            font-size: 16px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .feature {
-            background: #f5f5f7;
-            padding: 15px;
-            border-radius: 12px;
-            margin: 15px 0;
-            text-align: center;
-        }
-        
-        .feature h3 {
-            color: #1d1d1f;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .feature p {
-            color: #86868b;
-            font-size: 14px;
-            margin: 0;
-        }
-        
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            
-            .container {
-                padding: 20px 15px;
-                border-radius: 12px;
-            }
-            
-            h1 {
-                font-size: 24px;
-            }
-            
-            p {
-                font-size: 14px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎉 欢迎使用HTML5编辑器</h1>
-        <p>这是一个响应式的HTML5页面模板，完美适配iOS、Android、macOS和Windows设备。</p>
-        
-        <div class="feature">
-            <h3>📱 移动优先</h3>
-            <p>在各种移动设备上都有出色的显示效果</p>
-        </div>
-        
-        <div class="feature">
-            <h3>💻 跨平台兼容</h3>
-            <p>支持iOS、Android、macOS、Windows等主流平台</p>
-        </div>
-        
-        <div class="feature">
-            <h3>🚀 性能优化</h3>
-            <p>快速加载，流畅的用户体验</p>
-        </div>
-    </div>
-</body>
-</html>`;
-
         // 初始化编辑器 - 修改为清空状态
         htmlEditor.value = '';
         updateCharCount();
@@ -2127,20 +2017,28 @@
             updatePreview();
         }, 100);
 
-        // 实时预览功能 - 优化触摸设备体验
         let updateTimeout;
-        htmlEditor.addEventListener('input', function() {
-            clearTimeout(updateTimeout);
-            updateTimeout = setTimeout(updatePreview, 100);
-            updateCharCount();
-        });
+        let lastHistoryAddTime = 0;
+        let lastContent = htmlEditor.value;
+        let autoSaveTimeout;
         
-        // iOS Edge浏览器兼容性：监听change事件
-        htmlEditor.addEventListener('change', function() {
+        function handleEditorInput() {
             clearTimeout(updateTimeout);
             updateTimeout = setTimeout(updatePreview, 100);
             updateCharCount();
-        });
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
+                    addToHistory();
+                    lastContent = htmlEditor.value;
+                    lastHistoryAddTime = Date.now();
+                }
+            }, 2000);
+        }
+        
+        htmlEditor.addEventListener('input', handleEditorInput);
+        htmlEditor.addEventListener('change', handleEditorInput);
         
         // IE浏览器兼容性：监听propertychange事件
         if (document.documentMode || /Edge/.test(navigator.userAgent)) {
@@ -2319,8 +2217,10 @@
                     return;
                 }
 
-                // 为预览文档添加iOS Safari滚动优化样式
+                var existingScrollStyle = previewDoc.getElementById('__editorScrollStyle');
+                if (existingScrollStyle) existingScrollStyle.remove();
                 const style = previewDoc.createElement('style');
+                style.id = '__editorScrollStyle';
                 style.textContent = `
                     /* iOS Safari滚动优化 */
                     html, body {
@@ -3039,18 +2939,32 @@
              let history = [];
              try { history = JSON.parse(localStorage.getItem('shareHistory') || '[]'); } catch(e) {}
              if (history.length === 0) { list.innerHTML = '<div style="text-align: center; padding: 20px; color: #888; font-size: 13px;">暂无分享历史</div>'; return; }
-             list.innerHTML = history.map(item => {
+             list.innerHTML = '';
+             history.forEach(function(item, index) {
                  const time = formatRelativeTime(item.timestamp);
-                 return '<div style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center;">' +
-                     '<div style="flex: 1; min-width: 0;">' +
-                         '<div style="font-size: 13px; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + escapeHtml(item.title || '无标题') + '</div>' +
-                         '<div style="font-size: 11px; color: #888; margin-top: 2px;">' + time + '</div>' +
-                     '</div>' +
-                     '<div style="display: flex; gap: 4px; margin-left: 8px;">' +
-                         '<button class="btn btn-sm" onclick="copyShareHistoryUrl(\'' + item.url + '\')" style="font-size: 11px; padding: 4px 6px;">📋</button>' +
-                         '<button class="btn btn-sm" onclick="window.open(\'' + item.url + '\', \'_blank\')" style="font-size: 11px; padding: 4px 6px;">🔗</button>' +
-                     '</div></div>';
-             }).join('');
+                 var row = document.createElement('div');
+                 row.style.cssText = 'padding: 10px 0; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center;';
+                 var info = document.createElement('div');
+                 info.style.cssText = 'flex: 1; min-width: 0;';
+                 info.innerHTML = '<div style="font-size: 13px; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + escapeHtml(item.title || '无标题') + '</div><div style="font-size: 11px; color: #888; margin-top: 2px;">' + time + '</div>';
+                 var btns = document.createElement('div');
+                 btns.style.cssText = 'display: flex; gap: 4px; margin-left: 8px;';
+                 var copyBtn = document.createElement('button');
+                 copyBtn.className = 'btn btn-sm';
+                 copyBtn.style.cssText = 'font-size: 11px; padding: 4px 6px;';
+                 copyBtn.textContent = '📋';
+                 copyBtn.addEventListener('click', function() { copyShareHistoryUrl(item.url); });
+                 var openBtn = document.createElement('button');
+                 openBtn.className = 'btn btn-sm';
+                 openBtn.style.cssText = 'font-size: 11px; padding: 4px 6px;';
+                 openBtn.textContent = '🔗';
+                 openBtn.addEventListener('click', function() { window.open(item.url, '_blank'); });
+                 btns.appendChild(copyBtn);
+                 btns.appendChild(openBtn);
+                 row.appendChild(info);
+                 row.appendChild(btns);
+                 list.appendChild(row);
+             });
          }
 
          function copyShareHistoryUrl(url) {
@@ -3069,17 +2983,19 @@
          function saveModalShareBaseUrl() {
              const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
              if (modalShareBaseUrl) {
-                 localStorage.setItem('shareBaseUrl', modalShareBaseUrl.value);
-                 alert('分享链接基础URL已保存！');
+                 shareBaseUrl = modalShareBaseUrl.value.trim();
+                 saveSettings({ shareBaseUrl: shareBaseUrl });
+                 showToast('分享链接基础URL已保存', 'success');
              }
          }
          
          function resetModalShareBaseUrl() {
              const modalShareBaseUrl = document.getElementById('modalShareBaseUrl');
              if (modalShareBaseUrl) {
-                 modalShareBaseUrl.value = window.location.href.split('?')[0];
-                 localStorage.setItem('shareBaseUrl', modalShareBaseUrl.value);
-                 alert('分享链接基础URL已重置为当前页面URL！');
+                 shareBaseUrl = window.location.href.split('?')[0].split('#')[0];
+                 modalShareBaseUrl.value = shareBaseUrl;
+                 saveSettings({ shareBaseUrl: shareBaseUrl });
+                 showToast('分享链接基础URL已重置', 'success');
              }
          }
          
@@ -3088,11 +3004,11 @@
              if (modalAutoSaveInterval) {
                  const interval = parseInt(modalAutoSaveInterval.value);
                  if (interval > 0 && interval <= 600) {
-                     localStorage.setItem('autoSaveInterval', interval);
-                     restartAutoSave();
-                     alert('自动保存间隔已保存！');
+                     autoSaveInterval = interval;
+                     saveSettings({ autoSaveInterval: interval });
+                     showToast('自动保存间隔已保存', 'success');
                  } else {
-                     alert('自动保存间隔必须在1-600秒之间！');
+                     showToast('自动保存间隔必须在1-600秒之间', 'error');
                  }
              }
          }
@@ -3102,10 +3018,15 @@
              if (modalMaxHistoryRecords) {
                  const maxRecords = parseInt(modalMaxHistoryRecords.value);
                  if (maxRecords > 0 && maxRecords <= 50) {
-                     localStorage.setItem('maxHistoryRecords', maxRecords);
-                     alert('最大历史记录数已保存！');
+                     MAX_HISTORY_RECORDS = maxRecords;
+                     saveSettings({ maxHistoryRecords: maxRecords });
+                     if (historyRecords.length > MAX_HISTORY_RECORDS) {
+                         historyRecords = historyRecords.slice(0, MAX_HISTORY_RECORDS);
+                         saveHistory();
+                     }
+                     showToast('最大历史记录数已保存', 'success');
                  } else {
-                     alert('最大历史记录数必须在1-50之间！');
+                     showToast('最大历史记录数必须在1-50之间', 'error');
                  }
              }
          }
@@ -3343,34 +3264,6 @@
             }
         });
 
-        let lastHistoryAddTime = 0;
-        let lastContent = htmlEditor.value;
-        let autoSaveTimeout;
-
-        htmlEditor.addEventListener('input', function() {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(function() {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
-                    addToHistory();
-                    lastContent = htmlEditor.value;
-                    lastHistoryAddTime = Date.now();
-                }
-            }, 2000);
-        });
-        
-        htmlEditor.addEventListener('change', function() {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(function() {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
-                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
-                    addToHistory();
-                    lastContent = htmlEditor.value;
-                    lastHistoryAddTime = Date.now();
-                }
-            }, 2000);
-        });
-        
         window.addEventListener('beforeunload', function() {
             localStorage.setItem('htmlEditorContent', htmlEditor.value);
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
@@ -3378,11 +3271,7 @@
             }
         });
         
-        // 关闭所有面板 - 历史记录面板已改为弹窗，不再需要
-        function closeAllPanels() {
-            if (settingsPanel) settingsPanel.classList.remove('show');
-        }
-        
+
         // 显示历史记录列表函数已移除，现在使用模态窗口版本
         
         // 从历史记录恢复代码 - 现在使用模态窗口，关闭模态窗口即可
@@ -3486,20 +3375,8 @@
         // 处理设备旋转
         // 处理视口高度变化和设备方向变化
         function updateViewportHeight() {
-            // 使用 100dvh 获取 iOS 主屏幕启动时的正确视口高度（包含刘海区域）
             let dvh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${dvh}px`);
-
-            // 更新编辑器高度
-            htmlEditor.style.height = 'auto';
-            htmlEditor.style.height = htmlEditor.scrollHeight + 'px';
-
-            // 处理通知位置
-            const toast = document.querySelector('.editor-panel .toast');
-            if (toast) {
-                const isLandscape = window.innerWidth > window.innerHeight;
-                toast.style.top = isLandscape ? '85px' : '80px';
-            }
         }
 
         // 监听方向变化
@@ -3842,7 +3719,9 @@
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             showToast('导出成功', 'success');
         }
@@ -4301,6 +4180,13 @@
             return Promise.all(method.libs.map(function(lid) { return loadPdfLib(lid); }));
         }
 
+        function pdfGetRenderWidth() {
+            var pageSizeInfo = PDF_PAGE_SIZES[pdfPageSize] || PDF_PAGE_SIZES.a4;
+            var isLandscape = pdfOrientation === 'l';
+            var pageW = isLandscape ? pageSizeInfo.height : pageSizeInfo.width;
+            return Math.round(pageW * 3.7795275591);
+        }
+
         function pdfCreateRenderIframe(html, width, callback) {
             var iframe = document.createElement('iframe');
             iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + width + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
@@ -4317,10 +4203,15 @@
         }
 
         function pdfCanvasToPdfPages(canvas, jsPDFConstructor) {
-            var imgWidthMm = 190;
+            var pageSizeInfo = PDF_PAGE_SIZES[pdfPageSize] || PDF_PAGE_SIZES.a4;
+            var isLandscape = pdfOrientation === 'l';
+            var pageW = isLandscape ? pageSizeInfo.height : pageSizeInfo.width;
+            var pageH = isLandscape ? pageSizeInfo.width : pageSizeInfo.height;
+            var marginMm = pdfMargin;
+            var imgWidthMm = pageW - marginMm * 2;
             var imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
-            var pdf = new jsPDFConstructor('p', 'mm', 'a4');
-            var positionMm = 0, pageHeightMm = 277, remainingHeightMm = imgHeightMm;
+            var pdf = new jsPDFConstructor(isLandscape ? 'l' : 'p', 'mm', pdfPageSize);
+            var positionMm = 0, pageHeightMm = pageH - marginMm * 2, remainingHeightMm = imgHeightMm;
             while (remainingHeightMm > 0) {
                 var sourceY = positionMm * (canvas.width / imgWidthMm);
                 var sourceHeight = pageHeightMm * (canvas.width / imgWidthMm);
@@ -4335,7 +4226,7 @@
                 var pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
                 if (positionMm > 0) pdf.addPage();
                 var pageImgHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
-                pdf.addImage(pageImgData, 'JPEG', 10, 10, imgWidthMm, pageImgHeightMm);
+                pdf.addImage(pageImgData, 'JPEG', marginMm, marginMm, imgWidthMm, pageImgHeightMm);
                 remainingHeightMm -= pageHeightMm;
                 positionMm += pageHeightMm;
             }
@@ -4405,7 +4296,7 @@
         }
 
         async function pdfExportIframeJsPDF(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
@@ -4417,7 +4308,7 @@
         }
 
         async function pdfExportHtml2Pdf(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var opt = {
@@ -4435,7 +4326,7 @@
         }
 
         async function pdfExportPdfLibCanvas(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
@@ -4470,7 +4361,7 @@
         }
 
         async function pdfExportModernScreenshot(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, width: 794});
@@ -4482,7 +4373,7 @@
         }
 
         function pdfExportIframePrint(html) {
-            pdfCreateRenderIframe(html, 794, function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), function(iframe) {
                 try {
                     iframe.contentWindow.focus();
                     iframe.contentWindow.print();
@@ -4503,7 +4394,7 @@
         }
 
         async function pdfExportHighResImagePdf(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var canvas = await html2canvas(iframeBody, {scale:3, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
@@ -4515,7 +4406,7 @@
         }
 
         async function pdfExportCanvasDirect(html) {
-            pdfCreateRenderIframe(html, 794, async function(iframe) {
+            pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var scrollHeight = iframeBody.scrollHeight || iframeBody.offsetHeight || 1000;
@@ -5015,56 +4906,6 @@
             }
         });
         
-        // 测试历史记录功能（可选）
-        function testHistory() {
-            console.log('=== 测试历史记录功能 ===');
-            
-            // 测试添加到历史记录
-            htmlEditor.value = '<h1>测试历史记录 1</h1>';
-            addToHistory();
-            console.log('添加第一条历史记录后数量:', historyRecords.length);
-            
-            htmlEditor.value = '<h1>测试历史记录 2</h1>';
-            addToHistory();
-            console.log('添加第二条历史记录后数量:', historyRecords.length);
-            
-            // 测试显示历史记录（模态窗口版本）
-            renderModalHistory();
-            
-            console.log('=== 历史记录测试完成 ===');
-            showToast('历史记录测试完成，查看控制台获取详情', 'success');
-        }
-        
-        // 检查历史记录状态
-        function checkHistoryStatus() {
-            console.log('=== 历史记录状态检查 ===');
-            console.log('当前历史记录数量:', historyRecords.length);
-            console.log('最大历史记录数:', MAX_HISTORY_RECORDS);
-            console.log('localStorage键名:', HISTORY_STORAGE_KEY);
-            console.log('上次添加时间:', new Date(lastHistoryAddTime).toLocaleString());
-            console.log('当前编辑器内容长度:', htmlEditor.value.length);
-            console.log('最后记录内容预览:', historyRecords.length > 0 ? historyRecords[0].preview.substring(0, 50) + '...' : '无记录');
-            
-            // 检查localStorage中的数据
-            try {
-                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    console.log('localStorage中存储的记录数:', parsed.length);
-                } else {
-                    console.log('localStorage中无历史记录数据');
-                }
-            } catch (error) {
-                console.log('读取localStorage失败:', error.message);
-            }
-            
-            console.log('=== 状态检查完成 ===');
-            showToast('历史记录状态已输出到控制台', 'info');
-        }
-        
-        // 测试分享功能（可选）
-
-        
         htmlEditor.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
                 e.preventDefault();
@@ -5082,171 +4923,38 @@
             toggleSharePanelModal();
         }
         
-        // 生成分享链接
-
-        
-        // 简单的内容压缩函数
-        function compressContent(content) {
-            // 移除不必要的空白字符
-            let compressed = content.replace(/\s+/g, ' ').trim();
-            
-            // 压缩常见的HTML标签
-            const tagReplacements = {
-                '<div>': '①',
-                '</div>': '②',
-                '<p>': '③',
-                '</p>': '④',
-                '<span>': '⑤',
-                '</span>': '⑥',
-                '<h1>': '⑦',
-                '</h1>': '⑧',
-                '<h2>': '⑨',
-                '</h2>': '⑩',
-                '<br>': '⑪',
-                '<br/>': '⑫',
-                '&nbsp;': '⑬'
-            };
-            
-            for (const [tag, replacement] of Object.entries(tagReplacements)) {
-                compressed = compressed.replace(new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
-            }
-            
-            // 使用自定义编码
-            return btoa(encodeURIComponent(compressed));
-        }
-        
-        // 解压缩内容
-        function decompressContent(compressed) {
-            let decompressed = decodeURIComponent(atob(compressed));
-            
-            // 还原HTML标签
-            const tagReplacements = {
-                '①': '<div>',
-                '②': '</div>',
-                '③': '<p>',
-                '④': '</p>',
-                '⑤': '<span>',
-                '⑥': '</span>',
-                '⑦': '<h1>',
-                '⑧': '</h1>',
-                '⑨': '<h2>',
-                '⑩': '</h2>',
-                '⑪': '<br>',
-                '⑫': '<br/>',
-                '⑬': '&nbsp;'
-            };
-            
-            for (const [replacement, tag] of Object.entries(tagReplacements)) {
-                decompressed = decompressed.replace(new RegExp(replacement, 'g'), tag);
-            }
-            
-            return decompressed;
-        }
-        
-        // 复制分享链接到剪贴板
-        function copyShareLink() {
-            const link = shareLink.value;
-            if (!link) {
-                showToast('请先生成分享链接', 'error');
-                return;
-            }
-            
-            try {
-                // 使用Clipboard API复制链接
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(link).then(() => {
-                        showToast('链接已复制到剪贴板', 'success');
-                    }).catch(() => {
-                        fallbackCopyShareLink(link);
-                    });
-                } else {
-                    fallbackCopyShareLink(link);
-                }
-            } catch (error) {
-                // 只在开发模式下显示复制链接错误
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.error('复制链接失败:', error);
-                }
-                fallbackCopyShareLink(link);
-            }
-        }
-        
-        // 复制链接的降级方案
-        function fallbackCopyShareLink(link) {
-            try {
-                // 创建临时textarea元素
-                const textArea = document.createElement('textarea');
-                textArea.value = link;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                
-                // 执行复制命令
-                const success = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                
-                if (success) {
-                    showToast('链接已复制到剪贴板', 'success');
-                } else {
-                    showToast('复制失败，请手动复制', 'error');
-                }
-            } catch (error) {
-                // 只在开发模式下显示降级复制错误
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.error('降级复制方案失败:', error);
-                }
-                showToast('复制失败，请手动复制', 'error');
-            }
-        }
-        
-        // 在新窗口打开分享链接
-        function openShareLink() {
-            const link = shareLink.value;
-            if (!link) {
-                showToast('请先生成分享链接', 'error');
-                return;
-            }
-            
-            try {
-                window.open(link, '_blank');
-                showToast('分享链接已在新窗口打开', 'success');
-            } catch (error) {
-                // 只在开发模式下显示打开分享链接错误
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.error('打开分享链接失败:', error);
-                }
-                showToast('打开分享链接失败，请手动打开', 'error');
-            }
-        }
-        
         // 从URL参数加载分享内容
         async function loadFromShareUrl() {
             try {
                 var content = null;
+                var isHashShare = false;
                 var hash = window.location.hash;
                 if (hash && hash.length > 1) {
                     var hashData = hash.substring(1);
                     if (hashData.startsWith('lz:') || hashData.startsWith('b64:')) {
                         await loadLzString();
                         content = decompressFromUrl(hashData);
+                        isHashShare = true;
                     }
                 }
                 if (!content) {
                     var url = new URL(window.location.href);
                     var encodedContent = url.searchParams.get(SHARE_PARAM_NAME);
-                    var compressionMethod = url.searchParams.get('method') || 'base64';
                     if (encodedContent) {
-                        if (compressionMethod === 'custom') {
-                            content = decompressContent(encodedContent);
-                        } else {
+                        try {
                             content = decodeURIComponent(atob(encodedContent));
+                        } catch(e) {
+                            showToast('分享链接内容解码失败', 'error');
                         }
                     }
                 }
                 if (content) {
+                    if (isHashShare) {
+                        document.open();
+                        document.write(content);
+                        document.close();
+                        return;
+                    }
                     htmlEditor.value = content;
                     updatePreview();
                     updateCharCount();
@@ -5272,17 +4980,14 @@
                     
                     if (settings.shareBaseUrl) {
                         shareBaseUrl = settings.shareBaseUrl;
-                        if (shareBaseUrlInput) shareBaseUrlInput.value = settings.shareBaseUrl;
                     }
                     
                     if (settings.autoSaveInterval) {
                         autoSaveInterval = settings.autoSaveInterval;
-                        if (autoSaveIntervalInput) autoSaveIntervalInput.value = settings.autoSaveInterval;
                     }
                     
                     if (settings.maxHistoryRecords) {
                         MAX_HISTORY_RECORDS = settings.maxHistoryRecords;
-                        if (maxHistoryRecordsInput) maxHistoryRecordsInput.value = settings.maxHistoryRecords;
                     }
                     
                     if (settings.pdfPageSize) {
@@ -5324,55 +5029,6 @@
                 showToast('保存设置失败', 'error');
                 return false;
             }
-        }
-        
-        // 保存分享基础URL
-        function saveShareBaseUrl() {
-            const url = shareBaseUrlInput.value.trim();
-            shareBaseUrl = url;
-            saveSettings({ shareBaseUrl: url });
-        }
-        
-        // 重置分享基础URL
-        function resetShareBaseUrl() {
-            shareBaseUrl = '';
-            shareBaseUrlInput.value = '';
-            saveSettings({ shareBaseUrl: '' });
-        }
-        
-        // 保存自动保存间隔
-        function saveAutoSaveInterval() {
-            const interval = parseInt(autoSaveIntervalInput.value);
-            if (isNaN(interval) || interval < 1 || interval > 600) {
-                showToast('请输入1-600之间的数值', 'error');
-                return;
-            }
-            autoSaveInterval = interval;
-            saveSettings({ autoSaveInterval: interval });
-        }
-        
-        // 保存最大历史记录数
-        function saveMaxHistoryRecords() {
-            const maxRecords = parseInt(maxHistoryRecordsInput.value);
-            if (isNaN(maxRecords) || maxRecords < 1 || maxRecords > 50) {
-                showToast('请输入1-50之间的数值', 'error');
-                return;
-            }
-            MAX_HISTORY_RECORDS = maxRecords;
-            saveSettings({ maxHistoryRecords: maxRecords });
-            // 如果当前历史记录超过新的最大值，裁剪历史记录
-            if (historyRecords.length > MAX_HISTORY_RECORDS) {
-                historyRecords = historyRecords.slice(0, MAX_HISTORY_RECORDS);
-                saveHistory();
-            }
-        }
-        
-        // 应用所有设置
-        function applyAllSettings() {
-            saveShareBaseUrl();
-            saveAutoSaveInterval();
-            saveMaxHistoryRecords();
-            showToast('所有设置已应用', 'success');
         }
         
         function saveModalPdfPageSize() {
@@ -5429,43 +5085,6 @@
             saveSettings({ docxExportConfig: DOCX_EXPORT_CONFIG });
         }
         
-        // 自动生成在线可访问链接（使用新的分享管理器）
-
-        
-        
-        function formatDate(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-            
-            // 小于1分钟
-            if (diff < 60000) {
-                return '刚刚';
-            }
-            // 小于1小时
-            if (diff < 3600000) {
-                return Math.floor(diff / 60000) + '分钟前';
-            }
-            // 小于1天
-            if (diff < 86400000) {
-                return Math.floor(diff / 3600000) + '小时前';
-            }
-            // 小于7天
-            if (diff < 604800000) {
-                return Math.floor(diff / 86400000) + '天前';
-            }
-            
-            // 超过7天，显示具体日期
-            return date.toLocaleDateString('zh-CN');
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
         
         // iOS Safari/Edge 兼容性：增强触摸事件处理
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
