@@ -1730,8 +1730,7 @@
             <div class="panel-header">
                 <div class="panel-title">
                     <button class="btn btn-link" onclick="showHelp()" style="background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" type="button">
-                        <span>⚡</span>
-                        <span style="margin-left: 8px;">HTML EDITOR</span>
+                        <span>AI文档</span>
                     </button>
                 </div>
                 <div class="btn-group">
@@ -1780,9 +1779,8 @@
                 <div class="panel-title">
                     <div class="dropdown">
                         <button class="btn btn-link dropdown-toggle" onclick="togglePreviewDropdown()" id="previewDropdownBtn" type="button">
-                            <span>👁️</span>
-                            <span style="margin-left: 8px;" id="previewLabel">预览+编辑</span>
-                            <span style="margin-left: 4px;">▼</span>
+                            <span style="margin-right: 8px;" id="previewLabel">预览</span>
+                            <span>▼</span>
                         </button>
                         <div class="dropdown-menu" id="previewDropdownMenu">
                             <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel()" id="historyBtn">
@@ -1813,10 +1811,7 @@
                     </div>
                 </div>
                 <div class="btn-group">
-                    <button class="btn edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()" type="button">
-                        <span>🔓</span>
-                        <span>编辑</span>
-                    </button>
+                    <button class="btn edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()" type="button">编辑</button>
                     <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
                         <span class="icon">⛶</span>
                         全屏
@@ -1827,7 +1822,7 @@
                     </button>
                     <button class="btn btn-primary" onclick="exportToPdf()" id="downloadBtn">
                         <span class="icon">📄</span>
-                        导出PDF
+                        PDF
                     </button>
                 </div>
             </div>
@@ -5401,13 +5396,13 @@
             isEditMode=!isEditMode;
             var previewLabel=document.getElementById('previewLabel');
             if(isEditMode){
-                editToggleBtn.innerHTML='<span>🔒</span><span>编辑中</span>';
+                editToggleBtn.textContent='编辑';
                 editToggleBtn.classList.add('active');
-                if(previewLabel)previewLabel.textContent='编辑中';
+                if(previewLabel)previewLabel.textContent='编辑';
             }else{
-                editToggleBtn.innerHTML='<span>🔓</span><span>编辑</span>';
+                editToggleBtn.textContent='编辑';
                 editToggleBtn.classList.remove('active');
-                if(previewLabel)previewLabel.textContent='预览+编辑';
+                if(previewLabel)previewLabel.textContent='预览';
             }
             applyEditMode();
         }
