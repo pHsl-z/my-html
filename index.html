@@ -1781,7 +1781,7 @@
                     <div class="dropdown">
                         <button class="btn btn-link dropdown-toggle" onclick="togglePreviewDropdown()" id="previewDropdownBtn" type="button">
                             <span>👁️</span>
-                            <span style="margin-left: 8px;" id="previewLabel">预览</span>
+                            <span style="margin-left: 8px;" id="previewLabel">预览+编辑</span>
                             <span style="margin-left: 4px;">▼</span>
                         </button>
                         <div class="dropdown-menu" id="previewDropdownMenu">
@@ -1815,7 +1815,7 @@
                 <div class="btn-group">
                     <button class="btn edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()" type="button">
                         <span>🔓</span>
-                        <span>启用编辑</span>
+                        <span>编辑</span>
                     </button>
                     <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
                         <span class="icon">⛶</span>
@@ -5401,13 +5401,13 @@
             isEditMode=!isEditMode;
             var previewLabel=document.getElementById('previewLabel');
             if(isEditMode){
-                editToggleBtn.innerHTML='<span>🔒</span><span>编辑</span>';
+                editToggleBtn.innerHTML='<span>🔒</span><span>编辑中</span>';
                 editToggleBtn.classList.add('active');
-                if(previewLabel)previewLabel.textContent='编辑';
+                if(previewLabel)previewLabel.textContent='编辑中';
             }else{
                 editToggleBtn.innerHTML='<span>🔓</span><span>编辑</span>';
                 editToggleBtn.classList.remove('active');
-                if(previewLabel)previewLabel.textContent='预览';
+                if(previewLabel)previewLabel.textContent='预览+编辑';
             }
             applyEditMode();
         }
