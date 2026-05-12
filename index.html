@@ -256,6 +256,9 @@
                 -webkit-overflow-scrolling: touch;
 
             }
+            .highlight-layer {
+                -webkit-overflow-scrolling: touch;
+            }
         }
         
         /* iOS 13+ 增强兼容性 */
@@ -640,6 +643,12 @@
                 line-height: 1.5;
             }
             
+            .highlight-layer {
+                padding: 12px;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            
             .button {
                 padding: 6px 10px;
                 font-size: 12px;
@@ -772,6 +781,11 @@
                 padding: 15px;
             }
             
+            .highlight-layer {
+                font-size: 13px;
+                padding: 15px;
+            }
+            
             .panel-header {
                 padding: 14px 18px;
             }
@@ -899,6 +913,11 @@
             }
 
             .code-editor {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .highlight-layer {
                 padding: 10px;
                 font-size: 12px;
             }
@@ -1687,6 +1706,22 @@
                 transform: translateY(0) !important; /* 防止输入框被键盘遮挡 */
             }
         }
+
+        .editor-wrapper{flex:1;position:relative;overflow:hidden}
+        .highlight-layer{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;padding:24px;font-family:'SF Mono','Monaco','Inconsolata','Roboto Mono',monospace;font-size:14px;line-height:1.6;white-space:pre;overflow:auto;color:transparent}
+        .highlight-layer .token-tag{color:#569cd6}
+        .highlight-layer .token-attr{color:#9cdcfe}
+        .highlight-layer .token-string{color:#ce9178}
+        .highlight-layer .token-comment{color:#6a9955}
+        .highlight-layer .token-doctype{color:#569cd6}
+        .highlight-layer .token-text{color:#d4d4d4}
+        .highlight-layer .token-entity{color:#dcdcaa}
+        .highlight-modified{background:rgba(255,198,109,.25);border-radius:3px}
+        .code-editor{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;background:transparent;color:transparent;caret-color:#ffffff;z-index:2}
+        .edit-toggle-btn{padding:4px 12px;border:1px solid #3a3a3a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all .2s;background:#2a2a2a;color:#888;display:flex;align-items:center;gap:4px;-webkit-user-select:none;user-select:none}
+        .edit-toggle-btn:hover{border-color:#4a4a3a;background:#3a3a3a}
+        .edit-toggle-btn.active{background:#0066ff;border-color:#0066ff;color:#fff}
+        .edit-toggle-btn.active:hover{background:#0052cc}
     </style>
 </head>
 <body>
@@ -1700,6 +1735,10 @@
                     </button>
                 </div>
                 <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="showTemplatePanel()" id="templateBtn" type="button">
+                        <span class="icon">📋</span>
+                        模板
+                    </button>
                     <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
                         <span class="icon">📁</span>
                         打开
@@ -1715,7 +1754,10 @@
                     <!-- 历史、分享、设置按钮已移动到预览面板的下拉菜单中 -->
                 </div>
             </div>
-            <textarea id="htmlEditor" class="code-editor" placeholder="在这里输入你的HTML代码，或者点击粘贴按钮从剪贴板导入..."></textarea>
+            <div class="editor-wrapper">
+                <div id="highlightLayer" class="highlight-layer"></div>
+                <textarea id="htmlEditor" class="code-editor" placeholder="在这里输入你的HTML代码，或者点击粘贴按钮从剪贴板导入..."></textarea>
+            </div>
             <div class="status-bar">
                 <div class="status-indicator">
                     <div class="status-dot"></div>
@@ -1739,7 +1781,7 @@
                     <div class="dropdown">
                         <button class="btn btn-link dropdown-toggle" onclick="togglePreviewDropdown()" id="previewDropdownBtn" type="button">
                             <span>👁️</span>
-                            <span style="margin-left: 8px;">预览</span>
+                            <span style="margin-left: 8px;" id="previewLabel">预览</span>
                             <span style="margin-left: 4px;">▼</span>
                         </button>
                         <div class="dropdown-menu" id="previewDropdownMenu">
@@ -1767,14 +1809,14 @@
                                 <span class="icon">📄</span>
                                 PDF多方案导出
                             </button>
-                            <button class="btn btn-secondary dropdown-item" onclick="showTemplatePanel();closePreviewDropdown();" id="templateBtn">
-                                <span class="icon">📋</span>
-                                模板
-                            </button>
                         </div>
                     </div>
                 </div>
                 <div class="btn-group">
+                    <button class="btn edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()" type="button">
+                        <span>🔓</span>
+                        <span>启用编辑</span>
+                    </button>
                     <button class="btn btn-secondary" onclick="toggleFullscreenPreview()" id="fullscreenBtn">
                         <span class="icon">⛶</span>
                         全屏
@@ -2015,6 +2057,7 @@
         // 延迟初始化预览，确保DOM完全加载
         setTimeout(function() {
             updatePreview();
+            updateHighlight();
         }, 100);
 
         let updateTimeout;
@@ -2024,6 +2067,7 @@
         
         function handleEditorInput() {
             clearTimeout(updateTimeout);
+            updateHighlight();
             updateTimeout = setTimeout(updatePreview, 100);
             updateCharCount();
             clearTimeout(autoSaveTimeout);
@@ -2079,42 +2123,51 @@
         });
 
         function updatePreview() {
+            if(isSyncing)return;
             const code = htmlEditor.value;
             const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
             try {
-                // 使用srcdoc属性避免重复声明问题（现代浏览器）
+                if(syncObserver){syncObserver.disconnect();syncObserver=null;}
                 if ('srcdoc' in previewFrame) {
                     previewFrame.srcdoc = code;
                 } else {
-                    // IE浏览器兼容性处理
                     if (previewDoc.open && previewDoc.write && previewDoc.close) {
                         previewDoc.open();
                         previewDoc.write(code);
                         previewDoc.close();
                     } else {
-                        // 对于IE的备用方案
                         previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
                     }
                 }
                 
-                // 延迟应用滚动优化，确保内容完全加载
                 setTimeout(() => {
                     enhancePreviewScrolling();
+                    try{
+                        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                        if(doc&&doc.body)protectStructure(doc);
+                    }catch(e){}
+                    applyEditMode();
                 }, 50);
             } catch (error) {
-                console.log('Preview update error:', error);
-                // IE浏览器备用方案
                 try {
                     previewFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code);
-                } catch (ieError) {
-                    console.log('IE preview fallback error:', ieError);
-                }
+                } catch (ieError) {}
             }
         }
 
         function refreshPreview() {
             updatePreview();
         }
+
+        previewFrame.addEventListener('load',function(){
+            try{
+                var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                if(doc&&doc.body){
+                    protectStructure(doc);
+                    applyEditMode();
+                }
+            }catch(e){}
+        });
 
         // 打开本地HTML文件
         function openLocalFile() {
@@ -5139,6 +5192,324 @@
                 e.preventDefault();
             });
         }
+
+        var highlightLayer=document.getElementById('highlightLayer');
+        var editToggleBtn=document.getElementById('editToggleBtn');
+        var isEditMode=false;
+        var isSyncing=false;
+        var previewSyncTimer=null;
+        var syncObserver=null;
+        var previousEditorHtml='';
+        var modifiedRange=null;
+        var ZWSP='\u200B';
+        var STRUCT_TAGS=['SUP','SUB'];
+        var STRUCT_CLASSES=['fraction','num','den','sqrt','sqrt-content'];
+
+        function highlightHTML(html){
+            var result='';
+            var i=0;
+            var len=html.length;
+            while(i<len){
+                if(html[i]==='<'&&html.substr(i,4)==='<!--'){
+                    var end=html.indexOf('-->',i);
+                    if(end===-1)end=len;else end+=3;
+                    result+='<span class="token-comment">'+escapeHtmlTokens(html.substring(i,end))+'</span>';
+                    i=end;
+                }else if(html[i]==='<'&&html.substr(i,9)==='<!DOCTYPE'){
+                    var end=html.indexOf('>',i);
+                    if(end===-1)end=len;else end++;
+                    result+='<span class="token-doctype">'+escapeHtmlTokens(html.substring(i,end))+'</span>';
+                    i=end;
+                }else if(html[i]==='<'){
+                    var end=html.indexOf('>',i);
+                    if(end===-1)end=len;else end++;
+                    result+=highlightTag(html.substring(i,end));
+                    i=end;
+                }else{
+                    var end=html.indexOf('<',i);
+                    if(end===-1)end=len;
+                    var text=html.substring(i,end);
+                    if(text.trim()){
+                        result+='<span class="token-text">'+escapeHtmlTokens(text)+'</span>';
+                    }else{
+                        result+=escapeHtmlTokens(text);
+                    }
+                    i=end;
+                }
+            }
+            return result;
+        }
+
+        function escapeHtmlTokens(text){
+            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function highlightTag(tag){
+            var result='<span class="token-tag">&lt;';
+            var m=tag.match(/^<(\/?)([a-zA-Z0-9_\-]+)/);
+            if(m){
+                result+=m[1]+m[2];
+                var rest=tag.substring(m[0].length);
+                rest=rest.replace(/\s([a-zA-Z0-9_\-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g,function(match,name,double,single,unquoted){
+                    var attr=' <span class="token-attr">'+name+'</span>';
+                    var val=double||single||unquoted;
+                    if(val!==undefined){
+                        attr+='=<span class="token-string">'+(double?'"'+double+'"':single?"'"+single+"'":val)+'</span>';
+                    }
+                    return attr;
+                });
+                result+=rest.replace(/>/g,'&gt;');
+            }else{
+                result+=escapeHtmlTokens(tag.substring(1));
+            }
+            return result+'</span>';
+        }
+
+        function updateHighlight(){
+            highlightLayer.innerHTML=highlightHTML(htmlEditor.value);
+            syncHighlightScroll();
+        }
+
+        function syncHighlightScroll(){
+            highlightLayer.scrollTop=htmlEditor.scrollTop;
+            highlightLayer.scrollLeft=htmlEditor.scrollLeft;
+        }
+
+        function findDiff(oldStr,newStr){
+            var oldLines=oldStr.split('\n');
+            var newLines=newStr.split('\n');
+            var start=-1,end=-1;
+            for(var i=0;i<Math.min(oldLines.length,newLines.length);i++){
+                if(oldLines[i]!==newLines[i]){
+                    if(start===-1)start=i;
+                    end=i;
+                }
+            }
+            if(start===-1){
+                if(newLines.length>oldLines.length){
+                    start=oldLines.length;
+                    end=newLines.length-1;
+                }
+            }else if(newLines.length>oldLines.length){
+                end=newLines.length-1;
+            }
+            if(start!==-1)return{start:start,end:end};
+            return null;
+        }
+
+        function scrollToModifiedLine(lineNum){
+            var lineHeight=1.6*14;
+            htmlEditor.scrollTop=lineNum*lineHeight-(htmlEditor.clientHeight/2);
+            syncHighlightScroll();
+        }
+
+        function highlightModifiedRange(range){
+            if(!range)return;
+            updateHighlight();
+            var lines=htmlEditor.value.split('\n');
+            var newHtml='';
+            for(var i=0;i<lines.length;i++){
+                if(i>=range.start&&i<=range.end){
+                    newHtml+='<span class="highlight-modified">'+highlightHTML(lines[i])+'</span>';
+                }else{
+                    newHtml+=highlightHTML(lines[i]);
+                }
+                if(i<lines.length-1)newHtml+='\n';
+            }
+            highlightLayer.innerHTML=newHtml;
+        }
+
+        function isStructElement(el){
+            if(!el)return false;
+            if(STRUCT_TAGS.indexOf(el.tagName)!==-1)return true;
+            if(el.classList){
+                for(var i=0;i<STRUCT_CLASSES.length;i++){
+                    if(el.classList.contains(STRUCT_CLASSES[i]))return true;
+                }
+            }
+            return false;
+        }
+
+        function protectStructure(doc){
+            var sups=doc.querySelectorAll('sup, sub');
+            sups.forEach(function(el){
+                var text=el.textContent;
+                if(text.length===0||text===ZWSP)el.textContent=ZWSP;
+            });
+            var fracs=doc.querySelectorAll('.fraction .num, .fraction .den');
+            fracs.forEach(function(el){
+                var text=el.textContent;
+                if(text.length===0||text===ZWSP)el.textContent=ZWSP;
+            });
+        }
+
+        function setupMutationGuard(doc){
+            var observer=new MutationObserver(function(mutations){
+                mutations.forEach(function(m){
+                    if(m.type==='childList'){
+                        m.removedNodes.forEach(function(node){
+                            if(node.nodeType===1&&isStructElement(node)){
+                                var parent=m.target;
+                                if(parent&&parent.nodeType===1){
+                                    var restored=node.cloneNode(true);
+                                    if(restored.textContent.length===0)restored.textContent=ZWSP;
+                                    if(m.nextSibling)parent.insertBefore(restored,m.nextSibling);
+                                    else parent.appendChild(restored);
+                                }
+                            }
+                        });
+                    }
+                    if(m.type==='characterData'){
+                        var parent=m.target.parentElement;
+                        if(parent&&isStructElement(parent)){
+                            if(parent.textContent.length===0)parent.textContent=ZWSP;
+                        }
+                    }
+                });
+            });
+            observer.observe(doc.body,{childList:true,subtree:true,characterData:true});
+            return observer;
+        }
+
+        function setupBeforeInputGuard(doc){
+            doc.addEventListener('beforeinput',function(e){
+                var sel=doc.getSelection();
+                if(!sel||sel.rangeCount===0)return;
+                var range=sel.getRangeAt(0);
+                var container=range.commonAncestorContainer;
+                var el=container.nodeType===3?container.parentElement:container;
+                while(el&&el!==doc.body){
+                    if(isStructElement(el)){
+                        if(e.inputType==='deleteContentBackward'||e.inputType==='deleteContentForward'||e.inputType==='deleteContent'){
+                            var text=el.textContent;
+                            if(text.length<=1||(text.length===1&&text===ZWSP)){
+                                e.preventDefault();
+                                el.textContent=ZWSP;
+                                sel.collapse(el,0);
+                                sel.modify('move','forward','character');
+                                return;
+                            }
+                        }
+                        break;
+                    }
+                    el=el.parentElement;
+                }
+            },true);
+        }
+
+        function toggleEditMode(){
+            isEditMode=!isEditMode;
+            var previewLabel=document.getElementById('previewLabel');
+            if(isEditMode){
+                editToggleBtn.innerHTML='<span>🔒</span><span>编辑</span>';
+                editToggleBtn.classList.add('active');
+                if(previewLabel)previewLabel.textContent='编辑';
+            }else{
+                editToggleBtn.innerHTML='<span>🔓</span><span>编辑</span>';
+                editToggleBtn.classList.remove('active');
+                if(previewLabel)previewLabel.textContent='预览';
+            }
+            applyEditMode();
+        }
+
+        function applyEditMode(){
+            try{
+                var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                if(!doc||!doc.body)return;
+                if(isEditMode){
+                    doc.body.contentEditable=true;
+                    doc.body.style.outline='none';
+                    doc.body.style.cursor='text';
+                    doc.body.style.userSelect='text';
+                    var allEls=doc.body.querySelectorAll('*');
+                    for(var i=0;i<allEls.length;i++){
+                        allEls[i].contentEditable='inherit';
+                    }
+                    setupBeforeInputGuard(doc);
+                    if(syncObserver)syncObserver.disconnect();
+                    syncObserver=setupMutationGuard(doc);
+                    bindPreviewSyncEvents();
+                }else{
+                    doc.body.contentEditable=false;
+                    doc.body.style.cursor='default';
+                    doc.body.style.userSelect='default';
+                    if(syncObserver){
+                        syncObserver.disconnect();
+                        syncObserver=null;
+                    }
+                    bindPreviewSyncEvents();
+                    var allEls=doc.body.querySelectorAll('*');
+                    for(var i=0;i<allEls.length;i++){
+                        allEls[i].contentEditable='false';
+                    }
+                }
+            }catch(e){}
+        }
+
+        function updateEditorFromPreview(){
+            if(isSyncing||!isEditMode)return;
+            isSyncing=true;
+            try{
+                var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                protectStructure(doc);
+                var editedHtml=doc.documentElement.outerHTML;
+                var cleaned=editedHtml.replace(/\u200B/g,'');
+                var currentCleaned=htmlEditor.value.replace(/\u200B/g,'');
+                if(cleaned&&cleaned!==currentCleaned){
+                    var oldHtml=htmlEditor.value;
+                    var fullHtml='<!DOCTYPE html>\n'+editedHtml;
+                    htmlEditor.value=fullHtml;
+                    var diffRange=findDiff(oldHtml,fullHtml);
+                    if(diffRange){
+                        scrollToModifiedLine(diffRange.start);
+                        highlightModifiedRange(diffRange);
+                        setTimeout(function(){
+                            if(modifiedRange){updateHighlight();modifiedRange=null;}
+                        },2000);
+                        modifiedRange=diffRange;
+                    }else{
+                        updateHighlight();
+                    }
+                    updateCharCount();
+                    clearTimeout(autoSaveTimeout);
+                    autoSaveTimeout=setTimeout(function(){
+                        localStorage.setItem('htmlEditorContent',htmlEditor.value);
+                        if(htmlEditor.value.trim()&&htmlEditor.value!==lastContent){
+                            addToHistory();
+                            lastContent=htmlEditor.value;
+                        }
+                    },2000);
+                }
+            }catch(e){}
+            setTimeout(function(){isSyncing=false;},150);
+        }
+
+        function bindPreviewSyncEvents(){
+            try{
+                var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                var body=doc.body;
+                body.removeEventListener('input',onPreviewSyncInput);
+                body.removeEventListener('blur',onPreviewSyncBlur);
+                if(isEditMode){
+                    body.addEventListener('input',onPreviewSyncInput);
+                    body.addEventListener('blur',onPreviewSyncBlur);
+                }
+            }catch(e){}
+        }
+
+        function onPreviewSyncInput(e){
+            if(!isEditMode)return;
+            clearTimeout(previewSyncTimer);
+            previewSyncTimer=setTimeout(function(){updateEditorFromPreview();},300);
+        }
+
+        function onPreviewSyncBlur(e){
+            if(!isEditMode)return;
+            clearTimeout(previewSyncTimer);
+            updateEditorFromPreview();
+        }
+
+        htmlEditor.addEventListener('scroll',syncHighlightScroll);
     </script>
 </body>
 </html>

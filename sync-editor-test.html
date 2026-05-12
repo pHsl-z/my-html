@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双向同步编辑器 - 复杂内容测试</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg:#1e1e1e;--surface:#252526;--accent:#007acc;--text:#d4d4d4;--text2:#808080;--border:#3c3c3c;--success:#28a745;--warning:#e67e22;--error:#dc3545}
+        html,body{height:100%;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+        .app{display:grid;grid-template-rows:auto 1fr auto auto;height:100vh;grid-template-columns:180px 1fr 1fr}
+        .header{grid-column:1/-1;background:var(--surface);padding:12px 24px;border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:16px}
+        .header h1{font-size:17px;font-weight:700;color:var(--accent);letter-spacing:.5px}
+        .header .badge{font-size:10px;background:rgba(0,122,204,.2);color:var(--accent);padding:4px 12px;border-radius:12px;border:1px solid rgba(0,122,204,.3)}
+        .sync-indicator{margin-left:auto;font-size:12px;display:flex;align-items:center;gap:8px;color:var(--text2)}
+        .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+        .tpl-sidebar{background:#1a1a1a;border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
+        .tpl-section{margin-bottom:16px}
+        .tpl-section-title{font-size:10px;color:var(--text2);padding:8px 16px 6px;text-transform:uppercase;letter-spacing:1px}
+        .tpl-btn{display:block;width:calc(100% - 16px);margin:0 8px 4px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-size:12px;text-align:left;transition:all .15s}
+        .tpl-btn:hover{border-color:var(--accent);background:rgba(0,122,204,.08);color:#fff}
+        .tpl-btn.active{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:600}
+        .tpl-btn .tpl-icon{font-size:14px;margin-right:8px}
+        .tpl-btn .tpl-name{display:block;font-size:11px;opacity:.7;margin-top:2px}
+
+        .editor-panel,.preview-panel{display:flex;flex-direction:column;overflow:hidden}
+        .editor-panel{border-right:2px solid var(--border)}
+        .panel-header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:space-between}
+        .panel-header .label{color:var(--text);font-weight:600;font-size:13px}
+        .panel-header .hint{font-size:10px;color:var(--accent);background:rgba(0,122,204,.12);padding:3px 10px;border-radius:6px}
+        .editor-wrapper{flex:1;position:relative;overflow:hidden;}
+        .highlight-layer{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:1;padding:16px 18px;font-family:"Cascadia Code","Consolas","Monaco","Courier New",monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all;overflow:auto;}
+        #htmlEditor{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;background:transparent;color:transparent;caret-color:#fff;border:none;padding:16px 18px;font-family:"Cascadia Code","Consolas","Monaco","Courier New",monospace;font-size:13px;line-height:1.7;resize:none;outline:none;tab-size:2;letter-spacing:.3px;z-index:2;}
+        .token-tag{color:#569cd6}
+        .token-attr{color:#9cdcfe}
+        .token-string{color:#ce9178}
+        .token-comment{color:#6a9955}
+        .token-doctype{color:#569cd6}
+        .token-text{color:#d4d4d4}
+        .token-entity{color:#dcdcaa}
+        .highlight-modified{background:rgba(255,198,109,.25);border-radius:3px}
+        #previewFrame{flex:1;border:none;background:#fff}
+        .status-bar{grid-column:1/-1;padding:8px 24px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+        .status-bar .direction{color:var(--accent);font-weight:600}
+        .test-results{grid-column:1/-1;padding:8px 24px;background:#1a1a1a;border-top:1px solid var(--border);font-size:11px;color:var(--text2);display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+        .test-item{display:flex;align-items:center;gap:5px}
+        .test-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .test-dot.pass{background:var(--success)}
+        .test-dot.warn{background:var(--warning)}
+        .test-dot.fail{background:var(--error)}
+        .test-dot.pending{background:var(--text2)}
+        .guard-info{margin-left:auto;font-size:10px;color:var(--success);display:flex;align-items:center;gap:4px}
+        .edit-btn{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all .2s;background:var(--accent);color:#fff;}
+        .edit-btn:hover{filter:brightness(1.1);}
+        .edit-btn.inactive{background:#555;}
+        .edit-btn.inactive:hover{background:#666;}
+    </style>
+</head>
+<body>
+<div class="app">
+    <header class="header">
+        <h1>🔄 双向同步编辑器</h1>
+        <span class="badge">公式 · 表格 · SVG · 列表</span>
+        <div class="sync-indicator">
+            <span class="sync-dot"></span>
+            <span>双向同步已启用</span>
+        </div>
+    </header>
+
+    <nav class="tpl-sidebar">
+        <div class="tpl-section">
+            <div class="tpl-section-title">📐 数学公式</div>
+            <button class="tpl-btn" data-tpl="math" onclick="loadTemplate('math')">
+                <span class="tpl-icon">📐</span>数学公式
+                <span class="tpl-name">分数·上下标·根号</span>
+            </button>
+            <button class="tpl-btn" data-tpl="table" onclick="loadTemplate('table')">
+                <span class="tpl-icon">📊</span>表格
+                <span class="tpl-name">成绩表·课程表</span>
+            </button>
+            <button class="tpl-btn" data-tpl="katex" onclick="loadTemplate('katex')">
+                <span class="tpl-icon">🔢</span>KaTeX公式
+                <span class="tpl-name">专业LaTeX公式</span>
+            </button>
+            <button class="tpl-btn" data-tpl="mixed" onclick="loadTemplate('mixed')">
+                <span class="tpl-icon">🧩</span>综合混合
+                <span class="tpl-name">公式+表格+填空</span>
+            </button>
+        </div>
+
+        <div class="tpl-section">
+            <div class="tpl-section-title">🎨 UI组件</div>
+            <button class="tpl-btn" data-tpl="form" onclick="loadTemplate('form')">
+                <span class="tpl-icon">📝</span>表单组件
+                <span class="tpl-name">输入框·按钮·选择器</span>
+            </button>
+            <button class="tpl-btn" data-tpl="card" onclick="loadTemplate('card')">
+                <span class="tpl-icon">🃏</span>卡片布局
+                <span class="tpl-name">产品卡·信息卡</span>
+            </button>
+            <button class="tpl-btn" data-tpl="nav" onclick="loadTemplate('nav')">
+                <span class="tpl-icon">🔗</span>导航菜单
+                <span class="tpl-name">顶部栏·侧边栏</span>
+            </button>
+            <button class="tpl-btn" data-tpl="tabs" onclick="loadTemplate('tabs')">
+                <span class="tpl-icon">📑</span>标签页
+                <span class="tpl-name">Tabs切换·步骤条</span>
+            </button>
+            <button class="tpl-btn" data-tpl="modal" onclick="loadTemplate('modal')">
+                <span class="tpl-icon">💬</span>对话框
+                <span class="tpl-name">模态框·提示框</span>
+            </button>
+        </div>
+
+        <div class="tpl-section">
+            <div class="tpl-section-title">📈 数据展示</div>
+            <button class="tpl-btn" data-tpl="chart" onclick="loadTemplate('chart')">
+                <span class="tpl-icon">📊</span>图表
+                <span class="tpl-name">柱状图·饼图·折线</span>
+            </button>
+            <button class="tpl-btn" data-tpl="stats" onclick="loadTemplate('stats')">
+                <span class="tpl-icon">📈</span>统计卡片
+                <span class="tpl-name">数据统计·指标卡</span>
+            </button>
+            <button class="tpl-btn" data-tpl="progress" onclick="loadTemplate('progress')">
+                <span class="tpl-icon">⏳</span>进度条
+                <span class="tpl-name">加载·步骤·环形</span>
+            </button>
+            <button class="tpl-btn" data-tpl="timeline" onclick="loadTemplate('timeline')">
+                <span class="tpl-icon">�</span>时间线
+                <span class="tpl-name">历程·历史·流程</span>
+            </button>
+        </div>
+
+        <div class="tpl-section">
+            <div class="tpl-section-title">🎭 视觉交互</div>
+            <button class="tpl-btn" data-tpl="animation" onclick="loadTemplate('animation')">
+                <span class="tpl-icon">✨</span>动画效果
+                <span class="tpl-name">CSS动画·过渡</span>
+            </button>
+            <button class="tpl-btn" data-tpl="gallery" onclick="loadTemplate('gallery')">
+                <span class="tpl-icon">🖼️</span>图片画廊
+                <span class="tpl-name">网格·瀑布流</span>
+            </button>
+            <button class="tpl-btn" data-tpl="rating" onclick="loadTemplate('rating')">
+                <span class="tpl-icon">⭐</span>评分组件
+                <span class="tpl-name">星级·点赞·评价</span>
+            </button>
+        </div>
+
+        <div class="tpl-section">
+            <div class="tpl-section-title">📱 商业模板</div>
+            <button class="tpl-btn" data-tpl="pricing" onclick="loadTemplate('pricing')">
+                <span class="tpl-icon">💰</span>价格表
+                <span class="tpl-name">Pricing Table</span>
+            </button>
+            <button class="tpl-btn" data-tpl="profile" onclick="loadTemplate('profile')">
+                <span class="tpl-icon">👤</span>用户卡片
+                <span class="tpl-name">Profile Card</span>
+            </button>
+            <button class="tpl-btn" data-tpl="search" onclick="loadTemplate('search')">
+                <span class="tpl-icon">🔍</span>搜索框
+                <span class="tpl-name">搜索组件·过滤</span>
+            </button>
+            <button class="tpl-btn" data-tpl="list" onclick="loadTemplate('list')">
+                <span class="tpl-icon">�</span>列表嵌套
+                <span class="tpl-name">有序·无序·定义</span>
+            </button>
+            <button class="tpl-btn" data-tpl="svg" onclick="loadTemplate('svg')">
+                <span class="tpl-icon">🎨</span>SVG图形
+                <span class="tpl-name">柱状图·几何图形</span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="editor-panel">
+        <div class="panel-header">
+            <span class="label">📝 HTML 代码编辑器</span>
+            <span class="hint">修改代码 → 自动同步到预览</span>
+        </div>
+        <div class="editor-wrapper" style="flex:1;position:relative;overflow:hidden;">
+            <div id="highlightLayer" class="highlight-layer"></div>
+            <textarea id="htmlEditor" spellcheck="false"></textarea>
+        </div>
+    </section>
+    <section class="preview-panel">
+        <div class="panel-header">
+            <span class="label">👁️ 可编辑预览</span>
+            <div style="display:flex;gap:12px;align-items:center;">
+                <span class="hint" id="modeHint">预览模式 - 无法编辑</span>
+                <button class="edit-btn" id="editBtn">🔓 启用编辑</button>
+            </div>
+        </div>
+        <iframe id="previewFrame"></iframe>
+    </section>
+
+    <div class="test-results">
+        <span class="test-item"><span class="test-dot pending" id="testText"></span>纯文本</span>
+        <span class="test-item"><span class="test-dot pending" id="testFormula"></span>数学公式</span>
+        <span class="test-item"><span class="test-dot pending" id="testTable"></span>表格</span>
+        <span class="test-item"><span class="test-dot pending" id="testSvg"></span>SVG</span>
+        <span class="test-item"><span class="test-dot pending" id="testList"></span>列表</span>
+        <span class="test-item"><span class="test-dot pending" id="testStyle"></span>样式保留</span>
+        <span class="guard-info">🛡️ 结构保护已启用（sup/sub/fraction）</span>
+    </div>
+    <footer class="status-bar">
+        <span>同步方向：<span class="direction" id="syncDirection">就绪</span></span>
+        <span id="syncCount">同步次数：0</span>
+    </footer>
+</div>
+
+<script>
+var htmlEditor=document.getElementById('htmlEditor');
+var highlightLayer=document.getElementById('highlightLayer');
+var previewFrame=document.getElementById('previewFrame');
+var syncDirection=document.getElementById('syncDirection');
+var syncCountEl=document.getElementById('syncCount');
+var syncCount=0;
+var isSyncing=false;
+var editorTimer=null;
+var previewTimer=null;
+var ZWSP='\u200B';
+var isEditMode=false;
+var editBtn=document.getElementById('editBtn');
+var modeHint=document.getElementById('modeHint');
+var previousHtml='';
+var modifiedRange=null;
+
+var STRUCT_TAGS=['SUP','SUB'];
+var STRUCT_CLASSES=['fraction','num','den','sqrt','sqrt-content'];
+
+var TEMPLATES={};
+
+TEMPLATES.math='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\nbody{font-family:"Times New Roman","Microsoft YaHei",serif;padding:30px 40px;max-width:750px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:24px;}\n.question{margin-bottom:16px;font-size:14px;}\n.answer-line{border-bottom:1px solid #999;width:150px;display:inline-block;margin:0 5px;}\n.box{border:1px solid #ccc;padding:10px;border-radius:4px;margin-top:8px;background:#f9f9f9;}\n.formula-block{text-align:center;margin:16px 0;font-size:18px;font-style:italic;padding:12px;background:#fafafa;border-radius:6px;border:1px solid #eee;}\nsub,sup{font-size:0.7em;}\n.fraction{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px;}\n.fraction .num{border-bottom:1px solid #333;padding:0 5px 3px;text-align:center;min-width:20px;}\n.fraction .den{padding:3px 5px 0;text-align:center;}\n.sqrt-wrap{display:inline-flex;align-items:baseline;margin:0 2px;}\n.sqrt-prefix{font-size:1.3em;line-height:1;position:relative;}\n.sqrt-line{position:absolute;bottom:-2px;left:0;width:100%;height:1px;background:#333;transform:rotate(-15deg);transform-origin:left bottom;}\n.sqrt-content{bargin-left:3px;padding:0 2px;border-top:1px solid #333;}\n</style>\n</head>\n<body>\n<h1>数学公式编辑测试</h1>\n\n<div class="question"><strong>一、一元二次方程</strong></div>\n<div class="question">1. 解方程：x<sup>2</sup> - 5x + 6 = 0</div>\n<div class="formula-block">x = <span class="fraction"><span class="num">-b ± √(b<sup>2</sup>-4ac)</span><span class="den">2a</span></span></div>\n\n<div class="question">2. 求根公式中，当 Δ = b<sup>2</sup>-4ac &gt; 0 时，方程有两个不相等的实数根。</div>\n<div class="formula-block">Δ = (-5)<sup>2</sup> - 4×1×6 = 25 - 24 = 1 &gt; 0</div>\n\n<div class="question"><strong>二、三角函数</strong></div>\n<div class="question">3. 已知 sin θ = <span class="fraction"><span class="num">3</span><span class="den">5</span></span>，求 cos θ 的值。</div>\n<div class="formula-block">cos<sup>2</sup>θ + sin<sup>2</sup>θ = 1 → cos θ = <span class="fraction"><span class="num">4</span><span class="den">5</span></span></div>\n\n<div class="question">4. 勾股定理：在直角三角形中，a<sup>2</sup> + b<sup>2</sup> = c<sup>2</sup></div>\n<div class="formula-block">勾股定理：a<sup>2</sup> + b<sup>2</sup> = c<sup>2</sup></div>\n<div class="formula-block">求平方根：<span class="sqrt-wrap"><span class="sqrt-prefix\">√<span class="sqrt-line"></span></span><span class="sqrt-content">25</span></span> = 5</div>\n\n<div class="question"><strong>三、微积分</strong></div>\n<div class="question">5. 求函数 f(x) = x<sup>3</sup> 的导数：</div>\n<div class="formula-block">f\'(x) = 3x<sup>2</sup></div>\n\n<div class="question">6. 求定积分：</div>\n<div class="formula-block">∫₀¹ x<sup>2</sup> dx = <span class="fraction"><span class="num">1</span><span class="den">3</span></span>x<sup>3</sup> |₀¹ = <span class="fraction"><span class="num">1</span><span class="den">3</span></span></div>\n\n<div class="question"><strong>四、填空题</strong></div>\n<div class="question">7. 若 log₂8 = <span class="answer-line"></span></div>\n<div class="question">8. 2<sup>10</sup> = <span class="answer-line"></span></div>\n<div class="question">9. 圆的面积公式 S = π<span class="answer-line"></span><sup>2</sup></div>\n\n<div class="box" style="margin-top:24px;">💡 <strong>测试提示：</strong>试试点击上标数字（如 x² 中的 2）进行编辑，删除后重新输入，新内容会保持上标格式。</div>\n</body>\n</html>';
+
+TEMPLATES.table='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px 40px;max-width:800px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #2c3e50;padding-bottom:12px;margin-bottom:24px;}\nh3{font-size:16px;color:#2c3e50;margin:24px 0 12px;}\ntable{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}\nth{background:#2c3e50;color:#fff;padding:10px 14px;text-align:center;border:1px solid #1a252f;font-weight:600;}\ntd{padding:9px 14px;border:1px solid #ddd;text-align:center;}\ntr:nth-child(even){background:#f8f9fa;}\n.highlight-cell{background:#fff3cd;font-weight:bold;}\n.total-row{background:#e8f4fd;font-weight:bold;}\n.nested-table{width:100%;border-collapse:collapse;font-size:11px;margin:5px 0;}\n.nested-table th{background:#3498db;padding:5px 8px;font-size:10px;}\n.nested-table td{padding:4px 8px;border:1px solid #ddd;font-size:10px;}\n</style>\n</head>\n<body>\n<h1>表格编辑测试</h1>\n\n<h3>📊 成绩表</h3>\n<table>\n<tr><th>姓名</th><th>语文</th><th>数学</th><th>英语</th><th>总分</th><th>排名</th></tr>\n<tr><td>张三</td><td class="highlight-cell">95</td><td>88</td><td>92</td><td>275</td><td>1</td></tr>\n<tr><td>李四</td><td>87</td><td class="highlight-cell">98</td><td>85</td><td>270</td><td>2</td></tr>\n<tr><td>王五</td><td>90</td><td>82</td><td class="highlight-cell">96</td><td>268</td><td>3</td></tr>\n<tr class="total-row"><td>平均分</td><td>90.7</td><td>89.3</td><td>91.0</td><td>271.0</td><td>-</td></tr>\n</table>\n\n<h3>📋 课程表</h3>\n<table>\n<tr><th>节次</th><th>时间</th><th>周一</th><th>周二</th><th>周三</th><th>周四</th><th>周五</th></tr>\n<tr><td>1</td><td>8:00-8:45</td><td>语文</td><td>数学</td><td>英语</td><td>物理</td><td>化学</td></tr>\n<tr><td>2</td><td>8:55-9:40</td><td>数学</td><td>英语</td><td>语文</td><td>数学</td><td>语文</td></tr>\n<tr><td>3</td><td>10:00-10:45</td><td>英语</td><td>物理</td><td>数学</td><td>语文</td><td>英语</td></tr>\n<tr><td>4</td><td>10:55-11:40</td><td>物理</td><td>化学</td><td>体育</td><td>英语</td><td>数学</td></tr>\n</table>\n\n<h3>🔧 嵌套表格</h3>\n<table>\n<tr><th>项目</th><th>详情</th><th>状态</th></tr>\n<tr><td>前端开发</td><td>\n<table class="nested-table">\n<tr><th>模块</th><th>进度</th></tr>\n<tr><td>首页</td><td>90%</td></tr>\n<tr><td>用户中心</td><td>75%</td></tr>\n<tr><td>设置页</td><td>60%</td></tr>\n</table>\n</td><td>进行中</td></tr>\n<tr><td>后端开发</td><td>\n<table class="nested-table">\n<tr><th>模块</th><th>进度</th></tr>\n<tr><td>API</td><td>85%</td></tr>\n<tr><td>数据库</td><td>100%</td></tr>\n</table>\n</td><td>进行中</td></tr>\n</table>\n\n<div style="margin-top:24px;padding:14px;background:#f8f9fa;border-radius:8px;font-size:13px;">💡 <strong>测试提示：</strong>试试点击表格中的单元格直接编辑分数、姓名、课程名等。嵌套表格也可以编辑。</div>\n</body>\n</html>';
+
+TEMPLATES.svg='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px 40px;max-width:800px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #2c3e50;padding-bottom:12px;margin-bottom:24px;}\n.figure{text-align:center;margin:24px 0;}\n.figure-caption{font-size:13px;color:#666;margin-top:10px;}\n</style>\n</head>\n<body>\n<h1>SVG图形编辑测试</h1>\n\n<div class="figure">\n<svg width="320" height="220" viewBox="0 0 320 220" style="border:1px solid #eee;border-radius:6px;">\n<line x1="40" y1="180" x2="280" y2="180" stroke="#333" stroke-width="1.5"/>\n<line x1="40" y1="180" x2="40" y2="20" stroke="#333" stroke-width="1.5"/>\n<rect x="55" y="80" width="45" height="100" fill="#3498db" rx="4"/>\n<rect x="120" y="45" width="45" height="135" fill="#e74c3c" rx="4"/>\n<rect x="185" y="100" width="45" height="80" fill="#2ecc71" rx="4"/>\n<rect x="250" y="60" width="45" height="120" fill="#f39c12" rx="4"/>\n<text x="77" y="198" font-size="12" text-anchor="middle" fill="#333">语文</text>\n<text x="142" y="198" font-size="12" text-anchor="middle" fill="#333">数学</text>\n<text x="207" y="198" font-size="12" text-anchor="middle" fill="#333">英语</text>\n<text x="272" y="198" font-size="12" text-anchor="middle" fill="#333">物理</text>\n<text x="25" y="84" font-size="10" fill="#666" text-anchor="end">80</text>\n<text x="25" y="49" font-size="10" fill="#666" text-anchor="end">90</text>\n</svg>\n<div class="figure-caption">图1：各科成绩柱状图（点击标签文字可编辑）</div>\n</div>\n\n<div class="figure">\n<svg width="300" height="240" viewBox="0 0 300 240" style="border:1px solid #eee;border-radius:6px;">\n<line x1="50" y1="200" x2="250" y2="200" stroke="#333" stroke-width="1.5"/>\n<line x1="50" y1="200" x2="50" y2="40" stroke="#333" stroke-width="1.5"/>\n<polygon points="50,200 250,200 50,40" fill="none" stroke="#333" stroke-width="1.5"/>\n<circle cx="50" cy="200" r="4" fill="#e74c3c"/>\n<circle cx="250" cy="200" r="4" fill="#3498db"/>\n<circle cx="50" cy="40" r="4" fill="#2ecc71"/>\n<text x="38" y="218" font-size="13" fill="#333">A</text>\n<text x="252" y="218" font-size="13" fill="#333">B</text>\n<text x="38" y="32" font-size="13" fill="#333">C</text>\n<circle cx="150" cy="120" r="3" fill="#e74c3c"/>\n<text x="158" y="115" font-size="12" fill="#e74c3c">D(中点)</text>\n</svg>\n<div class="figure-caption">图2：三角形ABC（点击顶点标签可编辑）</div>\n</div>\n\n<div style="margin-top:24px;padding:14px;background:#f8f9fa;border-radius:8px;font-size:13px;">💡 <strong>测试提示：</strong>SVG中的文字标签可以直接点击编辑。SVG图形本身（线条、矩形等）不可直接编辑。</div>\n</body>\n</html>';
+
+TEMPLATES.list='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\nbody{font-family:"Microsoft YaHei",sans-serif;padding:30px 40px;max-width:750px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #2c3e50;padding-bottom:12px;margin-bottom:24px;}\nh3{font-size:16px;color:#2c3e50;margin:24px 0 12px;}\nol,ul{margin:12px 0 12px 24px;line-height:2;}\nli{margin:4px 0;}\n.todo-item{list-style:none;margin-left:-24px;}\n.todo-item input{margin-right:10px;transform:scale(1.2);}\n.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;margin:0 3px;font-weight:500;}\n.tag-high{background:#fde8e8;color:#e74c3c;}\n.tag-mid{background:#fef3cd;color:#e67e22;}\n.tag-low{background:#d4edda;color:#28a745;}\ndl{margin:12px 0;line-height:2;}\ndt{font-weight:600;color:#2c3e50;margin-top:8px;}\ndd{margin-left:20px;color:#555;}\n</style>\n</head>\n<body>\n<h1>列表编辑测试</h1>\n\n<h3>📝 有序列表</h3>\n<ol>\n<li>第一步：打开编辑器</li>\n<li>第二步：选择模板</li>\n<li>第三步：编辑内容</li>\n<li>第四步：导出文件</li>\n</ol>\n\n<h3>📋 无序列表</h3>\n<ul>\n<li>前端技术\n<ul>\n<li>HTML5</li>\n<li>CSS3\n<ul>\n<li>Flexbox</li>\n<li>Grid</li>\n<li>Animation</li>\n</ul>\n</li>\n<li>JavaScript\n<ul>\n<li>ES6+</li>\n<li>TypeScript</li>\n</ul>\n</li>\n</ul>\n</li>\n<li>后端技术\n<ul>\n<li>Node.js</li>\n<li>Python</li>\n</ul>\n</li>\n</ul>\n\n<h3>✅ 待办清单</h3>\n<ul>\n<li class="todo-item"><input type="checkbox" checked> 完成需求分析 <span class="tag tag-high">紧急</span></li>\n<li class="todo-item"><input type="checkbox" checked> 编写技术方案 <span class="tag tag-high">紧急</span></li>\n<li class="todo-item"><input type="checkbox"> 开发前端页面 <span class="tag tag-mid">中等</span></li>\n<li class="todo-item"><input type="checkbox"> 接口联调测试 <span class="tag tag-mid">中等</span></li>\n<li class="todo-item"><input type="checkbox"> 编写使用文档 <span class="tag tag-low">低</span></li>\n</ul>\n\n<h3>📖 定义列表</h3>\n<dl>\n<dt>HTML</dt>\n<dd>超文本标记语言，用于构建网页结构</dd>\n<dt>CSS</dt>\n<dd>层叠样式表，用于控制网页外观</dd>\n<dt>JavaScript</dt>\n<dd>脚本语言，用于实现网页交互功能</dd>\n</dl>\n\n<div style="margin-top:24px;padding:14px;background:#f8f9fa;border-radius:8px;font-size:13px;">💡 <strong>测试提示：</strong>试试点击列表项文字直接编辑。复选框也可以点击切换。嵌套列表的子项同样可以编辑。</div>\n</body>\n</html>';
+
+TEMPLATES.mixed='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\nbody{font-family:"Microsoft YaHei","Times New Roman",serif;padding:30px 40px;max-width:800px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #2c3e50;padding-bottom:12px;margin-bottom:24px;}\nh2{font-size:16px;color:#2c3e50;border-left:3px solid #3498db;padding-left:12px;margin:24px 0 12px;}\ntable{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}\nth{background:#2c3e50;color:#fff;padding:9px 12px;text-align:center;border:1px solid #1a252f;}\ntd{padding:9px 12px;border:1px solid #ddd;text-align:center;}\n.formula-block{text-align:center;margin:14px 0;font-size:16px;font-style:italic;padding:10px;background:#fafafa;border-radius:6px;border:1px solid #eee;font-family:"Times New Roman",serif;}\nsub,sup{font-size:0.7em;}\n.fraction{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px;}\n.fraction .num{border-bottom:1px solid #333;padding:0 5px 3px;text-align:center;min-width:20px;}\n.fraction .den{padding:3px 5px 0;text-align:center;}\n.answer-line{border-bottom:1px solid #999;width:120px;display:inline-block;margin:0 5px;}\n.box{border:1px solid #ccc;padding:10px;border-radius:4px;margin:8px 0;background:#f9f9f9;}\n</style>\n</head>\n<body>\n<h1>八年级数学期中练习题</h1>\n<p style="text-align:center;color:#666;font-size:14px;">考试时间：90分钟 | 满分：100分</p>\n<p style="text-align:center;font-size:12px;color:#999;">姓名：__________ 班级：__________</p>\n\n<h2>一、选择题（每题3分，共18分）</h2>\n<p>1. 一元二次方程 x<sup>2</sup>-4x+3=0 的根为（  ）</p>\n<p style="margin-left:24px;">A. x<sub>1</sub>=1, x<sub>2</sub>=3 &nbsp;&nbsp; B. x<sub>1</sub>=-1, x<sub>2</sub>=-3 &nbsp;&nbsp; C. x<sub>1</sub>=1, x<sub>2</sub>=-3 &nbsp;&nbsp; D. x<sub>1</sub>=-1, x<sub>2</sub>=3</p>\n\n<p>2. 将方程 2x<sup>2</sup>-8x+1=0 化为 (x-a)<sup>2</sup>=b 的形式，正确的是（  ）</p>\n<p style="margin-left:24px;">A. (x-2)<sup>2</sup>=<span class="fraction"><span class="num">7</span><span class="den">2</span></span> &nbsp;&nbsp; B. (x-4)<sup>2</sup>=<span class="fraction"><span class="num">15</span><span class="den">2</span></span> &nbsp;&nbsp; C. (x-2)<sup>2</sup>=<span class="fraction"><span class="num">15</span><span class="den">2</span></span> &nbsp;&nbsp; D. (x-4)<sup>2</sup>=<span class="fraction"><span class="num">7</span><span class="den">2</span></span></p>\n\n<h2>二、填空题（每题3分，共18分）</h2>\n<p>3. 方程 x<sup>2</sup>=9 的解为<span class="answer-line"></span></p>\n<p>4. 若 x=2 是方程 x<sup>2</sup>-ax+2=0 的一个根，则 a=<span class="answer-line"></span></p>\n\n<h2>三、解答题</h2>\n<p><strong>5.</strong>（8分）解方程：x<sup>2</sup>-5x+6=0</p>\n<div class="formula-block">x = <span class="fraction"><span class="num">5 ± √(25-24)</span><span class="den">2</span></span> = <span class="fraction"><span class="num">5 ± 1</span><span class="den">2</span></span></div>\n<div class="box">解：x<sub>1</sub>=3, x<sub>2</sub>=2</div>\n\n<p><strong>6.</strong>（10分）某商品原价200元，连续两次降价后为162元，求降价百分率。</p>\n<div class="formula-block">200 × (1-x)<sup>2</sup> = 162 → (1-x)<sup>2</sup> = 0.81 → 1-x = 0.9 → x = 10%</div>\n<div class="box">解：降价百分率为10%</div>\n\n<h2>四、成绩统计</h2>\n<table>\n<tr><th>学生</th><th>选择题</th><th>填空题</th><th>解答题</th><th>总分</th></tr>\n<tr><td>张三</td><td>18</td><td>15</td><td>40</td><td>73</td></tr>\n<tr><td>李四</td><td>15</td><td>18</td><td>45</td><td>78</td></tr>\n<tr><td>王五</td><td>12</td><td>12</td><td>35</td><td>59</td></tr>\n</table>\n\n<div style="margin-top:24px;padding:14px;background:#f8f9fa;border-radius:8px;font-size:13px;">💡 <strong>测试提示：</strong>这是综合测试，包含公式、表格、填空线、分数等。试试编辑上标（如 x² 中的 2）和表格数据。</div>\n</body>\n</html>';
+
+TEMPLATES.katex='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">\n<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>\n<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"><\/script>\n<style>\nbody{font-family:"Microsoft YaHei","Times New Roman",serif;padding:30px 40px;max-width:750px;margin:0 auto;color:#333;line-height:1.8;}\nh1{font-size:22px;text-align:center;border-bottom:2px solid #2c3e50;padding-bottom:12px;margin-bottom:24px;}\nh2{font-size:16px;color:#2c3e50;margin:24px 0 12px;}\n.formula-area{margin:14px 0;padding:14px 16px;background:#fafafa;border-radius:8px;border:1px solid #eee;}\n</style>\n</head>\n<body>\n<h1>KaTeX公式编辑测试</h1>\n\n<h2>📐 基础公式</h2>\n<div class="formula-area">一元二次方程求根公式：$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$</div>\n\n<div class="formula-area">欧拉公式：$$e^{i\\pi} + 1 = 0$$</div>\n\n<div class="formula-area">勾股定理：$$a^2 + b^2 = c^2$$</div>\n\n<h2>📊 积分与极限</h2>\n<div class="formula-area">定积分：$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$</div>\n\n<div class="formula-area">极限：$$\\lim_{n \\to \\infty} \\frac{1}{n} = 0$$</div>\n\n<div class="formula-area">求和：$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$</div>\n\n<h2>🧮 矩阵</h2>\n<div class="formula-area">$$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$</div>\n\n<h2>📝 行内公式</h2>\n<p>已知函数 $f(x) = x^2 + 2x + 1$，求 $f\'(x)$ 的值。</p>\n<p>当 $x = 3$ 时，$f(3) = 9 + 6 + 1 = 16$。</p>\n\n<div style="margin-top:24px;padding:14px;background:#fff3cd;border-radius:8px;font-size:13px;">⚠️ <strong>重要提示：</strong>KaTeX渲染的公式是特殊的DOM结构，直接点击编辑可能导致公式结构破坏。建议只编辑公式外的普通文字，公式部分通过代码编辑器修改LaTeX源码。</div>\n\n<script>\nrenderMathInElement(document.body, {\ndelimiters: [\n{left: "$$", right: "$$", display: true},\n{left: "$", right: "$", display: false}\n]\n});\n<\/script>\n</body>\n</html>';
+
+function loadTemplate(name){
+    htmlEditor.value=TEMPLATES[name]||'';
+    previousHtml=htmlEditor.value;
+    document.querySelectorAll('.tpl-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tpl===name);});
+    updateHighlight();
+    updatePreview();
+    resetTestDots();
+}
+
+function resetTestDots(){
+    ['testText','testFormula','testTable','testSvg','testList','testStyle'].forEach(function(id){
+        document.getElementById(id).className='test-dot pending';
+    });
+}
+
+function updateSyncInfo(direction){
+    syncCount++;
+    syncDirection.textContent=direction;
+    syncCountEl.textContent='同步次数：'+syncCount;
+}
+
+function isStructElement(el){
+    if(!el)return false;
+    if(STRUCT_TAGS.indexOf(el.tagName)!==-1)return true;
+    if(el.classList){
+        for(var i=0;i<STRUCT_CLASSES.length;i++){
+            if(el.classList.contains(STRUCT_CLASSES[i]))return true;
+        }
+    }
+    return false;
+}
+
+function protectStructure(doc){
+    var sups=doc.querySelectorAll('sup, sub');
+    sups.forEach(function(el){
+        var text=el.textContent;
+        if(text.length===0||text===ZWSP){
+            el.textContent=ZWSP;
+        }
+    });
+    var fracs=doc.querySelectorAll('.fraction .num, .fraction .den');
+    fracs.forEach(function(el){
+        var text=el.textContent;
+        if(text.length===0||text===ZWSP){
+            el.textContent=ZWSP;
+        }
+    });
+}
+
+function setupMutationGuard(doc){
+    var observer=new MutationObserver(function(mutations){
+        mutations.forEach(function(m){
+            if(m.type==='childList'){
+                m.removedNodes.forEach(function(node){
+                    if(node.nodeType===1&&isStructElement(node)){
+                        var parent=m.target;
+                        if(parent&&parent.nodeType===1){
+                            var restored=node.cloneNode(true);
+                            if(restored.textContent.length===0){
+                                restored.textContent=ZWSP;
+                            }
+                            if(m.nextSibling){
+                                parent.insertBefore(restored,m.nextSibling);
+                            }else{
+                                parent.appendChild(restored);
+                            }
+                        }
+                    }
+                });
+            }
+            if(m.type==='characterData'){
+                var parent=m.target.parentElement;
+                if(parent&&isStructElement(parent)){
+                    if(parent.textContent.length===0){
+                        parent.textContent=ZWSP;
+                    }
+                }
+            }
+        });
+    });
+    observer.observe(doc.body,{
+        childList:true,
+        subtree:true,
+        characterData:true
+    });
+    return observer;
+}
+
+function setupBeforeInputGuard(doc){
+    doc.addEventListener('beforeinput',function(e){
+        var sel=doc.getSelection();
+        if(!sel||sel.rangeCount===0)return;
+        var range=sel.getRangeAt(0);
+        var container=range.commonAncestorContainer;
+        var el=container.nodeType===3?container.parentElement:container;
+        while(el&&el!==doc.body){
+            if(isStructElement(el)){
+                if(e.inputType==='deleteContentBackward'||e.inputType==='deleteContentForward'||e.inputType==='deleteContent'){
+                    var text=el.textContent;
+                    if(text.length<=1||(text.length===1&&text===ZWSP)){
+                        e.preventDefault();
+                        el.textContent=ZWSP;
+                        sel.collapse(el,0);
+                        sel.modify('move','forward','character');
+                        return;
+                    }
+                }
+                break;
+            }
+            el=el.parentElement;
+        }
+    },true);
+}
+
+function highlightHTML(html){
+    var result='';
+    var i=0;
+    var len=html.length;
+    while(i<len){
+        if(html[i]==='<'&&html.substr(i,4)==='<!--'){
+            var end=html.indexOf('-->',i);
+            if(end===-1)end=len;
+            else end+=3;
+            result+='<span class="token-comment">'+escapeHtml(html.substring(i,end))+'</span>';
+            i=end;
+        }else if(html[i]==='<'&&html.substr(i,9)==='<!DOCTYPE'){
+            var end=html.indexOf('>',i);
+            if(end===-1)end=len;
+            else end++;
+            result+='<span class="token-doctype">'+escapeHtml(html.substring(i,end))+'</span>';
+            i=end;
+        }else if(html[i]==='<'){
+            var end=html.indexOf('>',i);
+            if(end===-1)end=len;
+            else end++;
+            result+=highlightTag(html.substring(i,end));
+            i=end;
+        }else{
+            var end=html.indexOf('<',i);
+            if(end===-1)end=len;
+            var text=html.substring(i,end);
+            if(text.trim()){
+                result+='<span class="token-text">'+escapeHtml(text)+'</span>';
+            }else{
+                result+=escapeHtml(text);
+            }
+            i=end;
+        }
+    }
+    return result;
+}
+
+function escapeHtml(text){
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlightTag(tag){
+    var result='<span class="token-tag">&lt;';
+    var m=tag.match(/^<(\/?)([a-zA-Z0-9_\-]+)/);
+    if(m){
+        result+=m[1]+m[2];
+        var rest=tag.substring(m[0].length);
+        rest=rest.replace(/\s([a-zA-Z0-9_\-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g,function(match,name,double,single,unquoted){
+            var attr=' <span class="token-attr">'+name+'</span>';
+            var val=double||single||unquoted;
+            if(val!==undefined){
+                attr+='=<span class="token-string">'+(double?'"'+double+'"':single?"'"+single+"'":val)+'</span>';
+            }
+            return attr;
+        });
+        result+=rest.replace(/>/g,'&gt;');
+    }else{
+        result+=escapeHtml(tag.substring(1));
+    }
+    return result+'</span>';
+}
+
+function updateHighlight(){
+    highlightLayer.innerHTML=highlightHTML(htmlEditor.value);
+    syncScroll();
+}
+
+function syncScroll(){
+    highlightLayer.scrollTop=htmlEditor.scrollTop;
+    highlightLayer.scrollLeft=htmlEditor.scrollLeft;
+}
+
+function findDiff(oldStr,newStr){
+    var oldLines=oldStr.split('\n');
+    var newLines=newStr.split('\n');
+    var start=-1,end=-1;
+    for(var i=0;i<Math.min(oldLines.length,newLines.length);i++){
+        if(oldLines[i]!==newLines[i]){
+            if(start===-1)start=i;
+            end=i;
+        }
+    }
+    if(start===-1){
+        if(newLines.length>oldLines.length){
+            start=oldLines.length;
+            end=newLines.length-1;
+        }
+    }else if(newLines.length>oldLines.length){
+        end=newLines.length-1;
+    }
+    if(start!==-1){
+        return {start:start,end:end};
+    }
+    return null;
+}
+
+function scrollToLine(lineNum){
+    var lineHeight=1.7*13;
+    var targetScrollTop=lineNum*lineHeight;
+    htmlEditor.scrollTop=targetScrollTop - (htmlEditor.clientHeight/2);
+    highlightLayer.scrollTop=htmlEditor.scrollTop;
+}
+
+function highlightModifiedRange(range){
+    if(!range)return;
+    updateHighlight();
+    var lines=htmlEditor.value.split('\n');
+    var newHtml='';
+    for(var i=0;i<lines.length;i++){
+        if(i>=range.start&&i<=range.end){
+            newHtml+='<span class="highlight-modified">'+highlightHTML(lines[i])+'</span>';
+        }else{
+            newHtml+=highlightHTML(lines[i]);
+        }
+        if(i<lines.length-1)newHtml+='\n';
+    }
+    highlightLayer.innerHTML=newHtml;
+}
+
+var currentObserver=null;
+
+function updatePreview(){
+    if(isSyncing)return;
+    isSyncing=true;
+    try{
+        if(currentObserver){
+            currentObserver.disconnect();
+            currentObserver=null;
+        }
+        var code=htmlEditor.value;
+        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
+        protectStructure(doc);
+        applyEditMode();
+        updateSyncInfo('代码 → 预览');
+        runTests();
+    }catch(e){}
+    setTimeout(function(){isSyncing=false;},150);
+}
+
+function toggleEditMode(){
+    isEditMode=!isEditMode;
+    if(isEditMode){
+        editBtn.textContent='🔒 禁用编辑';
+        editBtn.classList.remove('inactive');
+        modeHint.textContent='编辑模式 - 点击可编辑';
+    }else{
+        editBtn.textContent='🔓 启用编辑';
+        editBtn.classList.add('inactive');
+        modeHint.textContent='预览模式 - 无法编辑';
+    }
+    applyEditMode();
+}
+
+function applyEditMode(){
+    try{
+        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+        if(!doc||!doc.body)return;
+        if(isEditMode){
+            doc.body.contentEditable=true;
+            doc.body.style.outline='none';
+            doc.body.style.cursor='text';
+            doc.body.style.userSelect='text';
+            var allEls=doc.body.querySelectorAll('*');
+            for(var i=0;i<allEls.length;i++){
+                allEls[i].contentEditable='inherit';
+            }
+            setupBeforeInputGuard(doc);
+            if(currentObserver)currentObserver.disconnect();
+            currentObserver=setupMutationGuard(doc);
+            bindPreviewEvents();
+        }else{
+            doc.body.contentEditable=false;
+            doc.body.style.cursor='default';
+            doc.body.style.userSelect='default';
+            if(currentObserver){
+                currentObserver.disconnect();
+                currentObserver=null;
+            }
+            bindPreviewEvents();
+            var allEls=doc.body.querySelectorAll('*');
+            for(var i=0;i<allEls.length;i++){
+                allEls[i].contentEditable='false';
+            }
+        }
+    }catch(e){}
+}
+
+editBtn.addEventListener('click',toggleEditMode);
+
+function updateEditorFromPreview(){
+    if(isSyncing||!isEditMode)return;
+    isSyncing=true;
+    try{
+        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+        protectStructure(doc);
+        var editedHtml=doc.documentElement.outerHTML;
+        var cleaned=editedHtml.replace(/\u200B/g,'');
+        var currentCleaned=htmlEditor.value.replace(/\u200B/g,'');
+        if(cleaned&&cleaned!==currentCleaned){
+            var oldHtml=htmlEditor.value;
+            var fullHtml='<!DOCTYPE html>\n'+editedHtml;
+            htmlEditor.value=fullHtml;
+            var diffRange=findDiff(oldHtml,fullHtml);
+            if(diffRange){
+                scrollToLine(diffRange.start);
+                highlightModifiedRange(diffRange);
+                setTimeout(function(){
+                    if(modifiedRange){
+                        updateHighlight();
+                        modifiedRange=null;
+                    }
+                },2000);
+                modifiedRange=diffRange;
+            }else{
+                updateHighlight();
+            }
+            updateSyncInfo('预览 → 代码');
+        }
+    }catch(e){}
+    setTimeout(function(){isSyncing=false;},150);
+}
+
+function bindPreviewEvents(){
+    try{
+        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+        var body=doc.body;
+        body.removeEventListener('input',onPreviewInput);
+        body.removeEventListener('blur',onPreviewBlur);
+        if(isEditMode){
+            body.addEventListener('input',onPreviewInput);
+            body.addEventListener('blur',onPreviewBlur);
+        }
+    }catch(e){}
+}
+
+function onPreviewInput(e){
+    if(!isEditMode)return;
+    clearTimeout(previewTimer);
+    previewTimer=setTimeout(function(){updateEditorFromPreview();},300);
+}
+
+function onPreviewBlur(e){
+    if(!isEditMode)return;
+    clearTimeout(previewTimer);
+    updateEditorFromPreview();
+}
+
+htmlEditor.addEventListener('input',function(){
+    clearTimeout(editorTimer);
+    updateHighlight();
+    editorTimer=setTimeout(updatePreview,400);
+});
+
+htmlEditor.addEventListener('scroll',syncScroll);
+
+
+function runTests(){
+    try{
+        var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+        var body=doc.body;
+        setDot('testText',body&&body.contentEditable==='true'?'pass':'fail');
+        setDot('testFormula',doc.querySelector('.fraction,.formula-block,sup,sub')?'pass':'pending');
+        setDot('testTable',doc.querySelector('table')?'pass':'pending');
+        setDot('testSvg',doc.querySelector('svg')?'pass':'pending');
+        setDot('testList',doc.querySelector('ol,ul,dl')?'pass':'pending');
+        setDot('testStyle',doc.querySelector('style')?'pass':'pending');
+    }catch(e){}
+}
+
+function setDot(id,status){
+    var el=document.getElementById(id);
+    if(el)el.className='test-dot '+status;
+}
+
+// 初始化按钮状态
+editBtn.classList.add('inactive');
+loadTemplate('form');
+
+TEMPLATES.form='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:700px;margin:0 auto;color:#333;background:#f5f7fa;line-height:1.6}\nh2{font-size:18px;color:#333;margin:24px 0 12px;border-left:3px solid #4a90d9;padding-left:12px}\n.form-group{margin-bottom:16px}\nlabel{display:block;font-size:13px;color:#555;margin-bottom:6px;font-weight:500}\ninput[type="text"],input[type="email"],input[type="password"],input[type="number"],input[type="tel"],select,textarea{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#fff;transition:border-color .2s}\ninput:focus,select:focus,textarea:focus{outline:none;border-color:#4a90d9;box-shadow:0 0 0 3px rgba(74,144,217,.1)}\ntextarea{resize:vertical;min-height:100px}\n.btn{padding:10px 24px;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:all .2s}\n.btn-primary{background:#4a90d9;color:#fff}\n.btn-primary:hover{background:#3a7bc8}\n.btn-success{background:#52c41a;color:#fff}\n.btn-danger{background:#ff4d4f;color:#fff}\n.btn-outline{background:transparent;border:1px solid #ddd;color:#333}\n.btn-outline:hover{border-color:#4a90d9;color:#4a90d9}\n.checkbox-group,.radio-group{display:flex;gap:20px;flex-wrap:wrap}\n.checkbox-item,.radio-item{display:flex;align-items:center;gap:8px}\ninput[type="checkbox"],input[type="radio"]{width:16px;height:16px}\n.range-slider{display:flex;align-items:center;gap:12px}\ninput[type="range"]{flex:1}\n.range-value{min-width:40px;text-align:center;font-weight:600;color:#4a90d9}\n</style>\n</head>\n<body>\n<h2>基本输入框</h2>\n<div class="form-group"><label>姓名</label><input type="text" placeholder="请输入姓名"></div>\n<div class="form-group"><label>邮箱</label><input type="email" placeholder="example@email.com"></div>\n<div class="form-group"><label>手机号</label><input type="tel" placeholder="138-0000-0000"></div>\n<div class="form-group"><label>年龄</label><input type="number" placeholder="18-60"></div>\n<div class="form-group"><label>密码</label><input type="password" placeholder="请输入密码"></div>\n\n<h2>下拉选择</h2>\n<div class="form-group"><label>国家</label><select><option>请选择国家</option><option>中国</option><option>美国</option><option>日本</option></select></div>\n<div class="form-group"><label>城市</label><select><option>请选择城市</option><option>北京</option><option>上海</option><option>深圳</option></select></div>\n\n<h2>复选框</h2>\n<div class="checkbox-group">\n<label class="checkbox-item"><input type="checkbox"> 前端开发</label>\n<label class="checkbox-item"><input type="checkbox"> 后端开发</label>\n<label class="checkbox-item"><input type="checkbox"> UI设计</label>\n<label class="checkbox-item"><input type="checkbox"> 产品经理</label>\n</div>\n\n<h2>单选框</h2>\n<div class="radio-group">\n<label class="radio-item"><input type="radio" name="gender"> 男</label>\n<label class="radio-item"><input type="radio" name="gender"> 女</label>\n<label class="radio-item"><input type="radio" name="gender"> 保密</label>\n</div>\n\n<h2>范围滑块</h2>\n<div class="form-group"><label>价格区间</label><div class="range-slider"><input type="range" min="0" max="1000" value="500"><span class="range-value">¥500</span></div></div>\n\n<h2>多行文本</h2>\n<div class="form-group"><label>留言</label><textarea placeholder="请输入您的留言..."></textarea></div>\n\n<h2>按钮</h2>\n<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">\n<button class="btn btn-primary">主要按钮</button>\n<button class="btn btn-success">成功按钮</button>\n<button class="btn btn-danger">危险按钮</button>\n<button class="btn btn-outline">描边按钮</button>\n</div>\n</body>\n</html>';
+
+TEMPLATES.card='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f0f2f5}\nh2{font-size:18px;color:#333;margin:24px 0 16px}\n.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}\n.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s}\n.card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12)}\n.card-img{height:160px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px}\n.card-body{padding:20px}\n.card-title{font-size:16px;font-weight:600;margin-bottom:8px;color:#333}\n.card-text{font-size:13px;color:#666;line-height:1.6;margin-bottom:16px}\n.card-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}\n.tag{background:#e8f4fd;color:#4a90d9;padding:4px 10px;border-radius:4px;font-size:11px}\n.card-price{font-size:24px;font-weight:700;color:#ff4d4f;margin-bottom:12px}\n.card-price small{font-size:13px;color:#999;font-weight:400}\n.card-footer{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #eee}\n.card-btn{padding:8px 20px;background:#4a90d9;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}\n.card-meta{font-size:12px;color:#999}\n</style>\n</head>\n<body>\n<h2>产品卡片</h2>\n<div class="card-grid">\n<div class="card">\n<div class="card-img">🎓</div>\n<div class="card-body">\n<div class="card-title">在线编程课程</div>\n<div class="card-text">Python 全栈开发，从入门到精通。涵盖 Web 开发、数据分析、机器学习等方向。</div>\n<div class="card-tags"><span class="tag">Python</span><span class="tag">Web开发</span></div>\n<div class="card-price">¥299 <small>原价 ¥599</small></div>\n<div class="card-footer">\n<button class="card-btn">立即购买</button>\n<span class="card-meta">👤 1.2万人在学</span>\n</div>\n</div>\n</div>\n<div class="card">\n<div class="card-img" style="background:linear-gradient(135deg,#11998e,#38ef7d)">📊</div>\n<div class="card-body">\n<div class="card-title">数据分析实战</div>\n<div class="card-text">Excel + SQL + Python数据分析，真实案例驱动，适合零基础入门。</div>\n<div class="card-tags"><span class="tag">数据分析</span><span class="tag">SQL</span></div>\n<div class="card-price">¥199 <small>原价 ¥399</small></div>\n<div class="card-footer">\n<button class="card-btn">立即购买</button>\n<span class="card-meta">👤 8千人学</span>\n</div>\n</div>\n</div>\n<div class="card">\n<div class="card-img" style="background:linear-gradient(135deg,#f093fb,#f5576c)">🎨</div>\n<div class="card-body">\n<div class="card-title">UI/UX 设计课</div>\n<div class="card-text">Figma 从入门到精通，包含移动端、Web端设计规范与项目实战。</div>\n<div class="card-tags"><span class="tag">设计</span><span class="tag">Figma</span></div>\n<div class="card-price">¥399 <small>原价 ¥799</small></div>\n<div class="card-footer">\n<button class="card-btn">立即购买</button>\n<span class="card-meta">👤 5千人学</span>\n</div>\n</div>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.nav='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box;margin:0;padding:0}\nbody{font-family:"Microsoft YaHei",sans-serif;color:#333;background:#f5f7fa}\n.navbar{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px}\n.navbar-brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;color:#4a90d9}\n.navbar-menu{display:flex;gap:8px}\n.navbar-item{padding:8px 16px;border-radius:6px;cursor:pointer;transition:all .2s;font-size:14px;color:#555}\n.navbar-item:hover{background:#f0f0f0;color:#4a90d9}\n.navbar-item.active{background:#4a90d9;color:#fff}\n.navbar-actions{display:flex;gap:12px;align-items:center}\n.btn{ padding:8px 20px;border-radius:6px;border:none;cursor:pointer;font-size:14px;transition:all .2s}\n.btn-outline{border:1px solid #4a90d9;color:#4a90d9;background:transparent}\n.btn-outline:hover{background:#4a90d9;color:#fff}\n.btn-primary{background:#4a90d9;color:#fff}\n.btn-primary:hover{background:#3a7bc8}\n\n.sidebar-nav{background:#fff;width:240px;min-height:calc(100vh - 64px);padding:20px 0;border-right:1px solid #eee}\n.side-item{display:flex;align-items:center;gap:12px;padding:12px 24px;color:#555;cursor:pointer;transition:all .2s;font-size:14px}\n.side-item:hover{background:#f5f7fa;color:#4a90d9}\n.side-item.active{background:#e8f4fd;color:#4a90d9;border-right:3px solid #4a90d9}\n.side-item-icon{font-size:18px;width:24px;text-align:center}\n.side-item-badge{background:#ff4d4f;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:auto}\n\n.breadcrumb{display:flex;align-items:center;gap:8px;padding:16px 40px;font-size:13px;color:#999;background:#fff;border-bottom:1px solid #eee}\n.breadcrumb-item{color:#666}\n.breadcrumb-item:hover{color:#4a90d9;cursor:pointer}\n.breadcrumb-sep{color:#ccc}\n</style>\n</head>\n<body>\n<div class="navbar">\n<div class="navbar-brand">🎯 我的应用</div>\n<div class="navbar-menu">\n<div class="navbar-item active">首页</div>\n<div class="navbar-item">产品</div>\n<div class="navbar-item">解决方案</div>\n<div class="navbar-item">定价</div>\n<div class="navbar-item">关于我们</div>\n</div>\n<div class="navbar-actions">\n<button class="btn btn-outline">登录</button>\n<button class="btn btn-primary">免费试用</button>\n</div>\n</div>\n\n<div class="breadcrumb">\n<span class="breadcrumb-item">首页</span>\n<span class="breadcrumb-sep">/</span>\n<span class="breadcrumb-item">产品</span>\n<span class="breadcrumb-sep">/</span>\n<span class="breadcrumb-item">详情</span>\n</div>\n\n<div style="display:flex">\n<div class="sidebar-nav">\n<div class="side-item active"><span class="side-item-icon">📊</span>仪表盘</div>\n<div class="side-item"><span class="side-item-icon">📝</span>内容管理 <span class="side-item-badge">新</span></div>\n<div class="side-item"><span class="side-item-icon">👥</span>用户列表</div>\n<div class="side-item"><span class="side-item-icon">📦</span>订单管理</div>\n<div class="side-item"><span class="side-item-icon">📈</span>数据分析</div>\n<div class="side-item"><span class="side-item-icon">⚙️</span>系统设置</div>\n</div>\n<div style="flex:1;padding:40px">\n<h2 style="margin-bottom:24px">页面内容区域</h2>\n<p style="color:#666;line-height:1.8">这里是页面的主要内容的区域。左侧是侧边导航，顶部是面包屑导航。</p>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.tabs='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.tabs{display:flex;border-bottom:2px solid #eee;margin-bottom:24px}\n.tab-item{padding:12px 24px;cursor:pointer;font-size:14px;color:#666;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}\n.tab-item:hover{color:#4a90d9}\n.tab-item.active{color:#4a90d9;border-bottom-color:#4a90d9;font-weight:600}\n.tab-content{padding:20px;background:#fff;border-radius:8px;min-height:200px}\n\n.steps{display:flex;justify-content:space-between;margin:24px 0;position:relative}\n.steps::before{content:"";position:absolute;top:20px;left:0;right:0;height:2px;background:#ddd;z-index:0}\n.step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;flex:1}\n.step-circle{width:40px;height:40px;border-radius:50%;background:#fff;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-weight:600;color:#999;margin-bottom:8px;transition:all .2s}\n.step.active .step-circle{background:#4a90d9;border-color:#4a90d9;color:#fff}\n.step.done .step-circle{background:#52c41a;border-color:#52c41a;color:#fff}\n.step-label{font-size:13px;color:#666;text-align:center}\n.step.active .step-label{color:#4a90d9;font-weight:600}\n.step.desc{font-size:11px;color:#999;margin-top:4px}\n</style>\n</head>\n<body>\n<h2>标签页</h2>\n<div class="tabs">\n<div class="tab-item active">基本信息</div>\n<div class="tab-item">产品详情</div>\n<div class="tab-item">用户评价 <span style="background:#ff4d4f;color:#fff;padding:2px 6px;border-radius:10px;font-size:11px;margin-left:4px">128</span></div>\n<div class="tab-item">常见问题</div>\n</div>\n<div class="tab-content">\n<h3>基本信息</h3>\n<p>这是标签页的内容区域，可以展示不同的信息。</p>\n<p>每个标签页对应一个内容面板，用户点击标签可以切换显示不同的内容。</p>\n</div>\n\n<h2>步骤条</h2>\n<div class="steps">\n<div class="step done"><div class="step-circle">✓</div><div class="step-label">选择商品</div><div class="step desc">浏览并选择</div></div>\n<div class="step active"><div class="step-circle">2</div><div class="step-label">确认订单</div><div class="step desc">填写收货信息</div></div>\n<div class="step"><div class="step-circle">3</div><div class="step-label">支付付款</div><div class="step desc">选择支付方式</div></div>\n<div class="step"><div class="step-circle">4</div><div class="step-label">完成购买</div><div class="step desc">等待收货</div></div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.modal='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.modal{background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-width:500px;margin:0 auto;overflow:hidden}\n.modal-header{padding:20px 24px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}\n.modal-title{font-size:18px;font-weight:600}\n.modal-close{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s}\n.modal-close:hover{background:#f5f5f5}\n.modal-body{padding:24px;line-height:1.8}\n.modal-footer{padding:16px 24px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:12px}\n.btn{padding:10px 24px;border:none;border-radius:6px;cursor:pointer;font-size:14px;transition:all .2s}\n.btn-default{background:#f5f5f5;color:#333}\n.btn-default:hover{background:#e8e8e8}\n.btn-primary{background:#4a90d9;color:#fff}\n.btn-primary:hover{background:#3a7bc8}\n.btn-danger{background:#ff4d4f;color:#fff}\n\n.alert{padding:16px 20px;border-radius:8px;margin-bottom:16px;display:flex;align-items:center;gap:12px}\n.alert-info{background:#e8f4fd;color:#1a5276;border-left:4px solid #4a90d9}\n.alert-success{background:#d4edda;color:#155724;border-left:4px solid #52c41a}\n.alert-warning{background:#fff3cd;color:#856404;border-left:4px solid #faad14}\n.alert-danger{background:#f8d7da;color:#721c24;border-left:4px solid #ff4d4f}\n.alert-icon{font-size:20px}\n</style>\n</head>\n<body>\n<h2>对话框</h2>\n<div class="modal">\n<div class="modal-header">\n<div class="modal-title">确认删除</div>\n<div class="modal-close">✕</div>\n</div>\n<div class="modal-body">\n<p>确定要删除这个文件吗？此操作无法撤销。</p>\n</div>\n<div class="modal-footer">\n<button class="btn btn-default">取消</button>\n<button class="btn btn-danger">删除</button>\n</div>\n</div>\n\n<h2>提示框</h2>\n<div class="alert alert-info"><span class="alert-icon">ℹ️</span><div><strong>提示信息</strong><p style="margin:4px 0 0">这是一条提示信息，用于向用户展示重要提示。</p></div></div>\n<div class="alert alert-success"><span class="alert-icon">✅</span><div><strong>操作成功</strong><p style="margin:4px 0 0">您的文件已成功保存到云端。</p></div></div>\n<div class="alert alert-warning"><span class="alert-icon">⚠️</span><div><strong>警告</strong><p style="margin:4px 0 0">您的账户余额不足，请及时充值。</p></div></div>\n<div class="alert alert-danger"><span class="alert-icon">❌</span><div><strong>错误</strong><p style="margin:4px 0 0">网络连接失败，请检查网络设置。</p></div></div>\n</body>\n</html>';
+
+TEMPLATES.chart='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.chart-container{background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.chart-title{font-size:16px;font-weight:600;margin-bottom:20px}\n.bar-chart{display:flex;align-items:flex-end;gap:20px;height:200px;padding:0 20px;border-bottom:1px solid #eee}\n.bar-item{display:flex;flex-direction:column;align-items:center;flex:1}\n.bar{width:40px;background:linear-gradient(180deg,#4a90d9,#2c5aa0);border-radius:4px 4px 0 0;transition:height .3s}\n.bar-label{font-size:12px;color:#666;margin-top:8px}\n.bar-value{font-size:13px;font-weight:600;color:#4a90d9;margin-bottom:8px}\n\n.pie-chart{display:flex;gap:40px;align-items:center;justify-content:center}\n.pie-svg{width:200px;height:200px}\n.legend{display:flex;flex-wrap:wrap;gap:12px}\n.legend-item{display:flex;align-items:center;gap:8px;font-size:13px}\n.legend-dot{width:12px;height:12px;border-radius:3px}\n\n.line-chart{position:relative;height:200px;padding:20px 0}\n.line-path{fill:none;stroke:#4a90d9;stroke-width:3}\n.dot{fill:#4a90d9}\n</style>\n</head>\n<body>\n<h2>柱状图</h2>\n<div class="chart-container">\n<div class="chart-title">各月销售额（万元）</div>\n<div class="bar-chart">\n<div class="bar-item"><div class="bar-value">120</div><div class="bar" style="height:120px"></div><div class="bar-label">1月</div></div>\n<div class="bar-item"><div class="bar-value">85</div><div class="bar" style="height:85px;background:linear-gradient(180deg,#52c41a,#2d7a0f)"></div><div class="bar-label">2月</div></div>\n<div class="bar-item"><div class="bar-value">150</div><div class="bar" style="height:150px"></div><div class="bar-label">3月</div></div>\n<div class="bar-item"><div class="bar-value">200</div><div class="bar" style="height:200px;background:linear-gradient(180deg,#ff4d4f,#c62828)"></div><div class="bar-label">4月</div></div>\n<div class="bar-item"><div class="bar-value">180</div><div class="bar" style="height:180px"></div><div class="bar-label">5月</div></div>\n<div class="bar-item"><div class="bar-value">220</div><div class="bar" style="height:220px;background:linear-gradient(180deg,#faad14,#d79b00)"></div><div class="bar-label">6月</div></div>\n</div>\n</div>\n\n<h2>饼图</h2>\n<div class="chart-container">\n<div class="chart-title">用户来源分布</div>\n<div class="pie-chart">\n<svg class="pie-svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#4a90d9" stroke="#fff" stroke-width="2"/><path d="M50,50 L50,10 A40,40 0 0,1 89,70 Z" fill="#52c41a"/><path d="M50,50 L89,70 A40,40 0 0,1 20,80 Z" fill="#faad14"/><path d="M50,50 L20,80 A40,40 0 0,1 10,40 Z" fill="#ff4d4f"/></svg>\n<div>\n<div class="legend">\n<div class="legend-item"><div class="legend-dot" style="background:#4a90d9"></div>直接访问 35%</div>\n<div class="legend-item"><div class="legend-dot" style="background:#52c41a"></div>搜索引擎 40%</div>\n<div class="legend-item"><div class="legend-dot" style="background:#faad14"></div>社交媒体 15%</div>\n<div class="legend-item"><div class="legend-dot" style="background:#ff4d4f"></div>推荐链接 10%</div>\n</div>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.stats='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:1000px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}\n.stat-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:transform .2s,box-shadow .2s}\n.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}\n.stat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}\n.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}\n.stat-icon.blue{background:#e8f4fd;color:#4a90d9}\n.stat-icon.green{background:#d4edda;color:#52c41a}\n.stat-icon.orange{background:#fff3cd;color:#faad14}\n.stat-icon.red{background:#f8d7da;color:#ff4d4f}\n.stat-trend{font-size:12px;padding:4px 8px;border-radius:4px}\n.stat-trend.up{background:#d4edda;color:#52c41a}\n.stat-trend.down{background:#f8d7da;color:#ff4d4f}\n.stat-value{font-size:32px;font-weight:700;margin-bottom:4px}\n.stat-label{font-size:13px;color:#666}\n</style>\n</head>\n<body>\n<h2>统计卡片</h2>\n<div class="stats-grid">\n<div class="stat-card">\n<div class="stat-header">\n<div class="stat-icon blue">💰</div>\n<span class="stat-trend up">↑ 12.5%</span>\n</div>\n<div class="stat-value">¥125,680</div>\n<div class="stat-label">本月收入</div>\n</div>\n<div class="stat-card">\n<div class="stat-header">\n<div class="stat-icon green">👥</div>\n<span class="stat-trend up">↑ 8.3%</span>\n</div>\n<div class="stat-value">12,856</div>\n<div class="stat-label">总用户数</div>\n</div>\n<div class="stat-card">\n<div class="stat-header">\n<div class="stat-icon orange">📦</div>\n<span class="stat-trend down">↓ 3.2%</span>\n</div>\n<div class="stat-value">3,542</div>\n<div class="stat-label">订单总数</div>\n</div>\n<div class="stat-card">\n<div class="stat-header">\n<div class="stat-icon red">🛒</div>\n<span class="stat-trend up">↑ 15.8%</span>\n</div>\n<div class="stat-value">¥358</div>\n<div class="stat-label">客单价</div>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.progress='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:700px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.progress-item{margin-bottom:24px}\n.progress-header{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px}\n.progress-bar{height:8px;background:#e8e8e8;border-radius:4px;overflow:hidden}\n.progress-fill{height:100%;border-radius:4px;transition:width .3s}\n.progress-fill.blue{background:linear-gradient(90deg,#4a90d9,#6ba3e0)}\n.progress-fill.green{background:linear-gradient(90deg,#52c41a,#73d13d)}\n.progress-fill.orange{background:linear-gradient(90deg,#faad14,#ffc53d)}\n.progress-fill.red{background:linear-gradient(90deg,#ff4d4f,#ff7875)}\n\n.circle-progress{display:flex;gap:40px;justify-content:center;margin:32px 0}\n.circle-item{position:relative;width:120px;height:120px}\n.circle-svg{transform:rotate(-90deg)}\n.circle-bg{fill:none;stroke:#e8e8e8;stroke-width:8}\n.circle-fill{fill:none;stroke:#4a90d9;stroke-width:8;stroke-linecap:round;stroke-dasharray:314;stroke-dashoffset:94}\n.circle-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}\n.circle-value{font-size:24px;font-weight:700}\n.circle-label{font-size:12px;color:#666}\n\n.step-progress{display:flex;justify-content:space-between}\n.step-item{text-align:center;flex:1;position:relative}\n.step-item::before{content:"";position:absolute;top:16px;left:50%;right:-50%;height:4px;background:#e8e8e8;z-index:0}\n.step-item:last-child::before{display:none}\n.step-item.done::before{background:#52c41a}\n.step-circle{width:32px;height:32px;border-radius:50%;background:#fff;border:4px solid #e8e8e8;margin:0 auto 8px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-size:14px}\n.step-item.done .step-circle{border-color:#52c41a;background:#52c41a;color:#fff}\n.step-item.active .step-circle{border-color:#4a90d9;background:#4a90d9;color:#fff}\n.step-name{font-size:13px;color:#666}\n.step-item.active .step-name{color:#4a90d9;font-weight:600}\n</style>\n</head>\n<body>\n<h2>线性进度条</h2>\n<div class="progress-item">\n<div class="progress-header"><span>项目进度</span><span>75%</span></div>\n<div class="progress-bar"><div class="progress-fill blue" style="width:75%"></div></div>\n</div>\n<div class="progress-item">\n<div class="progress-header"><span>存储空间</span><span>58%</span></div>\n<div class="progress-bar"><div class="progress-fill orange" style="width:58%"></div></div>\n</div>\n<div class="progress-item">\n<div class="progress-header"><span>上传进度</span><span>32%</span></div>\n<div class="progress-bar"><div class="progress-fill green" style="width:32%"></div></div>\n</div>\n<div class="progress-item">\n<div class="progress-header"><span>错误率</span><span>8%</span></div>\n<div class="progress-bar"><div class="progress-fill red" style="width:8%"></div></div>\n</div>\n\n<h2>环形进度</h2>\n<div class="circle-progress">\n<div class="circle-item"><svg class="circle-svg" width="120" height="120"><circle class="circle-bg" cx="60" cy="60" r="50"/><circle class="circle-fill" cx="60" cy="60" r="50" style="stroke:#4a90d9;stroke-dashoffset:110"/></svg><div class="circle-text"><div class="circle-value">65%</div><div class="circle-label">完成率</div></div></div>\n<div class="circle-item"><svg class="circle-svg" width="120" height="120"><circle class="circle-bg" cx="60" cy="60" r="50"/><circle class="circle-fill" cx="60" cy="60" r="50" style="stroke:#52c41a;stroke-dashoffset:63"/></svg><div class="circle-text"><div class="circle-value">80%</div><div class="circle-label">通过率</div></div></div>\n<div class="circle-item"><svg class="circle-svg" width="120" height="120"><circle class="circle-bg" cx="60" cy="60" r="50"/><circle class="circle-fill" cx="60" cy="60" r="50" style="stroke:#faad14;stroke-dashoffset:157"/></svg><div class="circle-text"><div class="circle-value">50%</div><div class="circle-label">覆盖率</div></div></div>\n</div>\n\n<h2>步骤进度</h2>\n<div class="step-progress">\n<div class="step-item done"><div class="step-circle">✓</div><div class="step-name">已报名</div></div>\n<div class="step-item done"><div class="step-circle">✓</div><div class="step-name">已开课</div></div>\n<div class="step-item active"><div class="step-circle">3</div><div class="step-name">进行中</div></div>\n<div class="step-item"><div class="step-circle">4</div><div class="step-name">已结课</div></div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.timeline='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:700px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.timeline{position:relative;padding-left:30px}\n.timeline::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:2px;background:#e8e8e8}\n.timeline-item{position:relative;padding-bottom:32px}\n.timeline-item:last-child{padding-bottom:0}\n.timeline-dot{position:absolute;left:-30px;top:4px;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #4a90d9;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4a90d9}\n.timeline-item.done .timeline-dot{border-color:#52c41a;background:#52c41a;color:#fff}\n.timeline-item.active .timeline-dot{background:#4a90d9;color:#fff}\n.timeline-date{font-size:13px;color:#999;margin-bottom:8px}\n.timeline-content{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.timeline-title{font-size:16px;font-weight:600;margin-bottom:8px}\n.timeline-desc{font-size:13px;color:#666;line-height:1.6}\n.timeline-tag{display:inline-block;background:#e8f4fd;color:#4a90d9;padding:4px 10px;border-radius:4px;font-size:11px;margin-top:12px}\n\n.process{display:flex;gap:16px;margin:24px 0;flex-wrap:wrap}\n.process-item{flex:1;min-width:150px;background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.process-num{width:32px;height:32px;border-radius:50%;background:#4a90d9;color:#fff;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-weight:600}\n.process-title{font-size:14px;font-weight:600;margin-bottom:8px}\n.process-desc{font-size:12px;color:#666}\n</style>\n</head>\n<body>\n<h2>垂直时间线</h2>\n<div class="timeline">\n<div class="timeline-item done">\n<div class="timeline-dot">✓</div>\n<div class="timeline-date">2026年5月10日</div>\n<div class="timeline-content">\n<div class="timeline-title">项目启动</div>\n<div class="timeline-desc">召开项目启动会议，确定项目目标和里程碑计划。</div>\n<span class="timeline-tag">已完成</span>\n</div>\n</div>\n<div class="timeline-item done">\n<div class="timeline-dot">✓</div>\n<div class="timeline-date">2026年5月12日</div>\n<div class="timeline-content">\n<div class="timeline-title">需求分析</div>\n<div class="timeline-desc">完成用户需求调研，输出需求文档。</div>\n<span class="timeline-tag">已完成</span>\n</div>\n</div>\n<div class="timeline-item active">\n<div class="timeline-dot">2</div>\n<div class="timeline-date">2026年5月15日</div>\n<div class="timeline-content">\n<div class="timeline-title">系统设计</div>\n<div class="timeline-desc">正在进行系统架构设计和数据库设计。</div>\n<span class="timeline-tag" style="background:#fff3cd;color:#856404">进行中</span>\n</div>\n</div>\n<div class="timeline-item">\n<div class="timeline-dot">4</div>\n<div class="timeline-date">2026年5月20日</div>\n<div class="timeline-content">\n<div class="timeline-title">开发阶段</div>\n<div class="timeline-desc">前后端开发、接口联调。</div>\n<span class="timeline-tag" style="background:#f5f5f5;color:#999">待开始</span>\n</div>\n</div>\n</div>\n\n<h2>流程步骤</h2>\n<div class="process">\n<div class="process-item"><div class="process-num">1</div><div class="process-title">提交申请</div><div class="process-desc">填写基本信息</div></div>\n<div class="process-item"><div class="process-num">2</div><div class="process-title">资料审核</div><div class="process-desc">等待人工审核</div></div>\n<div class="process-item"><div class="process-num">3</div><div class="process-title">支付费用</div><div class="process-desc">在线完成支付</div></div>\n<div class="process-item"><div class="process-num">4</div><div class="process-title">完成注册</div><div class="process-desc">获取账号密码</div></div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.animation='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.demo-box{width:100px;height:100px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:20px auto}\n.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}\n.demo-card{background:#fff;border-radius:12px;padding:24px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.demo-label{font-size:13px;color:#666;margin-top:16px}\n\n@keyframes fadeIn{from{opacity:0}to{opacity:1}}\n@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}\n@keyframes scaleIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}\n@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}\n@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}\n@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}\n\n.box-fade{animation:fadeIn 1s ease}\n.box-slide{animation:slideUp 1s ease}\n.box-scale{animation:scaleIn .8s ease}\n.box-bounce{animation:bounce 1s ease infinite}\n.box-spin{animation:spin 2s linear infinite}\n.box-pulse{animation:pulse 1.5s ease-in-out infinite}\n\n.transition-demo{background:#4a90d9;color:#fff;cursor:pointer;transition:all .3s}\n.transition-demo:hover{background:#52c41a;transform:scale(1.1);box-shadow:0 8px 24px rgba(0,0,0,.2)}\n\n.shadow-demo{background:#fff;transition:all .3s}\n.shadow-demo:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.15)}\n</style>\n</head>\n<body>\n<h2>CSS 动画效果</h2>\n<div class="demo-grid">\n<div class="demo-card"><div class="demo-box box-fade" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff">1</div><div class="demo-label">淡入 Fade In</div></div>\n<div class="demo-card"><div class="demo-box box-slide" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff">2</div><div class="demo-label">上滑 Slide Up</div></div>\n<div class="demo-card"><div class="demo-box box-scale" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff">3</div><div class="demo-label">缩放 Scale In</div></div>\n<div class="demo-card"><div class="demo-box box-bounce" style="background:linear-gradient(135deg,#fa709a,#fee140);color:#333">4</div><div class="demo-label">弹跳 Bounce</div></div>\n<div class="demo-card"><div class="demo-box box-spin" style="background:linear-gradient(135deg,#4a90d9,#6ba3e0);color:#fff">↻</div><div class="demo-label">旋转 Spin</div></div>\n<div class="demo-card"><div class="demo-box box-pulse" style="background:linear-gradient(135deg,#ff4d4f,#ff7875);color:#fff">❤</div><div class="demo-label">脉冲 Pulse</div></div>\n</div>\n\n<h2>悬停过渡效果</h2>\n<div class="demo-grid">\n<div class="demo-card"><div class="demo-box transition-demo">Hover</div><div class="demo-label">悬停变色+缩放</div></div>\n<div class="demo-card shadow-demo"><div class="demo-box" style="background:#52c41a;color:#fff">阴影</div><div class="demo-label">悬停阴影增强</div></div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.gallery='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:1000px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}\n.gallery-item{aspect-ratio:1;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:12px;overflow:hidden;position:relative;cursor:pointer;transition:transform .2s}\n.gallery-item:hover{transform:scale(1.02)}\n.gallery-item::before{content:attr(data-title);position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;font-size:14px}\n.gallery-item .icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;opacity:.3}\n\n.masonry{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}\n.masonry-item{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.masonry-img{height:150px;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff}\n.masonry-body{padding:16px}\n.masonry-title{font-size:14px;font-weight:600;margin-bottom:8px}\n.masonry-desc{font-size:12px;color:#666}\n\n.color-card{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}\n.color-item{width:80px;text-align:center}\n.color-swatch{width:80px;height:80px;border-radius:12px;margin-bottom:8px}\n.color-name{font-size:12px;color:#666}\n</style>\n</head>\n<body>\n<h2>图片画廊</h2>\n<div class="gallery-grid">\n<div class="gallery-item" data-title="风景摄影" style="background:linear-gradient(135deg,#667eea,#764ba2)"><span class="icon">🏔️</span></div>\n<div class="gallery-item" data-title="城市夜景" style="background:linear-gradient(135deg,#11998e,#38ef7d)"><span class="icon">🌃</span></div>\n<div class="gallery-item" data-title="美食摄影" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><span class="icon">🍜</span></div>\n<div class="gallery-item" data-title="人物肖像" style="background:linear-gradient(135deg,#fa709a,#fee140)"><span class="icon">👤</span></div>\n<div class="gallery-item" data-title="动物世界" style="background:linear-gradient(135deg,#4a90d9,#6ba3e0)"><span class="icon">🐱</span></div>\n<div class="gallery-item" data-title="艺术设计" style="background:linear-gradient(135deg,#a18cd1,#fbc2eb)"><span class="icon">🎨</span></div>\n</div>\n\n<h2>瀑布流卡片</h2>\n<div class="masonry">\n<div class="masonry-item"><div class="masonry-img" style="background:linear-gradient(135deg,#ff9a56,#ff6a00);height:180px">🌅</div><div class="masonry-body"><div class="masonry-title">日出东方</div><div class="masonry-desc">记录每一天的日出时刻</div></div></div>\n<div class="masonry-item"><div class="masonry-img" style="background:linear-gradient(135deg,#00c6fb,#005bea)">🌊</div><div class="masonry-body"><div class="masonry-title">海洋世界</div><div class="masonry-desc">探索深海的奥秘</div></div></div>\n<div class="masonry-item"><div class="masonry-img" style="background:linear-gradient(135deg,#f093fb,#f5576c);height:140px">🌸</div><div class="masonry-body"><div class="masonry-title">春日樱花</div><div class="masonry-desc">樱花树下的浪漫</div></div></div>\n</div>\n\n<h2>配色方案</h2>\n<div class="color-card">\n<div class="color-item"><div class="color-swatch" style="background:#4a90d9"></div><div class="color-name">主色调</div></div>\n<div class="color-item"><div class="color-swatch" style="background:#52c41a"></div><div class="color-name">成功色</div></div>\n<div class="color-item"><div class="color-swatch" style="background:#faad14"></div><div class="color-name">警告色</div></div>\n<div class="color-item"><div class="color-swatch" style="background:#ff4d4f"></div><div class="color-name">错误色</div></div>\n<div class="color-item"><div class="color-swatch" style="background:#722ed1"></div><div class="color-name">紫色</div></div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.rating='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:700px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.rating-card{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.rating-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}\n.rating-score{font-size:48px;font-weight:700;color:#faad14}\n.rating-meta{font-size:13px;color:#666}\n.stars{display:flex;gap:4px;margin-top:4px}\n.star{font-size:20px;color:#ddd}\n.star.filled{color:#faad14}\n\n.rating-list{list-style:none;padding:0;margin:0}\n.rating-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0}\n.rating-item:last-child{border-bottom:none}\n.rating-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px}\n.rating-content{flex:1}\n.rating-name{font-size:14px;font-weight:600;margin-bottom:4px}\n.rating-text{font-size:13px;color:#666;line-height:1.5}\n.rating-time{font-size:12px;color:#999}\n\n.like-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid #eee;border-radius:20px;background:#fff;cursor:pointer;transition:all .2s;font-size:14px}\n.like-btn:hover{border-color:#ff4d4f;color:#ff4d4f}\n.like-btn.liked{background:#ff4d4f;color:#fff;border-color:#ff4d4f}\n\n.tag-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}\n.tag-item{padding:6px 14px;border-radius:16px;background:#f5f5f5;font-size:12px;color:#666;cursor:pointer;transition:all .2s}\n.tag-item:hover{background:#4a90d9;color:#fff}\n</style>\n</head>\n<body>\n<h2>评分组件</h2>\n<div class="rating-card">\n<div class="rating-header">\n<div>\n<div class="rating-score">4.8</div>\n<div class="rating-meta">共有 1,286 条评价</div>\n<div class="stars">\n<span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span>\n</div>\n</div>\n</div>\n<div class="tag-list">\n<span class="tag-item">物流快 328</span>\n<span class="tag-item">质量好 256</span>\n<span class="tag-item">服务好 189</span>\n<span class="tag-item">性价比高 156</span>\n</div>\n</div>\n\n<h2>用户评价列表</h2>\n<div class="rating-card">\n<ul class="rating-list">\n<li class="rating-item">\n<div class="rating-avatar">张</div>\n<div class="rating-content">\n<div class="rating-name">张三丰</div>\n<div class="stars" style="margin-bottom:8px"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span></div>\n<div class="rating-text">非常满意！包装精美，物流很快，产品质量很好，会继续回购的。</div>\n</div>\n<div class="rating-time">2026-05-10</div>\n</li>\n<li class="rating-item">\n<div class="rating-avatar" style="background:linear-gradient(135deg,#11998e,#38ef7d)">李</div>\n<div class="rating-content">\n<div class="rating-name">李四维</div>\n<div class="stars" style="margin-bottom:8px"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span></div>\n<div class="rating-text">整体不错，就是发货稍微慢了点，希望改进。</div>\n</div>\n<div class="rating-time">2026-05-08</div>\n</li>\n<li class="rating-item">\n<div class="rating-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">王</div>\n<div class="rating-content">\n<div class="rating-name">王五</div>\n<div class="stars" style="margin-bottom:8px"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span></div>\n<div class="rating-text">超级棒！超出预期，客服态度也很好，必须好评！</div>\n</div>\n<div class="rating-time">2026-05-05</div>\n</li>\n</ul>\n</div>\n\n<h2>点赞按钮</h2>\n<div style="display:flex;gap:16px;flex-wrap:wrap">\n<button class="like-btn"><span>👍</span> 点赞 (2.3k)</button>\n<button class="like-btn liked"><span>❤️</span> 已赞 (856)</button>\n<button class="like-btn"><span>⭐</span> 收藏</button>\n<button class="like-btn"><span>📤</span> 分享</button>\n</div>\n</body>\n</html>';
+
+TEMPLATES.pricing='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:1000px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px;text-align:center}\n.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}\n.pricing-card{background:#fff;border-radius:16px;padding:32px;position:relative;transition:transform .2s,box-shadow .2s}\n.pricing-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.1)}\n.pricing-card.popular{border:2px solid #4a90d9;transform:scale(1.05)}\n.pricing-card.popular:hover{transform:scale(1.05) translateY(-4px)}\n.popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#4a90d9;color:#fff;padding:4px 16px;border-radius:12px;font-size:12px;font-weight:600}\n.pricing-name{font-size:20px;font-weight:600;text-align:center;margin-bottom:16px}\n.pricing-price{text-align:center;margin-bottom:24px}\n.price-value{font-size:48px;font-weight:700;color:#333}\n.price-unit{font-size:14px;color:#999}\n.pricing-desc{text-align:center;color:#666;font-size:14px;margin-bottom:24px}\n.pricing-features{list-style:none;padding:0;margin:0 0 24px}\n.pricing-features li{padding:10px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px;font-size:14px}\n.pricing-features li::before{content:"✓";color:#52c41a;font-weight:bold}\n.pricing-features li.disabled{color:#ccc}\n.pricing-features li.disabled::before{content:"✕";color:#ccc}\n.pricing-btn{display:block;width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}\n.pricing-btn.primary{background:#4a90d9;color:#fff}\n.pricing-btn.primary:hover{background:#3a7bc8}\n.pricing-btn.outline{border:1px solid #4a90d9;color:#4a90d9;background:transparent}\n.pricing-btn.outline:hover{background:#4a90d9;color:#fff}\n</style>\n</head>\n<body>\n<h2>价格方案</h2>\n<div class="pricing-grid">\n<div class="pricing-card">\n<div class="pricing-name">基础版</div>\n<div class="pricing-price"><span class="price-value">¥0</span><span class="price-unit">/月</span></div>\n<div class="pricing-desc">适合个人用户入门使用</div>\n<ul class="pricing-features">\n<li>5个项目</li>\n<li>1GB存储空间</li>\n<li>基础分析功能</li>\n<li>邮件支持</li>\n<li class="disabled">高级API</li>\n<li class="disabled">自定义域名</li>\n</ul>\n<button class="pricing-btn outline">免费试用</button>\n</div>\n<div class="pricing-card popular">\n<span class="popular-badge">最受欢迎</span>\n<div class="pricing-name">专业版</div>\n<div class="pricing-price"><span class="price-value">¥99</span><span class="price-unit">/月</span></div>\n<div class="pricing-desc">适合团队和小型企业</div>\n<ul class="pricing-features">\n<li>无限项目</li>\n<li>50GB存储空间</li>\n<li>高级分析功能</li>\n<li>7x24小时支持</li>\n<li>高级API</li>\n<li class="disabled">自定义域名</li>\n</ul>\n<button class="pricing-btn primary">立即购买</button>\n</div>\n<div class="pricing-card">\n<div class="pricing-name">企业版</div>\n<div class="pricing-price"><span class="price-value">¥299</span><span class="price-unit">/月</span></div>\n<div class="pricing-desc">适合大型企业定制需求</div>\n<ul class="pricing-features">\n<li>无限项目</li>\n<li>无限存储空间</li>\n<li>全套分析功能</li>\n<li>专属客户经理</li>\n<li>高级API</li>\n<li>自定义域名</li>\n</ul>\n<button class="pricing-btn outline">联系我们</button>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.profile='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:900px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.profile-card{background:#fff;border-radius:16px;padding:32px;display:flex;gap:32px;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n.profile-avatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;flex-shrink:0}\n.profile-info{flex:1}\n.profile-name{font-size:24px;font-weight:700;margin-bottom:4px}\n.profile-title{color:#666;font-size:14px;margin-bottom:16px}\n.profile-bio{color:#666;line-height:1.6;margin-bottom:20px}\n.profile-stats{display:flex;gap:32px;margin-bottom:20px}\n.stat-item{text-align:center}\n.stat-value{font-size:20px;font-weight:700;color:#4a90d9}\n.stat-label{font-size:12px;color:#999}\n.profile-tags{display:flex;gap:8px;flex-wrap:wrap}\n.tag{background:#e8f4fd;color:#4a90d9;padding:4px 12px;border-radius:16px;font-size:12px}\n.profile-actions{display:flex;gap:12px}\n.btn{padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:all .2s}\n.btn-primary{background:#4a90d9;color:#fff}\n.btn-primary:hover{background:#3a7bc8}\n.btn-outline{border:1px solid #ddd;color:#666;background:transparent}\n\n.mini-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;align-items:center;gap:16px}\n.mini-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#11998e,#38ef7d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}\n.mini-info{flex:1}\n.mini-name{font-size:16px;font-weight:600;margin-bottom:4px}\n.mini-title{font-size:13px;color:#666}\n</style>\n</head>\n<body>\n<h2>用户资料卡</h2>\n<div class="profile-card">\n<div class="profile-avatar">陈</div>\n<div class="profile-info">\n<div class="profile-name">陈思远</div>\n<div class="profile-title">高级前端工程师 · 杭州</div>\n<div class="profile-bio">8年前端开发经验，专注于 React、Vue 等现代前端框架。热爱技术分享，在掘金社区发布过 50+ 篇文章。</div>\n<div class="profile-stats">\n<div class="stat-item"><div class="stat-value">1.2k</div><div class="stat-label">粉丝</div></div>\n<div class="stat-item"><div class="stat-value">856</div><div class="stat-label">关注</div></div>\n<div class="stat-item"><div class="stat-value">50+</div><div class="stat-label">文章</div></div>\n</div>\n<div class="profile-tags">\n<span class="tag">React</span>\n<span class="tag">Vue</span>\n<span class="tag">TypeScript</span>\n<span class="tag">Node.js</span>\n</div>\n<div class="profile-actions" style="margin-top:20px">\n<button class="btn btn-primary">关注</button>\n<button class="btn btn-outline">私信</button>\n</div>\n</div>\n</div>\n\n<h2>迷你用户卡</h2>\n<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">\n<div class="mini-card">\n<div class="mini-avatar">张</div>\n<div class="mini-info">\n<div class="mini-name">张三</div>\n<div class="mini-title">产品经理 · 深圳</div>\n</div>\n<button class="btn btn-primary" style="padding:8px 16px">+关注</button>\n</div>\n<div class="mini-card">\n<div class="mini-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">李</div>\n<div class="mini-info">\n<div class="mini-name">李梅</div>\n<div class="mini-title">UI设计师 · 上海</div>\n</div>\n<button class="btn btn-primary" style="padding:8px 16px">+关注</button>\n</div>\n<div class="mini-card">\n<div class="mini-avatar" style="background:linear-gradient(135deg,#fa709a,#fee140)">王</div>\n<div class="mini-info">\n<div class="mini-name">王明</div>\n<div class="mini-title">后端开发 · 北京</div>\n</div>\n<button class="btn btn-primary" style="padding:8px 16px">+关注</button>\n</div>\n</div>\n</body>\n</html>';
+
+TEMPLATES.search='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n*{box-sizing:border-box}\nbody{font-family:"Microsoft YaHei",sans-serif;padding:40px;max-width:800px;margin:0 auto;color:#333;background:#f5f7fa}\nh2{font-size:18px;margin:32px 0 16px}\n.search-box{display:flex;gap:12px;margin-bottom:24px}\n.search-input-wrapper{position:relative;flex:1}\n.search-input{width:100%;padding:14px 20px 14px 48px;border:2px solid #e8e8e8;border-radius:12px;font-size:15px;transition:border-color .2s}\n.search-input:focus{outline:none;border-color:#4a90d9}\n.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:18px;color:#999}\n.search-btn{padding:14px 28px;background:#4a90d9;color:#fff;border:none;border-radius:12px;font-size:15px;cursor:pointer;transition:background .2s}\n.search-btn:hover{background:#3a7bc8}\n\n.filter-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}\n.filter-btn{padding:8px 16px;border:1px solid #e8e8e8;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:all .2s}\n.filter-btn:hover,.filter-btn.active{border-color:#4a90d9;background:#4a90d9;color:#fff}\n\n.result-item{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);cursor:pointer;transition:all .2s}\n.result-item:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}\n.result-title{font-size:16px;font-weight:600;color:#4a90d9;margin-bottom:8px}\n.result-desc{font-size:13px;color:#666;line-height:1.6;margin-bottom:12px}\n.result-meta{display:flex;gap:16px;font-size:12px;color:#999}\n.result-tag{background:#e8f4fd;color:#4a90d9;padding:2px 8px;border-radius:4px}\n\n.suggestion{padding:12px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px;transition:background .2s}\n.suggestion:hover{background:#f5f7fa}\n.suggestion-key{color:#4a90d9;font-weight:600}\n</style>\n</head>\n<body>\n<h2>搜索框</h2>\n<div class="search-box">\n<div class="search-input-wrapper">\n<span class="search-icon">🔍</span>\n<input type="text" class="search-input" placeholder="搜索文章、教程、资源...">\n</div>\n<button class="search-btn">搜索</button>\n</div>\n\n<h2>热门搜索</h2>\n<div class="filter-bar">\n<span class="filter-btn active">全部</span>\n<span class="filter-btn">前端</span>\n<span class="filter-btn">后端</span>\n<span class="filter-btn">移动端</span>\n<span class="filter-btn">人工智能</span>\n<span class="filter-btn">数据库</span>\n<span class="filter-btn">DevOps</span>\n</div>\n\n<h2>搜索结果</h2>\n<div class="result-item">\n<div class="result-title">React 18 新特性详解</div>\n<div class="result-desc">React 18 引入了自动批处理、新的 Suspense 特性、Concurrent Rendering 等重大更新。本文详细介绍每个新特性的使用方法和注意事项。</div>\n<div class="result-meta">\n<span class="result-tag">React</span>\n<span>阅读 2.3k</span>\n<span>2026-05-08</span>\n</div>\n</div>\n<div class="result-item">\n<div class="result-title">Vue 3 Composition API 最佳实践</div>\n<div class="result-desc">深入讲解 Vue 3 Composition API 的使用场景、代码组织方式，以及如何编写可复用逻辑。</div>\n<div class="result-meta">\n<span class="result-tag">Vue</span>\n<span>阅读 1.8k</span>\n<span>2026-05-06</span>\n</div>\n</div>\n<div class="result-item">\n<div class="result-title">TypeScript 5.0 更新亮点</div>\n<div class="result-desc">TypeScript 5.0 带来了更轻量的类型检查、新的装饰器语法、性能优化等众多新功能。</div>\n<div class="result-meta">\n<span class="result-tag">TypeScript</span>\n<span>阅读 1.5k</span>\n<span>2026-05-04</span>\n</div>\n</div>\n</body>\n</html>';
+
+loadTemplate('card');
+</script>
+</body>
+</html>

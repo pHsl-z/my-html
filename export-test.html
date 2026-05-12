@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>导出测试工具</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#1a1a2e;
+            --surface:#16213e;
+            --surface2:#0f3460;
+            --accent:#4a9eff;
+            --accent2:#2b5797;
+            --success:#28a745;
+            --error:#dc3545;
+            --warning:#e67e22;
+            --text:#e6e6e6;
+            --text2:#999;
+            --border:#333
+        }
+        html,body{height:100%;font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+        .app{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+        .header{background:var(--surface);padding:12px 20px;display:flex;align-items:center;gap:20px;border-bottom:2px solid var(--accent)}
+        .header h1{font-size:18px;color:var(--accent);white-space:nowrap}
+        .header .stats{font-size:11px;color:var(--text2);background:var(--surface2);padding:4px 12px;border-radius:20px}
+        .tabs{display:flex;gap:8px;margin-left:auto}
+        .tab{padding:8px 20px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font-size:13px;transition:all .2s}
+        .tab:hover{border-color:var(--accent)}
+        .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+        .main{display:grid;grid-template-columns:200px 1fr 45%;overflow:hidden}
+        .sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px}
+        .sidebar h3{font-size:12px;color:var(--text2);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+        .tpl-btn{display:block;width:100%;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);cursor:pointer;font-size:12px;text-align:left;transition:all .2s}
+        .tpl-btn:hover{border-color:var(--accent);background:rgba(74,158,255,.1)}
+        .tpl-btn.active{border-color:var(--accent);background:var(--accent);color:#fff}
+        .tpl-btn span{margin-right:6px}
+        .editor-panel{display:flex;flex-direction:column;background:#0d0d0d}
+        .panel-header{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2)}
+        #htmlEditor{flex:1;width:100%;background:#111;color:#d4d4d4;border:none;padding:12px;font-family:"Consolas","Monaco",monospace;font-size:12px;line-height:1.5;resize:none;outline:none}
+        .preview-panel{display:flex;flex-direction:column;background:#fff;border-left:1px solid var(--border)}
+        .preview-header{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text)}
+        #previewFrame{flex:1;border:none}
+        .methods-bar{background:var(--surface);border-top:2px solid var(--surface2);padding:10px 16px;max-height:200px;overflow-y:auto}
+        .methods-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+        .method-card{border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg);transition:all .2s}
+        .method-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(74,158,255,.2)}
+        .method-card.ready{border-color:rgba(40,167,69,.4)}
+        .method-info{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .method-id{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
+        .method-card.ready .method-id{background:var(--success)}
+        .method-name{font-size:12px;font-weight:600;color:var(--text);flex:1}
+        .method-libs{font-size:10px;color:var(--text2);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px}
+        .lib-tag{padding:2px 6px;border-radius:4px;font-size:9px;background:rgba(255,255,255,.05)}
+        .lib-tag.loaded{background:rgba(40,167,69,.2);color:var(--success)}
+        .lib-tag.needed{background:rgba(230,126,34,.2);color:var(--warning)}
+        .export-btn{width:100%;padding:8px;border:1px solid var(--accent);border-radius:6px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+        .export-btn:hover{background:#3d8bfd;transform:scale(1.02)}
+        .export-btn:active{transform:scale(0.98)}
+        .export-btn.loading{background:var(--warning);border-color:var(--warning);cursor:wait}
+        .format-badge{font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px}
+        .format-badge.docx{background:var(--accent2);color:#fff}
+        .format-badge.pdf{background:var(--accent);color:#fff}
+        .toast-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px}
+        .toast{padding:12px 20px;border-radius:8px;font-size:13px;color:#fff;animation:toastIn .3s ease;max-width:320px;word-wrap:break-word}
+        .toast.info{background:var(--accent)}
+        .toast.success{background:var(--success)}
+        .toast.error{background:var(--error)}
+        .toast.warning{background:var(--warning)}
+        @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+        .status-bar{padding:8px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:11px;color:var(--text2);display:flex;justify-content:space-between}
+        .status-bar .dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px}
+        .detail-panel{position:fixed;top:0;right:0;width:400px;height:100%;background:var(--surface);border-left:2px solid var(--accent);z-index:1000;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto}
+        .detail-panel.open{transform:translateX(0)}
+        .detail-header{padding:16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        .detail-header h3{font-size:14px;color:var(--accent)}
+        .detail-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:16px}
+        .detail-body{padding:16px}
+        .detail-section{margin-bottom:16px}
+        .detail-section h4{font-size:12px;color:var(--accent);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+        .detail-section p{font-size:12px;color:var(--text2);line-height:1.6}
+        .detail-ratings{display:flex;gap:12px;flex-wrap:wrap}
+        .rating-item{font-size:11px;color:var(--text2)}
+        .rating-item strong{color:var(--accent)}
+        .detail-libs{display:flex;flex-direction:column;gap:8px}
+        .detail-lib{display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:6px}
+        .detail-lib-icon{font-size:16px}
+        .detail-lib-name{font-size:12px;flex:1}
+        .detail-lib-status{font-size:10px;padding:2px 8px;border-radius:4px}
+        .detail-lib-status.loaded{background:rgba(40,167,69,.2);color:var(--success)}
+        .detail-lib-status.needed{background:rgba(230,126,34,.2);color:var(--warning)}
+        @media(max-width:1200px){.main{grid-template-columns:180px 1fr 40%}}
+        @media(max-width:900px){.main{grid-template-columns:1fr}.sidebar{display:none}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <header class="header">
+        <h1>📥 导出测试工具</h1>
+        <span class="stats" id="statsInfo">18种导出方案 | 16个模板 | 11个库</span>
+        <div class="tabs">
+            <button class="tab active" data-format="docx" onclick="switchFormat('docx')">📝 DOCX (8)</button>
+            <button class="tab" data-format="pdf" onclick="switchFormat('pdf')">📄 PDF (10)</button>
+            <button class="tab" data-format="all" onclick="switchFormat('all')">🌐 全部 (18)</button>
+        </div>
+    </header>
+    
+    <main class="main">
+        <aside class="sidebar">
+            <h3>📋 模板选择</h3>
+            <div id="templateList"></div>
+        </aside>
+        
+        <section class="editor-panel">
+            <div class="panel-header">
+                <span>HTML 编辑器</span>
+                <span id="charCount">0 字符</span>
+            </div>
+            <textarea id="htmlEditor" spellcheck="false"></textarea>
+        </section>
+        
+        <section class="preview-panel">
+            <div class="preview-header">👁️ 实时预览</div>
+            <iframe id="previewFrame"></iframe>
+        </section>
+    </main>
+    
+    <div class="methods-bar">
+        <div class="methods-grid" id="methodsGrid"></div>
+    </div>
+    
+    <footer class="status-bar">
+        <span><span class="dot"></span><span id="statusText">就绪</span></span>
+        <span id="libStatus">库状态：点击导出按钮自动加载所需库</span>
+    </footer>
+</div>
+
+<div class="detail-panel" id="detailPanel">
+    <div class="detail-header">
+        <h3 id="detailTitle">方案详情</h3>
+        <button class="detail-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.39/dist/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-to-docx@1.8.0/dist/html-to-docx.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docshift@1.0.2/dist/docshift.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="templates-data.js"></script>
+<script>
+var htmlEditor=document.getElementById('htmlEditor');
+var previewFrame=document.getElementById('previewFrame');
+var charCount=document.getElementById('charCount');
+var statusText=document.getElementById('statusText');
+var methodsGrid=document.getElementById('methodsGrid');
+var templateList=document.getElementById('templateList');
+var activeFormat='docx';
+var selectedMethod=null;
+var _htmlDocxJsFn=window.htmlDocx;
+var _htmlToDocxFn=window.HTMLtoDOCX;
+var _docShiftFn=window.DocShift;
+delete window.htmlDocx;
+delete window.HTMLtoDOCX;
+delete window.DocShift;
+var EXPORT_CONFIG={pageSize:'A4',orientation:'portrait',marginTop:1440,marginRight:1440,marginBottom:1440,marginLeft:1440,fontName:'Microsoft YaHei',fontSize:24};
+var LIBS={docx:{name:'docx.js',icon:'📄',format:'docx',check:function(){return typeof docx!=='undefined'}},htmlDocxJs:{name:'html-docx-js',icon:'🔄',format:'docx',check:function(){return _htmlDocxJsFn!==null}},htmlToDocx:{name:'html-to-docx',icon:'🔧',format:'docx',check:function(){return _htmlToDocxFn!==null}},docShift:{name:'DocShift',icon:'🔀',format:'docx',check:function(){return _docShiftFn!==null}},fileSaver:{name:'FileSaver',icon:'💾',format:'both',check:function(){return typeof saveAs!=='undefined'}},jspdf:{name:'jsPDF',icon:'📄',format:'pdf',check:function(){return typeof window.jspdf!=='undefined'}},html2canvas:{name:'html2canvas',icon:'📸',format:'both',check:function(){return typeof html2canvas!=='undefined'}},html2pdf:{name:'html2pdf.js',icon:'📦',format:'pdf',check:function(){return typeof html2pdf!=='undefined'}},pdflib:{name:'pdf-lib',icon:'🔧',format:'pdf',check:function(){return typeof PDFLib!=='undefined'}},mscreenshot:{name:'modern-screenshot',icon:'🖼️',format:'pdf',check:function(){return typeof modernScreenshot!=='undefined'}}};
+var DOCX_METHODS=[{id:1,name:'html-to-docx ⭐',libs:['htmlToDocx','fileSaver'],format:'docx',desc:'推荐首选。专业HTML→DOCX原生转换，保留样式/表格/图片，兼容性好。',quality:'★★★★★',speed:'★★★☆☆',compat:'★★★★★',ease:'★★★★★'},{id:2,name:'html-docx-js',libs:['htmlDocxJs','fileSaver'],format:'docx',desc:'altchunks方式，简单快速。仅Word可用。',quality:'★★★☆☆',speed:'★★★★★',compat:'★★☆☆☆',ease:'★★★★★'},{id:3,name:'DocShift',libs:['docShift','fileSaver'],format:'docx',desc:'新一代双向转换库，样式映射保留好。',quality:'★★★★☆',speed:'★★★★☆',compat:'★★★★☆',ease:'★★★★☆'},{id:4,name:'docx.js 声明式',libs:['docx','fileSaver'],format:'docx',desc:'声明式API手动构建文档，仅导出结构化文本。',quality:'★★☆☆☆',speed:'★★★★☆',compat:'★★★★★',ease:'★★☆☆☆'},{id:5,name:'docx.js+HTML解析',libs:['docx','fileSaver'],format:'docx',desc:'解析HTML DOM树，保留标题/段落/表格等基本结构。',quality:'★★★★☆',speed:'★★★☆☆',compat:'★★★★★',ease:'★★★☆☆'},{id:6,name:'HTML另存为.doc',libs:[],format:'doc',desc:'将HTML保存为.doc文件。无需任何库！',quality:'★★★★☆',speed:'★★★★★',compat:'★★★★☆',ease:'★★★★★'},{id:7,name:'富文本复制',libs:[],format:'clipboard',desc:'复制到剪贴板，可直接粘贴到Word。无需任何库！',quality:'★★★☆☆',speed:'★★★★★',compat:'★★★☆☆',ease:'★★★★★'},{id:8,name:'打印/另存',libs:[],format:'print',desc:'打开打印预览，可导出PDF。无需任何库！',quality:'★★★★☆',speed:'★★★★★',compat:'★★★★★',ease:'★★★★☆'}];
+var PDF_METHODS=[{id:101,name:'iframe+jsPDF',libs:['jspdf','html2canvas'],format:'pdf',desc:'iframe渲染→html2canvas截图→jsPDF分页。最可靠的基础方案。',quality:'★★★★☆',speed:'★★★☆☆',compat:'★★★★★',ease:'★★★★★'},{id:102,name:'html2pdf.js',libs:['html2pdf'],format:'pdf',desc:'封装库方案，自带分页。',quality:'★★★★☆',speed:'★★★★☆',compat:'★★★★☆',ease:'★★★★★'},{id:103,name:'pdf-lib+Canvas',libs:['pdflib','html2canvas'],format:'pdf',desc:'pdf-lib替代jsPDF，PNG嵌入质量更高。',quality:'★★★★★',speed:'★★★☆☆',compat:'★★★★☆',ease:'★★★☆☆'},{id:104,name:'modern-screenshot',libs:['mscreenshot'],format:'pdf',desc:'modern-screenshot替代html2canvas，对CSS渐变支持更好。',quality:'★★★★★',speed:'★★★★☆',compat:'★★★★☆',ease:'★★★★☆'},{id:105,name:'iframe打印',libs:[],format:'pdf',desc:'隐藏iframe触发浏览器打印。无需任何库！',quality:'★★★★☆',speed:'★★★★★',compat:'★★★★★',ease:'★★★★★'},{id:106,name:'新窗口打印',libs:[],format:'pdf',desc:'新窗口打开HTML触发打印。无需任何库！',quality:'★★★★☆',speed:'★★★★★',compat:'★★★★★',ease:'★★★★☆'},{id:107,name:'高清图片PDF',libs:['jspdf','html2canvas'],format:'pdf',desc:'3倍分辨率截图→PDF。更清晰但文件更大。',quality:'★★★★★',speed:'★★☆☆☆',compat:'★★★★★',ease:'★★★★☆'},{id:108,name:'Canvas直绘',libs:['jspdf','html2canvas'],format:'pdf',desc:'预分配Canvas尺寸，直接渲染。',quality:'★★★★☆',speed:'★★★☆☆',compat:'★★★★★',ease:'★★★☆☆'},{id:109,name:'双iframe隔离',libs:['jspdf','html2canvas'],format:'pdf',desc:'双重隔离环境渲染，更稳定。',quality:'★★★★☆',speed:'★★★☆☆',compat:'★★★★★',ease:'★★★☆☆'},{id:110,name:'srcdoc直出',libs:['jspdf','html2canvas'],format:'pdf',desc:'iframe.srcdoc加载HTML，最简洁。',quality:'★★★★☆',speed:'★★★★☆',compat:'★★★★★',ease:'★★★★★'}];
+var TEMPLATES=[{id:'math',icon:'📐',name:'数学练习题'},{id:'chinese',icon:'📝',name:'语文生字词'},{id:'poster',icon:'🎨',name:'活动海报'},{id:'legal',icon:'⚖️',name:'法律文书'},{id:'resume',icon:'👤',name:'个人简历'},{id:'invoice',icon:'🧾',name:'发票收据'},{id:'contract',icon:'📜',name:'合同模板'},{id:'exam',icon:'📋',name:'考试试卷'},{id:'recipe',icon:'🍳',name:'美食食谱'},{id:'meeting',icon:'📅',name:'会议纪要'},{id:'paper',icon:'🎓',name:'学术论文'},{id:'schedule',icon:'🗓️',name:'课程表'},{id:'letter',icon:'✉️',name:'商务信函'},{id:'report',icon:'📊',name:'工作报告'},{id:'dark',icon:'🌙',name:'深色背景'},{id:'gradient',icon:'🌈',name:'渐变背景'}];
+SAMPLES.dark='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>深色背景</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#1a1a2e;color:#e6e6e6;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}h1{color:#4a9eff;margin-bottom:20px;font-size:28px;}p{line-height:1.8;margin-bottom:16px;color:#ccc;}.card{background:#16213e;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #2a3a5e;}.card h2{color:#7ec8e3;margin-bottom:12px;}.highlight{color:#ffc107;font-weight:bold;}</style></head><body><h1>深色主题页面</h1><div class="card"><h2>关于此测试</h2><p>这是一个<span class="highlight">深色背景</span>页面，PDF应保持深色背景。</p></div><div class="card"><h2>预期效果</h2><p>所见即所得：深色背景在PDF中也应为深色。</p></div></body></html>';
+SAMPLES.gradient='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>渐变背景</title><style>body{background:linear-gradient(180deg,#0f0c29,#302b63,#24243e);color:#fff;font-family:-apple-system,sans-serif;padding:40px;min-height:100vh;}h1{font-size:32px;margin-bottom:24px;}.box{background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border-radius:16px;padding:24px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.2);}.box p{line-height:1.8;}.gradient-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#f093fb,#f5576c,#4facfe);margin:16px 0;}</style></head><body><h1>渐变背景测试</h1><div class="gradient-bar"></div><div class="box"><p>CSS渐变背景+毛玻璃效果，PDF应保持原样。</p></div><div class="box"><p>渐变条和半透明卡片都应完整保留。</p></div></body></html>';
+function buildTemplateButtons(){TEMPLATES.forEach(function(tpl){var btn=document.createElement('button');btn.className='tpl-btn';btn.dataset.id=tpl.id;btn.innerHTML='<span>'+tpl.icon+'</span>'+tpl.name;btn.onclick=function(){loadSample(tpl.id);};templateList.appendChild(btn);});}
+function loadSample(name){htmlEditor.value=SAMPLES[name]||'';document.querySelectorAll('.tpl-btn').forEach(function(b){b.classList.toggle('active',b.dataset.id===name)});updatePreview();}
+function updatePreview(){var code=htmlEditor.value;charCount.textContent=code.length+' 字符';try{if('srcdoc' in previewFrame){previewFrame.srcdoc=code;}else{var doc=previewFrame.contentDocument;doc.open();doc.write(code);doc.close();}}catch(e){previewFrame.src='data:text/html;charset=utf-8,'+encodeURIComponent(code);}}
+htmlEditor.addEventListener('input',function(){clearTimeout(htmlEditor._timer);htmlEditor._timer=setTimeout(updatePreview,300);charCount.textContent=htmlEditor.value.length+' 字符';});function showToast(msg,type){type=type||'info';var t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(function(){t.remove();},3000);}
+function setStatus(text){statusText.textContent=text;}
+function isLibLoaded(id){return LIBS[id]&&LIBS[id].check();}
+function getCurrentMethods(){if(activeFormat==='docx')return DOCX_METHODS;if(activeFormat==='pdf')return PDF_METHODS;return[...DOCX_METHODS,...PDF_METHODS];}
+function buildMethodsGrid(){methodsGrid.innerHTML='';var methods=getCurrentMethods();methods.forEach(function(m){var ready=isMethodReady(m);var card=document.createElement('div');card.className='method-card '+(ready?'ready':'');card.id='methodCard'+m.id;var info=document.createElement('div');info.className='method-info';info.innerHTML='<span class="method-id">'+m.id+'</span><span class="method-name">'+m.name+'</span><span class="format-badge '+m.format+'">'+m.format.toUpperCase()+'</span>';var libsDiv=document.createElement('div');libsDiv.className='method-libs';m.libs.forEach(function(lid){var loaded=isLibLoaded(lid);libsDiv.innerHTML+='<span class="lib-tag '+(loaded?'loaded':'needed')+'">'+LIBS[lid].icon+' '+LIBS[lid].name+(loaded?' ✓':' ○')+'</span>'});if(m.libs.length===0)libsDiv.innerHTML='<span class="lib-tag loaded">🎉 无需库</span>';var btn=document.createElement('button');btn.className='method-export-btn';btn.onclick=function(){doExport(m.id);};btn.textContent=ready?'🚀 导出':'📥 加载并导出';card.appendChild(info);card.appendChild(libsDiv);card.appendChild(btn);card.onclick=function(){showDetail(m.id);};methodsGrid.appendChild(card);});}
+function isMethodReady(method){return method.libs.every(function(lid){return isLibLoaded(lid);});}
+function switchFormat(fmt){activeFormat=fmt;document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.format===fmt)});buildMethodsGrid();}
+function showDetail(id){var allMethods=[...DOCX_METHODS,...PDF_METHODS];var m=allMethods.find(function(x){return x.id===id});if(!m)return;document.getElementById('detailTitle').textContent='方案 '+m.id+': '+m.name;var html='<div class="detail-section"><h4>📋 方案描述</h4><p>'+m.desc+'</p></div>';html+='<div class="detail-section"><h4>⭐ 评分</h4><div class="detail-ratings"><span class="rating-item">质量：<strong>'+m.quality+'</strong></span><span class="rating-item">速度：<strong>'+m.speed+'</strong></span><span class="rating-item">兼容：<strong>'+m.compat+'</strong></span><span class="rating-item">易用：<strong>'+m.ease+'</strong></span></div></div>';html+='<div class="detail-section"><h4>📦 依赖库</h4><div class="detail-libs">';m.libs.forEach(function(lid){var loaded=isLibLoaded(lid);html+='<div class="detail-lib"><span class="detail-lib-icon">'+LIBS[lid].icon+'</span><span class="detail-lib-name">'+LIBS[lid].name+'</span><span class="detail-lib-status '+(loaded?'loaded':'needed')+'">'+(loaded?'✅ 已加载':'❌ 未加载')+'</span></div>'});if(m.libs.length===0)html+='<div class="detail-lib"><span class="detail-lib-icon">🎉</span><span class="detail-lib-name">无需任何依赖库</span><span class="detail-lib-status loaded">✅ 随时可用</span></div>';html+='</div></div>';html+='<button class="export-btn" style="margin-top:16px;" onclick="closeDetail();doExport('+m.id+')">'+(isMethodReady(m)?'🚀 立即导出':'📥 加载并导出')+'</button>';document.getElementById('detailBody').innerHTML=html;document.getElementById('detailPanel').classList.add('open');}
+function closeDetail(){document.getElementById('detailPanel').classList.remove('open');}
+function getHtmlContent(){return htmlEditor.value;}
+function getFilename(ext){ext=ext||'docx';var content=htmlEditor.value;var title=(content.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1];return(title?title.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g,'_'):'export')+'.'+ext;}
+function downloadBlob(blob,filename){if(typeof saveAs!=='undefined'){saveAs(blob,filename);showToast('导出成功：'+filename,'success');}else{var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);showToast('导出成功：'+filename,'success');}}
+function htmlToText(html){var tmp=document.createElement('div');tmp.innerHTML=html;return tmp.textContent||tmp.innerText||'';}
+function wrapHtmlForDoc(html){if(/<html/i.test(html))return html;return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>'+html+'</body></html>';}
+async function doExport(id){var allMethods=[...DOCX_METHODS,...PDF_METHODS];var method=allMethods.find(function(m){return m.id===id});if(!method)return;var html=getHtmlContent();if(!html.trim()){showToast('内容为空','error');return;}setStatus('方案'+id+': '+method.name+' 生成中...');showToast('开始生成...','info');var startTime=performance.now();try{switch(id){case 1:await exportHtmlToDocx(html);break;case 2:await exportHtmlDocxJs(html);break;case 3:await exportDocShift(html);break;case 4:await exportDocxJs(html);break;case 5:await exportDocxJsParsed(html);break;case 6:exportHtmlAsDoc(html);break;case 7:await exportRichCopy(html);break;case 8:exportPrintPreview(html);break;case 101:await pdfExportIframeJsPDF(html);break;case 102:await pdfExportHtml2Pdf(html);break;case 103:await pdfExportPdfLibCanvas(html);break;case 104:await pdfExportModernScreenshot(html);break;case 105:pdfExportIframePrint(html);break;case 106:pdfExportNewWindowPrint(html);break;case 107:await pdfExportHighResImagePdf(html);break;case 108:await pdfExportCanvasDirect(html);break;case 109:await pdfExportDoubleIframe(html);break;case 110:await pdfExportSrcdoc(html);break;}var elapsed=((performance.now()-startTime)/1000).toFixed(2);setStatus('方案'+id+': 导出完成 ('+elapsed+'s)');}catch(e){showToast('方案'+id+'失败: '+e.message,'error');setStatus('方案'+id+': 失败');}}
+async function exportHtmlToDocx(html){var fullHtml=wrapHtmlForDoc(html);var opts={orientation:EXPORT_CONFIG.orientation,margins:{top:EXPORT_CONFIG.marginTop,right:EXPORT_CONFIG.marginRight,bottom:EXPORT_CONFIG.marginBottom,left:EXPORT_CONFIG.marginLeft},table:{row:{cantSplit:true}},footer:false,header:false};var result=await _htmlToDocxFn(fullHtml,null,opts);var blob=new Blob([result],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});downloadBlob(blob,getFilename('docx'));}
+async function exportHtmlDocxJs(html){var fullHtml=wrapHtmlForDoc(html);var converted=_htmlDocxJsFn.asBlob(fullHtml,{});var blob=new Blob([converted],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});downloadBlob(blob,getFilename('docx'));showToast('提示：仅Word可正常打开','warning');}
+async function exportDocShift(html){var fullHtml=wrapHtmlForDoc(html);var result=await _docShiftFn.toDocx(fullHtml);var blob=new Blob([result],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});downloadBlob(blob,getFilename('docx'));}
+async function exportDocxJs(html){var text=htmlToText(html);var titleMatch=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);var title=titleMatch?titleMatch[1]:'导出文档';var paragraphs=text.split('\n').filter(function(l){return l.trim().length>0});var children=[];children.push(new docx.Paragraph({children:[new docx.TextRun({text:title,bold:true,size:48,font:EXPORT_CONFIG.fontName})],alignment:docx.AlignmentType.CENTER,spacing:{after:400}}));children.push(new docx.Paragraph({children:[]}));paragraphs.forEach(function(l){children.push(new docx.Paragraph({children:[new docx.TextRun({text:l,size:EXPORT_CONFIG.fontSize,font:EXPORT_CONFIG.fontName})],spacing:{after:120}}));});var doc=new docx.Document({sections:[{properties:{page:{size:EXPORT_CONFIG.orientation==='landscape'?{width:16838,height:11906,orientation:docx.PageOrientation.LANDSCAPE}:{width:11906,height:16838},margin:{top:EXPORT_CONFIG.marginTop,bottom:EXPORT_CONFIG.marginBottom,left:EXPORT_CONFIG.marginLeft,right:EXPORT_CONFIG.marginRight}}},children:children}]});var blob=await docx.Packer.toBlob(doc);downloadBlob(blob,getFilename('docx'));showToast('提示：仅导出纯文本','warning');}
+async function exportDocxJsParsed(html){var tmp=document.createElement('div');tmp.innerHTML=html.replace(/<!DOCTYPE[^>]*>/i,'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head[^>]*>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'<div>').replace(/<\/body>/i,'</div>');var titleMatch=html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);var title=titleMatch?titleMatch[1]:'导出文档';var children=[];children.push(new docx.Paragraph({children:[new docx.TextRun({text:title,bold:true,size:48,font:EXPORT_CONFIG.fontName})],alignment:docx.AlignmentType.CENTER,spacing:{after:400}}));function processNode(node){if(node.nodeType===3){var txt=node.textContent.trim();if(txt)children.push(new docx.Paragraph({children:[new docx.TextRun({text:txt,size:EXPORT_CONFIG.fontSize,font:EXPORT_CONFIG.fontName})],spacing:{after:120}}));return;}if(node.nodeType!==1)return;var tag=node.tagName.toLowerCase();if(tag==='style'||tag==='script'||tag==='meta'||tag==='link'||tag==='head')return;if(tag==='h1'||tag==='h2'||tag==='h3'||tag==='h4'||tag==='h5'||tag==='h6'){var sizes={h1:48,h2:36,h3:28,h4:24,h5:21,h6:18};children.push(new docx.Paragraph({children:[new docx.TextRun({text:node.textContent,bold:true,size:sizes[tag]||28,font:EXPORT_CONFIG.fontName})],spacing:{before:240,after:120}}));}else if(tag==='p'){var runs=[];node.childNodes.forEach(function(cn){if(cn.nodeType===3){var t=cn.textContent;if(t)runs.push(new docx.TextRun({text:t,size:EXPORT_CONFIG.fontSize,font:EXPORT_CONFIG.fontName}));}else if(cn.nodeType===1){var ct=cn.tagName.toLowerCase();if(ct==='strong'||ct==='b')runs.push(new docx.TextRun({text:cn.textContent,bold:true,size:EXPORT_CONFIG.fontSize,font:EXPORT_CONFIG.fontName}));else runs.push(new docx.TextRun({text:cn.textContent,size:EXPORT_CONFIG.fontSize,font:EXPORT_CONFIG.fontName}));}});if(runs.length>0)children.push(new docx.Paragraph({children:runs,spacing:{after:120}}));}else{node.childNodes.forEach(function(cn){processNode(cn);});}}tmp.childNodes.forEach(function(cn){processNode(cn);});var doc=new docx.Document({sections:[{properties:{page:{size:EXPORT_CONFIG.orientation==='landscape'?{width:16838,height:11906,orientation:docx.PageOrientation.LANDSCAPE}:{width:11906,height:16838},margin:{top:EXPORT_CONFIG.marginTop,bottom:EXPORT_CONFIG.marginBottom,left:EXPORT_CONFIG.marginLeft,right:EXPORT_CONFIG.marginRight}}},children:children}]});var blob=await docx.Packer.toBlob(doc);downloadBlob(blob,getFilename('docx'));}
+function exportHtmlAsDoc(html){var fullHtml=wrapHtmlForDoc(html);var wordHtml='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>body{font-family:"'+EXPORT_CONFIG.fontName+'"}</style></head><body>'+fullHtml.replace(/<!DOCTYPE[^>]*>/i,'').replace(/<html[^>]*>/i,'').replace(/<\/html>/i,'').replace(/<head[^>]*>[\s\S]*?<\/head>/i,'').replace(/<body[^>]*>/i,'').replace(/<\/body>/i,'')+'</body></html>';var blob=new Blob(['\ufeff'+wordHtml],{type:'application/msword'});downloadBlob(blob,getFilename('doc'));}
+async function exportRichCopy(html){var tmp=document.createElement('div');tmp.innerHTML=html;tmp.style.cssText='position:fixed;left:-9999px;top:0;';document.body.appendChild(tmp);try{var htmlContent=tmp.innerHTML;var textContent=tmp.textContent||tmp.innerText||'';if(navigator.clipboard&&navigator.clipboard.write){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlContent],{type:'text/html'}),'text/plain':new Blob([textContent],{type:'text/plain'})})]);showToast('已复制富文本到剪贴板','success');}else{var range=document.createRange();range.selectNodeContents(tmp);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);document.execCommand('copy');sel.removeAllRanges();showToast('已复制到剪贴板','success');}}catch(e){showToast('复制失败: '+e.message,'error');}finally{document.body.removeChild(tmp);}}
+function exportPrintPreview(html){var printWin=window.open('','_blank');if(!printWin){showToast('弹窗被拦截','error');return;}printWin.document.write(html);printWin.document.close();printWin.onload=function(){printWin.print();};showToast('已打开打印预览','success');}
+function pdfCreateRenderIframe(html,width,callback){var iframe=document.createElement('iframe');iframe.style.cssText='position:fixed;left:0;top:0;width:'+width+'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(iframe);var iframeDoc=iframe.contentDocument||iframe.contentWindow.document;iframeDoc.open();iframeDoc.write(html);iframeDoc.close();setTimeout(function(){callback(iframe);},800);}
+function pdfRemoveIframe(iframe){try{document.body.removeChild(iframe);}catch(e){}}
+function pdfCanvasToPdfPages(canvas,jsPDFConstructor){var imgWidthMm=190;var imgHeightMm=(canvas.height*imgWidthMm)/canvas.width;var pdf=new jsPDFConstructor('p','mm','a4');var positionMm=0,pageHeightMm=277,remainingHeightMm=imgHeightMm;while(remainingHeightMm>0){var sourceY=positionMm*(canvas.width/imgWidthMm);var sourceHeight=pageHeightMm*(canvas.width/imgWidthMm);var pageCanvas=document.createElement('canvas');pageCanvas.width=canvas.width;pageCanvas.height=Math.min(Math.round(sourceHeight),canvas.height-Math.round(sourceY));if(pageCanvas.height<=0)break;var ctx=pageCanvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);ctx.drawImage(canvas,0,Math.round(sourceY),canvas.width,pageCanvas.height,0,0,canvas.width,pageCanvas.height);var pageImgData=pageCanvas.toDataURL('image/jpeg',0.95);if(positionMm>0)pdf.addPage();var pageImgHeightMm=(pageCanvas.height*imgWidthMm)/canvas.width;pdf.addImage(pageImgData,'JPEG',10,10,imgWidthMm,pageImgHeightMm);remainingHeightMm-=pageHeightMm;positionMm+=pageHeightMm;}return pdf;}
+async function pdfExportIframeJsPDF(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=pdfCanvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+async function pdfExportHtml2Pdf(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var opt={margin:10,filename:getFilename('pdf'),image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['avoid-all','css','legacy']}};await html2pdf().set(opt).from(iframeBody).save();showToast('导出成功','success');pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+async function pdfExportPdfLibCanvas(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdfDoc=await PDFLib.PDFDocument.create();var pageWidth=595.28,pageHeight=841.89,margin=28.35;var contentWidth=pageWidth-margin*2,contentHeight=pageHeight-margin*2;var imgAspect=canvas.width/canvas.height;var renderWidth=contentWidth,renderHeight=renderWidth/imgAspect;var yOffset=0,totalContentHeight=renderHeight,scale=canvas.width/renderWidth;while(yOffset<totalContentHeight){var page=pdfDoc.addPage([pageWidth,pageHeight]);var sliceHeight=Math.min(contentHeight,totalContentHeight-yOffset);var sourceY=yOffset*scale,sourceHeight=sliceHeight*scale;var sliceCanvas=document.createElement('canvas');sliceCanvas.width=canvas.width;sliceCanvas.height=Math.round(sourceHeight);var ctx=sliceCanvas.getContext('2d');ctx.drawImage(canvas,0,Math.round(sourceY),canvas.width,Math.round(sourceHeight),0,0,canvas.width,Math.round(sourceHeight));var sliceData=sliceCanvas.toDataURL('image/png');var sliceBytes=await fetch(sliceData).then(function(r){return r.arrayBuffer();});var sliceImg=await pdfDoc.embedPng(sliceBytes);page.drawImage(sliceImg,{x:margin,y:pageHeight-margin-sliceHeight,width:renderWidth,height:sliceHeight});yOffset+=contentHeight;}var pdfBytes=await pdfDoc.save();downloadBlob(new Blob([pdfBytes],{type:'application/pdf'}),getFilename('pdf'));pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+async function pdfExportModernScreenshot(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await modernScreenshot.domToCanvas(iframeBody,{scale:2,width:794});var pdf=pdfCanvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+function pdfExportIframePrint(html){pdfCreateRenderIframe(html,794,function(iframe){try{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(function(){pdfRemoveIframe(iframe);},2000);}catch(e){showToast('打印失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+function pdfExportNewWindowPrint(html){var printWin=window.open('','_blank');if(!printWin){showToast('弹窗被拦截','error');return;}printWin.document.write(html);printWin.document.close();printWin.onload=function(){printWin.print();setTimeout(function(){printWin.close();},500);};}
+async function pdfExportHighResImagePdf(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var canvas=await html2canvas(iframeBody,{scale:3,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=pdfCanvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+async function pdfExportCanvasDirect(html){pdfCreateRenderIframe(html,794,async function(iframe){try{var iframeBody=iframe.contentDocument.body;var scrollHeight=iframeBody.scrollHeight||iframeBody.offsetHeight||1000;var canvas=document.createElement('canvas');canvas.width=794*2;canvas.height=scrollHeight*2;var ctx=canvas.getContext('2d');var rendered=await html2canvas(iframeBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794,canvas:canvas});var pdf=pdfCanvasToPdfPages(rendered,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));pdfRemoveIframe(iframe);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(iframe);}});}
+async function pdfExportDoubleIframe(html){var outerIframe=document.createElement('iframe');outerIframe.style.cssText='position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(outerIframe);var outerDoc=outerIframe.contentDocument||outerIframe.contentWindow.document;outerDoc.open();outerDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>html,body{margin:0;padding:0;}</style></head><body></body></html>');outerDoc.close();await new Promise(function(r){setTimeout(r,100);});var innerIframe=outerDoc.createElement('iframe');innerIframe.style.cssText='width:794px;border:none;';outerDoc.body.appendChild(innerIframe);var innerDoc=innerIframe.contentDocument||innerIframe.contentWindow.document;innerDoc.open();innerDoc.write(html);innerDoc.close();await new Promise(function(r){setTimeout(r,800);});try{var innerBody=innerDoc.body;var canvas=await html2canvas(innerBody,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=pdfCanvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));}catch(e){showToast('导出失败: '+e.message,'error');}pdfRemoveIframe(outerIframe);}
+async function pdfExportSrcdoc(html){var renderFrame=document.createElement('iframe');renderFrame.style.cssText='position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';document.body.appendChild(renderFrame);renderFrame.srcdoc=html;renderFrame.onload=async function(){try{var doc=renderFrame.contentDocument;await new Promise(function(r){setTimeout(r,300);});var body=doc.body;var canvas=await html2canvas(body,{scale:2,useCORS:true,logging:false,backgroundColor:null,width:794,windowWidth:794});var pdf=pdfCanvasToPdfPages(canvas,window.jspdf.jsPDF);downloadBlob(pdf.output('blob'),getFilename('pdf'));pdfRemoveIframe(renderFrame);}catch(e){showToast('导出失败: '+e.message,'error');pdfRemoveIframe(renderFrame);}};}
+buildTemplateButtons();loadSample('math');buildMethodsGrid();
+</script>
+</body>
+</html>
