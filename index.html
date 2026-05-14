@@ -4624,6 +4624,11 @@
 
         // 打印预览函数 - 优化iOS Safari兼容性
         function printPreview() {
+            printCurrentPreview();
+        }
+
+        // 打印函数
+        function printCurrentPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                 
@@ -4632,99 +4637,26 @@
                     showToast('预览内容为空，请先输入一些内容', 'error');
                     return;
                 }
-
-                // iOS Safari特殊处理
-                if (isIOS()) {
-                    // 在iOS Safari中，直接在当前窗口打印预览内容
-                    printCurrentPreview();
-                    return;
-                }
-
-                // 创建打印样式
-                const style = document.createElement('style');
-                style.textContent = `
-                    @media print {
-                        @page { margin: 1cm; }
-                        body { 
-                            margin: 0;
-                            padding: 0;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-                        }
-                        * { 
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
-                    }
-                `;
-
-                // 创建一个新的打印窗口
-                const printWindow = window.open('', '_blank');
-                if (!printWindow) {
-                    showToast('无法打开打印窗口，请检查是否被浏览器阻止', 'error');
-                    return;
-                }
-
-                // 复制所有原始样式表
-                const styleSheets = Array.from(previewDoc.styleSheets);
-                const styleLinks = styleSheets.map(sheet => {
-                    if (sheet.href) {
-                        return `<link rel="stylesheet" href="${sheet.href}">`;
-                    } else if (sheet.ownerNode && sheet.ownerNode.textContent) {
-                        return `<style>${sheet.ownerNode.textContent}</style>`;
-                    }
-                    return '';
-                }).join('');
-
-                // 构建打印页面
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>打印预览</title>
-                        ${styleLinks}
-                        ${style.outerHTML}
-                    </head>
-                    <body>
-                        ${previewDoc.body.innerHTML}
-                    </body>
-                    </html>
-                `);
-                printWindow.document.close();
-
-                // 等待资源加载完成后打印
-                if (printWindow.document.readyState === 'complete') {
-                    printWindow.print();
-                } else {
-                    printWindow.addEventListener('load', function() {
-                        printWindow.print();
-                    });
-                }
-
-                // 打印完成后关闭窗口
-                const checkPrintCompletion = setInterval(() => {
-                    if (!printWindow || printWindow.closed) {
-                        clearInterval(checkPrintCompletion);
-                    }
-                }, 1000);
-
-                showToast('正在打开打印预览...', 'success');
-            } catch (error) {
-                // 只在开发模式下显示打印错误
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.error('打印出错:', error);
-                }
-                showToast('打印功能出错，请重试', 'error');
-            }
-        }
-
-        // iOS Safari专用打印函数
-        function printCurrentPreview() {
-            try {
-                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                 
-                // 创建临时打印样式
+                // iOS Safari 处理
+                if (isIOS()) {
+                    // 在新窗口中打开内容进行打印
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) {
+                        showToast('请允许弹出窗口以使用打印功能', 'error');
+                        return;
+                    }
+                    const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>@media print{@page{margin:1cm}body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}*{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}@media screen{body{padding:20px}}</style></head><body>' + previewDoc.body.innerHTML + '</body></html>';
+                    printWindow.document.write(fullHtml);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 300);
+                    return;
+                }
+                
                 const printStyle = document.createElement('style');
                 printStyle.textContent = `
                     @media print {
@@ -4740,27 +4672,19 @@
                         }
                     }
                 `;
-                
-                // 将打印样式添加到预览文档
                 previewDoc.head.appendChild(printStyle);
-                
-                // 直接打印预览框架
                 previewFrame.contentWindow.print();
-                
-                // 延迟移除打印样式
                 setTimeout(() => {
                     if (printStyle.parentNode) {
                         printStyle.parentNode.removeChild(printStyle);
                     }
                 }, 1000);
-                
-                showToast('正在打印预览内容...', 'success');
+                showToast('正在打印...', 'success');
             } catch (error) {
-                // 只在开发模式下显示iOS打印错误
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.error('iOS打印出错:', error);
+                    console.error('打印出错:', error);
                 }
-                showToast('iOS打印功能出错，请重试', 'error');
+                showToast('打印功能出错，请重试', 'error');
             }
         }
 
