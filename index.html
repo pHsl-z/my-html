@@ -4638,22 +4638,33 @@
                     return;
                 }
                 
-                // iOS Safari 处理
                 if (isIOS()) {
-                    // 在新窗口中打开内容进行打印
-                    const printWindow = window.open('', '_blank');
-                    if (!printWindow) {
-                        showToast('请允许弹出窗口以使用打印功能', 'error');
-                        return;
+                    try {
+                        sessionStorage.setItem('_iosPrintEditor', htmlEditor.value);
+                        sessionStorage.setItem('_iosPrintFlag', '1');
+                    } catch(e) {}
+                    
+                    var pDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                    var fullHtml = '<!DOCTYPE html><html>' + pDoc.documentElement.innerHTML + '</html>';
+                    
+                    var printScript = '<scr' + 'ipt>' +
+                        'setTimeout(function(){window.print();},600);' +
+                        'var _reloaded=false;' +
+                        'function _doReload(){if(!_reloaded){_reloaded=true;location.reload();}}' +
+                        'window.onafterprint=function(){_doReload();};' +
+                        'window.addEventListener("focus",function(){setTimeout(_doReload,500);});' +
+                        'setTimeout(_doReload,30000);' +
+                    '</scr' + 'ipt>';
+                    
+                    if (fullHtml.indexOf('</body>') !== -1) {
+                        fullHtml = fullHtml.replace('</body>', printScript + '</body>');
+                    } else {
+                        fullHtml += printScript;
                     }
-                    const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>@media print{@page{margin:1cm}body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}*{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}}@media screen{body{padding:20px}}</style></head><body>' + previewDoc.body.innerHTML + '</body></html>';
-                    printWindow.document.write(fullHtml);
-                    printWindow.document.close();
-                    printWindow.focus();
-                    setTimeout(() => {
-                        printWindow.print();
-                        printWindow.close();
-                    }, 300);
+                    
+                    document.open();
+                    document.write(fullHtml);
+                    document.close();
                     return;
                 }
                 
@@ -4844,13 +4855,29 @@
         // 页面加载时尝试恢复保存的内容
         window.addEventListener('load', function() {
             try {
-                // 加载设置
                 loadSettings();
                 
-                // 首先检查是否有分享链接参数
+                if (sessionStorage.getItem('_iosPrintFlag') === '1') {
+                    sessionStorage.removeItem('_iosPrintFlag');
+                    var savedEditor = sessionStorage.getItem('_iosPrintEditor');
+                    if (savedEditor !== null) {
+                        htmlEditor.value = savedEditor;
+                        sessionStorage.removeItem('_iosPrintEditor');
+                        updatePreview();
+                        updateHighlight();
+                    }
+                    loadHistory();
+                    if (isIOS()) {
+                        setTimeout(function() {
+                            htmlEditor.focus();
+                            htmlEditor.blur();
+                        }, 500);
+                    }
+                    return;
+                }
+                
                 loadFromShareUrl();
                 
-                // 如果没有分享内容，再从localStorage加载
                 if (!htmlEditor.value.trim()) {
                     loadFromLocalStorage();
                 }
