@@ -1734,11 +1734,7 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="showTemplatePanel()" id="templateBtn" type="button">
-                        <span class="icon">📋</span>
-                        模板
-                    </button>
-                    <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
+                    <button class="btn btn-secondary" onclick="showOpenMenu()" id="openBtn" type="button">
                         <span class="icon">📁</span>
                         打开
                     </button>
@@ -1746,11 +1742,10 @@
                         <span class="icon">🗑️</span>
                         清空
                     </button>
-                    <button class="btn btn-secondary" onclick="pasteFromClipboard()" id="pasteBtn" type="button">
+                    <button class="btn btn-secondary" onclick="copyAllCode()" id="copyBtn" type="button">
                         <span class="icon">📋</span>
-                        粘贴
+                        复制
                     </button>
-                    <!-- 历史、分享、设置按钮已移动到预览面板的下拉菜单中 -->
                 </div>
             </div>
             <div class="editor-wrapper">
@@ -4546,7 +4541,32 @@
             showModal('📄 PDF多方案导出', content);
         }
 
-        function showTemplatePanel() {
+        function copyAllCode() {
+            try {
+                var code = htmlEditor.value;
+                if (!code.trim()) {
+                    showToast('编辑区没有内容可复制', 'error');
+                    return;
+                }
+                htmlEditor.select();
+                htmlEditor.setSelectionRange(0, code.length);
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(code).then(function() {
+                        showToast('已复制全部代码', 'success');
+                    }).catch(function() {
+                        document.execCommand('copy');
+                        showToast('已复制全部代码', 'success');
+                    });
+                } else {
+                    document.execCommand('copy');
+                    showToast('已复制全部代码', 'success');
+                }
+            } catch(e) {
+                showToast('复制失败，请手动选择复制', 'error');
+            }
+        }
+
+        function showOpenMenu() {
             var templateCards = DOCX_TEMPLATES.map(function(t) {
                 return '<div onclick="loadTemplate(\'' + t.id + '\');closeModal();" style="padding:14px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor=\'#5dade2\';this.style.background=\'#222\';" onmouseout="this.style.borderColor=\'#2a2a2a\';this.style.background=\'#1a1a1a\';">' +
                     '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -4560,16 +4580,24 @@
             }).join('');
 
             var content = '<div style="max-height:60vh;overflow-y:auto;">' +
-                '<div style="margin-bottom:12px;">' +
+                '<div onclick="closeModal();openLocalFile();" style="padding:14px;margin-bottom:12px;background:#1a3a5c;border-radius:8px;border:1px solid #2a5a8a;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor=\'#5dade2\';this.style.background=\'#1a4a6c\';" onmouseout="this.style.borderColor=\'#2a5a8a\';this.style.background=\'#1a3a5c\';">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span style="font-size:24px;">📁</span>' +
+                        '<div>' +
+                            '<div style="color:#e6e6e6;font-weight:500;font-size:13px;">打开本地文件</div>' +
+                            '<div style="color:#8899aa;font-size:11px;">选择 .html / .htm 文件</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="margin-bottom:8px;">' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">📋 预制模板</span>' +
-                        '<span style="color:#888;font-size:11px;">共' + DOCX_TEMPLATES.length + '个模板</span>' +
+                        '<span style="color:#888;font-size:11px;">共' + DOCX_TEMPLATES.length + '个</span>' +
                     '</div>' +
-                    '<p style="color:#888;font-size:11px;line-height:1.5;">选择模板快速开始编辑，所有模板均为两页A4纸内容，适合测试导出效果。</p>' +
                 '</div>' +
                 templateCards +
             '</div>';
-            showModal('📋 预制模板', content);
+            showModal('打开', content);
         }
 
         function loadTemplate(id) {
