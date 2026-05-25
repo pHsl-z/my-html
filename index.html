@@ -260,7 +260,6 @@
         /* iOS 13+ 增强兼容性 */
         @media (pointer: coarse) {
             .btn {
-                min-height: 44px; /* iOS推荐的最小触摸目标 */
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -268,6 +267,10 @@
             
             .btn-group {
                 gap: 8px;
+            }
+
+            .panel-header .btn {
+                min-height: 32px;
             }
         }
 
@@ -349,12 +352,13 @@
             border: none !important;
             color: #ffffff !important;
             padding: 8px 12px !important;
-            font-size: 14px !important;
+            font-size: 13px !important;
             font-weight: 500 !important;
             display: flex !important;
             align-items: center !important;
             gap: 4px !important;
             transition: all 0.2s ease !important;
+            min-height: 0 !important;
         }
 
         .dropdown-toggle:hover {
@@ -368,6 +372,7 @@
             padding: 8px 16px !important;
             font-size: 13px !important;
             gap: 6px !important;
+            min-height: 0 !important;
         }
 
         .dropdown-toggle.btn-secondary:hover {
@@ -1716,23 +1721,10 @@
                         <span class="icon">📋</span>
                         复制
                     </button>
-                    <div style="position:relative;">
-                        <button class="btn btn-secondary dropdown-toggle" onclick="toggleOpenDropdown()" id="openDropdownBtn" type="button">
-                            <span class="icon">📁</span>
-                            <span>打开</span>
-                            <span>▼</span>
-                        </button>
-                        <div class="dropdown-menu" id="openDropdownMenu">
-                            <button class="btn btn-secondary dropdown-item" onclick="openLocalFile();closeOpenDropdown();" id="openBtn">
-                                <span class="icon">📂</span>
-                                打开文件
-                            </button>
-                            <button class="btn btn-secondary dropdown-item" onclick="showTemplatePanel();closeOpenDropdown();" id="templateBtn">
-                                <span class="icon">📋</span>
-                                模板
-                            </button>
-                        </div>
-                    </div>
+                    <button class="btn btn-secondary" onclick="openLocalFile()" id="openBtn" type="button">
+                        <span class="icon">📂</span>
+                        打开
+                    </button>
                     <button class="btn btn-secondary" onclick="clearEditor()" id="clearBtn" type="button">
                         <span class="icon">🗑️</span>
                         清空
@@ -1780,6 +1772,10 @@
                             <button class="btn btn-primary dropdown-item" onclick="toggleSharePanel()" id="shareBtn">
                                 <span class="icon">🔗</span>
                                 分享
+                            </button>
+                            <button class="btn btn-warning dropdown-item" onclick="showTemplatePanel();closePreviewDropdown();" id="templateDropdownBtn">
+                                <span class="icon">📋</span>
+                                模板
                             </button>
                             <button class="btn btn-info dropdown-item" onclick="toggleSettingsPanel()" id="settingsBtn">
                                 <span class="icon">⚙️</span>
@@ -2186,6 +2182,7 @@
                     // 可选：将内容也加载到编辑器中
                     showConfirmDialog('是否将文件内容加载到编辑器中？', function() {
                         htmlEditor.value = content;
+                        updateHighlight();
                         updateCharCount();
                     });
                     
@@ -2381,6 +2378,7 @@
             }
             showConfirmDialog('确定要清空编辑器吗？', function() {
                 htmlEditor.value = '';
+                updateHighlight();
                 updateCharCount();
                 updatePreview();
                 setTimeout(function() {
@@ -2800,6 +2798,7 @@
             if (historyRecords[index]) {
                 htmlEditor.value = historyRecords[index].content || '';
                 updatePreview();
+                updateHighlight();
                 updateCharCount();
                 closeModal();
                 showToast('已从历史记录恢复', 'success');
@@ -3185,6 +3184,7 @@
                         htmlEditor.value = text;
                         htmlEditor.focus();
                         updatePreview();
+                        updateHighlight();
                         updateCharCount();
                         showToast('已从剪贴板粘贴', 'success');
                         pasteBtn.classList.add('pasting');
@@ -3206,6 +3206,7 @@
                     htmlEditor.value = ta.value;
                     htmlEditor.focus();
                     updatePreview();
+                    updateHighlight();
                     updateCharCount();
                     showToast('已从剪贴板粘贴', 'success');
                     pasteBtn.classList.add('pasting');
@@ -3249,6 +3250,7 @@
                     htmlEditor.value = text;
                     htmlEditor.focus();
                     updatePreview();
+                    updateHighlight();
                     updateCharCount();
                     showToast('已从剪贴板粘贴', 'success');
                     document.body.removeChild(overlay);
@@ -3359,6 +3361,7 @@
             if (record) {
                 htmlEditor.value = record.content;
                 updatePreview();
+                updateHighlight();
                 updateCharCount();
                 closeModal(); // 关闭模态窗口而不是面板
                 showToast('已从历史记录恢复', 'success');
@@ -3510,6 +3513,13 @@
         window.addEventListener('resize', adjustToastPositionForiPad);
 
         function loadFromLocalStorage() {
+            var savedContent = localStorage.getItem('htmlEditorContent');
+            if (savedContent) {
+                htmlEditor.value = savedContent;
+                updatePreview();
+                updateHighlight();
+                updateCharCount();
+            }
         }
         
         // 功能简介显示函数
@@ -4542,6 +4552,7 @@
             if (SAMPLES[id]) {
                 htmlEditor.value = SAMPLES[id];
                 updatePreview();
+                updateHighlight();
                 var tpl = DOCX_TEMPLATES.find(function(t) { return t.id === id; });
                 showToast('已加载模板：' + (tpl ? tpl.name : id), 'success');
             } else {
@@ -4922,6 +4933,7 @@
                     }
                     htmlEditor.value = content;
                     updatePreview();
+                    updateHighlight();
                     updateCharCount();
                     showToast('已加载分享内容', 'success');
                     if (window.history && window.history.replaceState) {
