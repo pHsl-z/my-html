@@ -2938,8 +2938,14 @@
         htmlEditor.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                addToHistory();
-                showToast('已保存到历史记录', 'success');
+                if (htmlEditor.value.trim()) {
+                    addToHistory();
+                    lastContent = htmlEditor.value;
+                    lastHistoryAddTime = Date.now();
+                    showToast('已保存到历史记录', 'success');
+                } else {
+                    showToast('内容为空，无法保存', 'error');
+                }
             }
             if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
@@ -2957,6 +2963,7 @@
             localStorage.setItem('htmlEditorContent', htmlEditor.value);
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                 addToHistory();
+                lastContent = htmlEditor.value;
             }
         });
         
@@ -3042,12 +3049,22 @@
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                // iOS Safari 的 beforeunload 不可靠，切后台时主动保存历史记录
+                if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
+                    addToHistory();
+                    lastContent = htmlEditor.value;
+                }
             }
         });
-        
+
         // 移动设备优化：处理页面切换和后台运行
         window.addEventListener('blur', function() {
             localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            // iOS 后台切换兜底：blur 时也保存历史记录
+            if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
+                addToHistory();
+                lastContent = htmlEditor.value;
+            }
         });
         
         // 处理设备旋转
@@ -3115,6 +3132,8 @@
                 updatePreview();
                 updateHighlight();
                 updateCharCount();
+                // 同步 lastContent，避免初始化后误判内容已变化导致重复/漏保存
+                lastContent = savedContent;
             }
         }
         
