@@ -305,17 +305,6 @@
             border-color: #bd2130;
         }
 
-        .btn-warning {
-            background: #e0a800;
-            border-color: #d39e00;
-            color: #212529;
-        }
-
-        .btn-warning:hover {
-            background: #c69500;
-            border-color: #b88600;
-        }
-
         .btn-success {
             background: #00a86b;
             border-color: #00a86b;
@@ -486,8 +475,8 @@
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            opacity: 0.3 !important;
-            transition: all 0.2s ease !important;
+            opacity: 0.3;
+            transition: opacity 0.2s ease !important;
             padding: 0 !important;
             outline: none !important;
         }
@@ -522,7 +511,7 @@
                 right: max(12px, env(safe-area-inset-right)) !important;
                 width: 44px !important;
                 height: 44px !important;
-                opacity: 0.5 !important;
+                opacity: 0.5;
                 background: rgba(0, 0, 0, 0.4) !important;
                 border: 2px solid rgba(255, 255, 255, 0.3) !important;
             }
@@ -1680,7 +1669,6 @@
         }, 100);
 
         let updateTimeout;
-        let lastHistoryAddTime = 0;
         let lastContent = htmlEditor.value;
         let autoSaveTimeout;
         
@@ -1691,11 +1679,10 @@
             updateCharCount();
             clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(function() {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                safeSetItem('htmlEditorContent', htmlEditor.value);
                 if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                     addToHistory();
                     lastContent = htmlEditor.value;
-                    lastHistoryAddTime = Date.now();
                 }
             }, autoSaveInterval * 1000);
         }
@@ -2588,7 +2575,7 @@
              try { history = JSON.parse(localStorage.getItem('shareHistory') || '[]'); } catch(e) {}
              history.unshift(record);
              if (history.length > 30) history = history.slice(0, 30);
-             localStorage.setItem('shareHistory', JSON.stringify(history));
+             safeSetItem('shareHistory', JSON.stringify(history));
          }
 
          function refreshShareHistoryModal() {
@@ -2829,50 +2816,6 @@
             showToast('请长按编辑器粘贴，或复制内容后重试', 'info');
         }
 
-        async function autoPasteOnLoad() {
-            try {
-                if (!navigator.clipboard || !navigator.clipboard.readText) return;
-                const text = await navigator.clipboard.readText();
-                if (!text || !text.trim()) return;
-                if (text.trim().length < 5) return;
-                if (htmlEditor.value.trim()) return;
-
-                const overlay = document.createElement('div');
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100000;display:flex;justify-content:center;align-items:center;';
-                const dialog = document.createElement('div');
-                dialog.style.cssText = 'background:#2a2a2a;border:1px solid #3a3a3a;border-radius:12px;padding:20px;max-width:340px;width:90%;text-align:center;';
-                const msg = document.createElement('p');
-                msg.style.cssText = 'color:#e6e6e6;margin:0 0 16px;font-size:15px;line-height:1.6;';
-                const preview = text.trim().substring(0, 80).replace(/</g, '&lt;');
-                msg.innerHTML = '检测到剪贴板内容：<br><span style="color:#999;font-size:12px;word-break:break-all;">' + preview + (text.trim().length > 80 ? '...' : '') + '</span><br><br>是否粘贴到编辑器？';
-                const btnGroup = document.createElement('div');
-                btnGroup.style.cssText = 'display:flex;gap:10px;justify-content:center;';
-                const cancelBtn = document.createElement('button');
-                cancelBtn.textContent = '取消';
-                cancelBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:1px solid #3a3a3a;background:#404040;color:#fff;font-size:14px;cursor:pointer;';
-                cancelBtn.onclick = function() { document.body.removeChild(overlay); };
-                const confirmBtn = document.createElement('button');
-                confirmBtn.textContent = '粘贴';
-                confirmBtn.style.cssText = 'padding:10px 20px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:14px;cursor:pointer;font-weight:500;';
-                confirmBtn.onclick = function() {
-                    htmlEditor.value = text;
-                    htmlEditor.focus();
-                    updatePreview();
-                    updateHighlight();
-                    updateCharCount();
-                    showToast('已从剪贴板粘贴', 'success');
-                    document.body.removeChild(overlay);
-                };
-                btnGroup.appendChild(cancelBtn);
-                btnGroup.appendChild(confirmBtn);
-                dialog.appendChild(msg);
-                dialog.appendChild(btnGroup);
-                overlay.appendChild(dialog);
-                document.body.appendChild(overlay);
-            } catch (err) {
-            }
-        }
-
         // Toast 消息提示
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -2941,7 +2884,6 @@
                 if (htmlEditor.value.trim()) {
                     addToHistory();
                     lastContent = htmlEditor.value;
-                    lastHistoryAddTime = Date.now();
                     showToast('已保存到历史记录', 'success');
                 } else {
                     showToast('内容为空，无法保存', 'error');
@@ -2960,7 +2902,7 @@
         });
 
         window.addEventListener('beforeunload', function() {
-            localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            safeSetItem('htmlEditorContent', htmlEditor.value);
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                 addToHistory();
                 lastContent = htmlEditor.value;
@@ -3048,7 +2990,7 @@
         
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                localStorage.setItem('htmlEditorContent', htmlEditor.value);
+                safeSetItem('htmlEditorContent', htmlEditor.value);
                 // iOS Safari 的 beforeunload 不可靠，切后台时主动保存历史记录
                 if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                     addToHistory();
@@ -3059,7 +3001,7 @@
 
         // 移动设备优化：处理页面切换和后台运行
         window.addEventListener('blur', function() {
-            localStorage.setItem('htmlEditorContent', htmlEditor.value);
+            safeSetItem('htmlEditorContent', htmlEditor.value);
             // iOS 后台切换兜底：blur 时也保存历史记录
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
                 addToHistory();
@@ -3125,8 +3067,18 @@
         // 监听窗口大小变化
         window.addEventListener('resize', adjustToastPositionForiPad);
 
+        // 安全的 localStorage 读写包装，避免 Safari 隐私模式或配额超限抛出异常
+        function safeSetItem(key, value) {
+            try { localStorage.setItem(key, value); return true; }
+            catch(e) { console.warn('localStorage.setItem 失败:', e.name); return false; }
+        }
+        function safeGetItem(key) {
+            try { return localStorage.getItem(key); }
+            catch(e) { console.warn('localStorage.getItem 失败:', e.name); return null; }
+        }
+
         function loadFromLocalStorage() {
-            var savedContent = localStorage.getItem('htmlEditorContent');
+            var savedContent = safeGetItem('htmlEditorContent');
             if (savedContent) {
                 htmlEditor.value = savedContent;
                 updatePreview();
@@ -3205,7 +3157,7 @@
                 </div>
                 
                 <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="var m=document.getElementById('helpModal');if(m)m.remove();" style="
+                    <button id="helpCloseBtn" style="
                         background: #007aff;
                         color: white;
                         border: none;
@@ -3217,27 +3169,34 @@
                     ">关闭</button>
                 </div>
             `;
-            
+
             modal.appendChild(content);
             modal.className = 'modal';
-            
+            document.body.appendChild(modal);
+
+            // 统一关闭函数：移除模态框和ESC监听器，避免事件泄漏
+            function closeHelp() {
+                modal.remove();
+                document.removeEventListener('keydown', helpEscHandler);
+            }
+
+            // 关闭按钮
+            content.querySelector('#helpCloseBtn').addEventListener('click', closeHelp);
+
             // 点击背景关闭
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) {
-                    modal.remove();
+                    closeHelp();
                 }
             });
-            
+
             // ESC键关闭
             function helpEscHandler(e) {
                 if (e.key === 'Escape') {
-                    modal.remove();
-                    document.removeEventListener('keydown', helpEscHandler);
+                    closeHelp();
                 }
             }
             document.addEventListener('keydown', helpEscHandler);
-            
-            document.body.appendChild(modal);
         }
 
         async function exportToPdf() {
@@ -3950,7 +3909,7 @@
             pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
-                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:pdfGetRenderWidth(), windowWidth:pdfGetRenderWidth()});
                     var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
                     pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
                     pdfRemoveIframe(iframe);
@@ -3962,11 +3921,13 @@
             pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
+                    var renderW = pdfGetRenderWidth();
+                    var isLandscape = pdfOrientation === 'l';
                     var opt = {
-                        margin: 10, filename: pdfGetFilename(),
+                        margin: pdfMargin, filename: pdfGetFilename(),
                         image: {type: 'jpeg', quality: 0.95},
-                        html2canvas: {scale: 2, useCORS: true, logging: false, backgroundColor: null, width: 794, windowWidth: 794},
-                        jsPDF: {unit: 'mm', format: 'a4', orientation: 'portrait'},
+                        html2canvas: {scale: 2, useCORS: true, logging: false, backgroundColor: null, width: renderW, windowWidth: renderW},
+                        jsPDF: {unit: 'mm', format: pdfPageSize, orientation: isLandscape ? 'landscape' : 'portrait'},
                         pagebreak: {mode: ['avoid-all', 'css', 'legacy']}
                     };
                     await html2pdf().set(opt).from(iframeBody).save();
@@ -3980,11 +3941,16 @@
             pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
-                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var canvas = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:pdfGetRenderWidth(), windowWidth:pdfGetRenderWidth()});
                     var imgData = canvas.toDataURL('image/png');
                     var imgBytes = await fetch(imgData).then(function(r) { return r.arrayBuffer(); });
                     var pdfDoc = await PDFLib.PDFDocument.create();
-                    var pageWidth = 595.28, pageHeight = 841.89, margin = 28.35;
+                    // 使用用户设置的纸张大小和边距（pt单位，1mm≈2.8346pt）
+                    var pageSizeInfo = PDF_PAGE_SIZES[pdfPageSize] || PDF_PAGE_SIZES.a4;
+                    var isLandscape = pdfOrientation === 'l';
+                    var pageWidth = (isLandscape ? pageSizeInfo.height : pageSizeInfo.width) * 2.8346;
+                    var pageHeight = (isLandscape ? pageSizeInfo.width : pageSizeInfo.height) * 2.8346;
+                    var margin = pdfMargin * 2.8346;
                     var contentWidth = pageWidth - margin * 2, contentHeight = pageHeight - margin * 2;
                     var imgAspect = canvas.width / canvas.height;
                     var renderWidth = contentWidth, renderHeight = renderWidth / imgAspect;
@@ -4015,7 +3981,7 @@
             pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
-                    var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, width: 794});
+                    var canvas = await modernScreenshot.domToCanvas(iframeBody, {scale: 2, width: pdfGetRenderWidth()});
                     var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
                     pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
                     pdfRemoveIframe(iframe);
@@ -4048,7 +4014,7 @@
             pdfCreateRenderIframe(html, pdfGetRenderWidth(), async function(iframe) {
                 try {
                     var iframeBody = iframe.contentDocument.body;
-                    var canvas = await html2canvas(iframeBody, {scale:3, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var canvas = await html2canvas(iframeBody, {scale:3, useCORS:true, logging:false, backgroundColor:null, width:pdfGetRenderWidth(), windowWidth:pdfGetRenderWidth()});
                     var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
                     pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
                     pdfRemoveIframe(iframe);
@@ -4061,11 +4027,12 @@
                 try {
                     var iframeBody = iframe.contentDocument.body;
                     var scrollHeight = iframeBody.scrollHeight || iframeBody.offsetHeight || 1000;
+                    var renderW = pdfGetRenderWidth();
                     var canvas = document.createElement('canvas');
-                    canvas.width = 794 * 2;
+                    canvas.width = renderW * 2;
                     canvas.height = scrollHeight * 2;
                     var ctx = canvas.getContext('2d');
-                    var rendered = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794, canvas:canvas});
+                    var rendered = await html2canvas(iframeBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:renderW, windowWidth:renderW, canvas:canvas});
                     var pdf = pdfCanvasToPdfPages(rendered, window.jspdf.jsPDF);
                     pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
                     pdfRemoveIframe(iframe);
@@ -4074,8 +4041,9 @@
         }
 
         async function pdfExportDoubleIframe(html) {
+            var renderW = pdfGetRenderWidth();
             var outerIframe = document.createElement('iframe');
-            outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
+            outerIframe.style.cssText = 'position:fixed;left:0;top:0;width:' + renderW + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
             document.body.appendChild(outerIframe);
             var outerDoc = outerIframe.contentDocument || outerIframe.contentWindow.document;
             outerDoc.open();
@@ -4083,7 +4051,7 @@
             outerDoc.close();
             await new Promise(function(r) { setTimeout(r, 100); });
             var innerIframe = outerDoc.createElement('iframe');
-            innerIframe.style.cssText = 'width:794px;border:none;';
+            innerIframe.style.cssText = 'width:' + renderW + 'px;border:none;';
             outerDoc.body.appendChild(innerIframe);
             var innerDoc = innerIframe.contentDocument || innerIframe.contentWindow.document;
             innerDoc.open();
@@ -4092,7 +4060,7 @@
             await new Promise(function(r) { setTimeout(r, 800); });
             try {
                 var innerBody = innerDoc.body;
-                var canvas = await html2canvas(innerBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                var canvas = await html2canvas(innerBody, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:renderW, windowWidth:renderW});
                 var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
                 pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
             } catch(e) { showToast('导出失败: ' + e.message, 'error'); }
@@ -4100,8 +4068,9 @@
         }
 
         async function pdfExportSrcdoc(html) {
+            var renderW = pdfGetRenderWidth();
             var renderFrame = document.createElement('iframe');
-            renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
+            renderFrame.style.cssText = 'position:fixed;left:0;top:0;width:' + renderW + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;';
             document.body.appendChild(renderFrame);
             renderFrame.srcdoc = html;
             renderFrame.onload = async function() {
@@ -4109,7 +4078,7 @@
                     var doc = renderFrame.contentDocument;
                     await new Promise(function(r) { setTimeout(r, 300); });
                     var body = doc.body;
-                    var canvas = await html2canvas(body, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:794, windowWidth:794});
+                    var canvas = await html2canvas(body, {scale:2, useCORS:true, logging:false, backgroundColor:null, width:renderW, windowWidth:renderW});
                     var pdf = pdfCanvasToPdfPages(canvas, window.jspdf.jsPDF);
                     pdfDownloadBlob(pdf.output('blob'), pdfGetFilename());
                     pdfRemoveIframe(renderFrame);
@@ -4333,8 +4302,6 @@
                 closeBtn.onclick = toggleFullscreenPreview;
                 closeBtn.title = '退出全屏';
                 document.body.appendChild(closeBtn);
-                // 延迟显示关闭按钮以实现淡入效果
-                requestAnimationFrame(() => closeBtn.style.opacity = '0.3');
             }
             
             // 延迟刷新预览以确保正确渲染
@@ -4492,8 +4459,6 @@
                 if (!htmlEditor.value.trim()) {
                     loadFromLocalStorage();
                 }
-                
-                setTimeout(autoPasteOnLoad, 500);
                 
                 loadHistory();
                 
@@ -5019,7 +4984,7 @@
                     updateCharCount();
                     clearTimeout(autoSaveTimeout);
                     autoSaveTimeout=setTimeout(function(){
-                        localStorage.setItem('htmlEditorContent',htmlEditor.value);
+                        safeSetItem('htmlEditorContent',htmlEditor.value);
                         if(htmlEditor.value.trim()&&htmlEditor.value!==lastContent){
                             addToHistory();
                             lastContent=htmlEditor.value;
