@@ -1815,6 +1815,7 @@
             <button class="btn btn-secondary" id="favBackBtn" onclick="favGoUp()" title="返回上一级">←</button>
             <button class="btn btn-secondary" onclick="favGoTo(null)" title="回到收藏夹根目录">🏠</button>
             <div class="fav-breadcrumb" id="favBreadcrumb"></div>
+            <button class="btn btn-info" onclick="favSyncMenu()" id="favSyncBtn" title="云同步（多设备）">☁️ 同步</button>
             <button class="btn btn-primary" onclick="favCreateFolder()">📁 新建文件夹</button>
             <button class="btn btn-secondary" onclick="closeFavoritesPage()">✕ 关闭</button>
         </div>
@@ -2393,7 +2394,7 @@
             
             const msg = document.createElement('p');
             msg.textContent = message;
-            msg.style.cssText = 'margin:0 0 20px;font-size:16px;line-height:1.5;';
+            msg.style.cssText = 'margin:0 0 20px;font-size:16px;line-height:1.5;white-space:pre-line;';
             
             const btnGroup = document.createElement('div');
             btnGroup.style.cssText = 'display:flex;gap:12px;justify-content:center;';
@@ -2717,6 +2718,45 @@
                         </div>
                     </div>
                     
+                    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">☁️ 收藏夹云同步（GitHub）</h4>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 140px;">
+                                <label for="favSyncOwner" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">GitHub 用户名：</label>
+                                <input type="text" id="favSyncOwner" placeholder="例如：pHsl-z" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div style="flex: 1; min-width: 140px;">
+                                <label for="favSyncRepo" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">仓库名（建议私有）：</label>
+                                <input type="text" id="favSyncRepo" placeholder="例如：my-favorites-sync" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 120px;">
+                                <label for="favSyncBranch" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">分支：</label>
+                                <input type="text" id="favSyncBranch" placeholder="main" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label for="favSyncPath" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">文件路径：</label>
+                                <input type="text" id="favSyncPath" placeholder="favorites.json" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label for="favSyncToken" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">访问令牌（Fine-grained PAT）：</label>
+                            <input type="password" id="favSyncToken" autocomplete="off" placeholder="github_pat_ 开头" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 6px 0 0;">创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。Repository access 仅选择该仓库，权限只需 Contents: Read and write。令牌仅保存在本设备浏览器，不会写入代码；输入框留空表示保留已保存的令牌。</p>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label for="favSyncDevice" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">设备名称（用于区分多端）：</label>
+                            <input type="text" id="favSyncDevice" placeholder="例如：我的iPad" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-primary" onclick="saveModalFavSync()">保存</button>
+                            <button class="btn btn-sm btn-secondary" onclick="testFavSyncConnection()">测试连接</button>
+                            <span id="favSyncTestResult" style="font-size: 12px;"></span>
+                        </div>
+                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。</p>
+                    </div>
+
                     <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
                         <button class="btn btn-primary" onclick="applyModalAllSettings()">应用所有设置</button>
                         <button class="btn btn-secondary" onclick="loadModalSettings()">重新加载设置</button>
@@ -3060,6 +3100,7 @@
              saveModalDocxOrientation();
              saveModalDocxFontName();
              saveModalDocxFontSize();
+             saveModalFavSync();
              _silentSave = false;
              showToast('所有设置已应用', 'success');
          }
@@ -3101,6 +3142,19 @@
              
              var modalDocxFontSize = document.getElementById('modalDocxFontSize');
              if (modalDocxFontSize) modalDocxFontSize.value = DOCX_EXPORT_CONFIG.fontSize;
+
+             var favSyncOwnerInput = document.getElementById('favSyncOwner');
+             if (favSyncOwnerInput) favSyncOwnerInput.value = favSyncConfig.owner || '';
+             var favSyncRepoInput = document.getElementById('favSyncRepo');
+             if (favSyncRepoInput) favSyncRepoInput.value = favSyncConfig.repo || '';
+             var favSyncBranchInput = document.getElementById('favSyncBranch');
+             if (favSyncBranchInput) favSyncBranchInput.value = favSyncConfig.branch || 'main';
+             var favSyncPathInput = document.getElementById('favSyncPath');
+             if (favSyncPathInput) favSyncPathInput.value = favSyncConfig.path || 'favorites.json';
+             var favSyncTokenInput = document.getElementById('favSyncToken');
+             if (favSyncTokenInput) favSyncTokenInput.value = favSyncConfig.token || '';
+             var favSyncDeviceInput = document.getElementById('favSyncDevice');
+             if (favSyncDeviceInput) favSyncDeviceInput.value = favSyncConfig.deviceName || '';
          }
         
         // 关闭下拉菜单
@@ -5412,15 +5466,22 @@
                     const data = JSON.parse(stored);
                     favoritesData = {
                         folders: Array.isArray(data.folders) ? data.folders : [],
-                        items: Array.isArray(data.items) ? data.items : []
+                        items: Array.isArray(data.items) ? data.items : [],
+                        updatedAt: data.updatedAt || null,
+                        updatedBy: data.updatedBy || null
                     };
                 }
             } catch (error) {
-                favoritesData = { folders: [], items: [] };
+                favoritesData = { folders: [], items: [], updatedAt: null, updatedBy: null };
             }
         }
 
-        function saveFavorites() {
+        // 保存收藏到localStorage；bump=false 时不刷新时间戳（云拉取时保留云端时间）
+        function saveFavorites(bump) {
+            if (bump !== false) {
+                favoritesData.updatedAt = new Date().toISOString();
+                favoritesData.updatedBy = (typeof favSyncConfig !== 'undefined' && favSyncConfig) ? favSyncConfig.deviceName : '';
+            }
             try {
                 localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoritesData));
                 return true;
@@ -5951,6 +6012,363 @@
             if (value && cb) cb(value);
             else if (!value) showToast('名称不能为空', 'error');
         }
+
+        /* ---------- GitHub 云同步（多设备收藏夹同步） ---------- */
+        const FAV_SYNC_STORAGE_KEY = 'htmlEditorFavSyncConfig';
+        var favSyncConfig = { owner: '', repo: '', token: '', branch: 'main', path: 'favorites.json', deviceName: '', lastSyncAt: null, lastSyncAction: '' };
+
+        function favDefaultDeviceName() {
+            const ua = navigator.userAgent;
+            if (/iPad/.test(ua)) return 'iPad';
+            if (/iPhone/.test(ua)) return 'iPhone';
+            if (/Android/.test(ua)) return 'Android设备';
+            if (/Macintosh/.test(ua)) return 'Mac';
+            if (/Windows/.test(ua)) return 'Windows设备';
+            return '我的设备';
+        }
+
+        function loadFavSyncConfig() {
+            try {
+                const stored = localStorage.getItem(FAV_SYNC_STORAGE_KEY);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    favSyncConfig = {
+                        owner: data.owner || '',
+                        repo: data.repo || '',
+                        token: data.token || '',
+                        branch: data.branch || 'main',
+                        path: data.path || 'favorites.json',
+                        deviceName: data.deviceName || favDefaultDeviceName(),
+                        lastSyncAt: data.lastSyncAt || null,
+                        lastSyncAction: data.lastSyncAction || ''
+                    };
+                    return;
+                }
+            } catch (error) {}
+            favSyncConfig = { owner: '', repo: '', token: '', branch: 'main', path: 'favorites.json', deviceName: favDefaultDeviceName(), lastSyncAt: null, lastSyncAction: '' };
+        }
+
+        function saveFavSyncConfigToStorage() {
+            try {
+                localStorage.setItem(FAV_SYNC_STORAGE_KEY, JSON.stringify(favSyncConfig));
+                return true;
+            } catch (error) {
+                showToast('云同步配置保存失败', 'error');
+                return false;
+            }
+        }
+
+        function isFavSyncConfigured() {
+            return !!(favSyncConfig.owner.trim() && favSyncConfig.repo.trim() && favSyncConfig.token.trim());
+        }
+
+        function favSyncApiBase() {
+            return 'https://api.github.com/repos/' + encodeURIComponent(favSyncConfig.owner.trim()) + '/' + encodeURIComponent(favSyncConfig.repo.trim());
+        }
+
+        function favSyncBranchName() {
+            return favSyncConfig.branch.trim() || 'main';
+        }
+
+        function favSyncNormalizedPath() {
+            return (favSyncConfig.path || 'favorites.json').trim().replace(/^\/+/, '') || 'favorites.json';
+        }
+
+        function favSyncEncodedPath() {
+            return favSyncNormalizedPath().split('/').map(encodeURIComponent).join('/');
+        }
+
+        function favSyncHeaders() {
+            return { 'Authorization': 'Bearer ' + favSyncConfig.token.trim() };
+        }
+
+        // UTF-8 安全的 Base64（收藏内容含中文，且可能较大，分块处理）
+        function favB64Encode(str) {
+            const bytes = new TextEncoder().encode(str);
+            let bin = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+            }
+            return btoa(bin);
+        }
+
+        function favB64Decode(b64) {
+            const bin = atob(String(b64).replace(/\s/g, ''));
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return new TextDecoder('utf-8').decode(bytes);
+        }
+
+        function favSyncTimeStr(iso) {
+            try { return new Date(iso).toLocaleString('zh-CN'); } catch (e) { return String(iso || ''); }
+        }
+
+        function favParseFavJson(text) {
+            try {
+                const d = JSON.parse(text);
+                return (d && (Array.isArray(d.folders) || Array.isArray(d.items))) ? d : null;
+            } catch (e) { return null; }
+        }
+
+        // 统一请求：404/409/422 返回状态对象，401/403/网络错误抛错
+        async function favGhRequest(url, options) {
+            let res;
+            try {
+                res = await fetch(url, options);
+            } catch (e) {
+                throw new Error('网络请求失败，请检查网络连接');
+            }
+            if (res.status === 401) throw new Error('访问令牌无效或已过期（401），请到设置中更新');
+            if (res.status === 403) {
+                const body = await res.json().catch(function() { return {}; });
+                const msg = body && body.message ? body.message : '';
+                if (/1 ?MB|too large/i.test(msg)) return { status: 403, ok: false, tooLarge: true };
+                throw new Error('无权限访问（403），请检查令牌对该仓库的 Contents 读写权限');
+            }
+            if (res.status === 404) return { status: 404, ok: false };
+            if (res.status === 409 || res.status === 422) return { status: res.status, ok: false, conflict: true };
+            if (!res.ok) throw new Error('GitHub 请求失败（HTTP ' + res.status + '）');
+            return { status: res.status, ok: true, res: res };
+        }
+
+        // 读取云端收藏：{exists:false} 或 {exists:true, text, sha}
+        async function favCloudGet() {
+            const headers = favSyncHeaders();
+            const branch = favSyncBranchName();
+            const fileUrl = favSyncApiBase() + '/contents/' + favSyncEncodedPath() + '?ref=' + encodeURIComponent(branch);
+            const r = await favGhRequest(fileUrl, { headers: headers });
+            if (r.status === 404) return { exists: false };
+            if (r.tooLarge) {
+                // 超过 1MB：raw 读取内容 + 递归树查询 blob sha
+                const rawRes = await fetch(fileUrl, { headers: Object.assign({}, headers, { 'Accept': 'application/vnd.github.raw' }) });
+                if (!rawRes.ok) throw new Error('读取云端大文件失败（HTTP ' + rawRes.status + '）');
+                const text = await rawRes.text();
+                const treeRes = await fetch(favSyncApiBase() + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1', { headers: headers });
+                if (!treeRes.ok) throw new Error('无法获取云端文件版本信息（HTTP ' + treeRes.status + '）');
+                const tree = await treeRes.json();
+                const entry = (tree.tree || []).find(function(t) { return t.path === favSyncNormalizedPath(); });
+                if (!entry) throw new Error('无法定位云端文件，请稍后重试');
+                return { exists: true, text: text, sha: entry.sha };
+            }
+            const info = await r.res.json();
+            return { exists: true, text: favB64Decode(info.content || ''), sha: info.sha };
+        }
+
+        async function favCloudPut(jsonStr, sha) {
+            const headers = Object.assign({}, favSyncHeaders(), { 'Content-Type': 'application/json' });
+            const body = {
+                message: '📁 更新收藏夹（' + favSyncConfig.deviceName + '）',
+                content: favB64Encode(jsonStr),
+                branch: favSyncBranchName()
+            };
+            if (sha) body.sha = sha;
+            return favGhRequest(favSyncApiBase() + '/contents/' + favSyncEncodedPath(), {
+                method: 'PUT', headers: headers, body: JSON.stringify(body)
+            });
+        }
+
+        function favSyncEnsureConfigured() {
+            if (isFavSyncConfigured()) return true;
+            showConfirmDialog('尚未配置云同步。\n是否现在打开同步设置？', function() {
+                toggleSettingsPanel();
+            });
+            return false;
+        }
+
+        function saveFavSyncRecord(action) {
+            favSyncConfig.lastSyncAt = new Date().toISOString();
+            favSyncConfig.lastSyncAction = action;
+            saveFavSyncConfigToStorage();
+        }
+
+        async function favCloudUpload() {
+            if (!favSyncEnsureConfigured()) return;
+            closeModal();
+            showToast('正在上传到云端…', 'success');
+            try {
+                const remote = await favCloudGet();
+                if (remote.exists) {
+                    const remoteData = favParseFavJson(remote.text);
+                    if (remoteData && remoteData.updatedAt && favoritesData.updatedAt &&
+                        new Date(remoteData.updatedAt) > new Date(favoritesData.updatedAt)) {
+                        showConfirmDialog(
+                            '云端数据较新：\n' + favSyncTimeStr(remoteData.updatedAt) + ' 由「' + (remoteData.updatedBy || '未知设备') + '」更新。\n\n确定要用本地数据覆盖云端吗？',
+                            async function() { await favDoUpload(remote.sha); }
+                        );
+                        return;
+                    }
+                    await favDoUpload(remote.sha);
+                } else {
+                    await favDoUpload(null);
+                }
+            } catch (e) {
+                showToast('上传失败：' + e.message, 'error');
+            }
+        }
+
+        async function favDoUpload(sha) {
+            try {
+                const payload = {
+                    version: 1,
+                    app: 'my-html-editor',
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: favSyncConfig.deviceName,
+                    folders: favoritesData.folders,
+                    items: favoritesData.items
+                };
+                const jsonStr = JSON.stringify(payload);
+                let r = await favCloudPut(jsonStr, sha);
+                if (r.conflict && sha) {
+                    const remote = await favCloudGet();
+                    r = await favCloudPut(jsonStr, remote.exists ? remote.sha : null);
+                }
+                if (r.status === 404) throw new Error('仓库或分支不存在，请检查设置（部分仓库默认分支为 master）');
+                if (r.conflict) throw new Error('云端数据刚被其他设备更新，请先拉取再上传');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                favoritesData.updatedAt = payload.updatedAt;
+                favoritesData.updatedBy = payload.updatedBy;
+                saveFavorites(false);
+                saveFavSyncRecord('上传');
+                showToast('已上传到云端（' + favSyncConfig.repo + '/' + favSyncNormalizedPath() + '）', 'success');
+            } catch (e) {
+                showToast('上传失败：' + e.message, 'error');
+            }
+        }
+
+        async function favCloudPull() {
+            if (!favSyncEnsureConfigured()) return;
+            closeModal();
+            showToast('正在从云端拉取…', 'success');
+            try {
+                const remote = await favCloudGet();
+                if (!remote.exists) {
+                    showToast('云端暂无收藏数据，请先在另一台设备上传', 'error');
+                    return;
+                }
+                const remoteData = favParseFavJson(remote.text);
+                if (!remoteData) {
+                    showToast('云端文件不是有效的收藏数据', 'error');
+                    return;
+                }
+                const applyPull = function() {
+                    favoritesData = {
+                        folders: Array.isArray(remoteData.folders) ? remoteData.folders : [],
+                        items: Array.isArray(remoteData.items) ? remoteData.items : [],
+                        updatedAt: remoteData.updatedAt || new Date().toISOString(),
+                        updatedBy: remoteData.updatedBy || '云端'
+                    };
+                    if (favCurrentFolderId && !favoritesData.folders.some(function(f) { return f.id === favCurrentFolderId; })) {
+                        favCurrentFolderId = null;
+                    }
+                    saveFavorites(false);
+                    saveFavSyncRecord('拉取');
+                    renderFavorites();
+                    showToast('已从云端拉取：' + favoritesData.folders.length + ' 个文件夹 · ' + favoritesData.items.length + ' 个收藏', 'success');
+                };
+                if (remoteData.updatedAt && favoritesData.updatedAt &&
+                    new Date(favoritesData.updatedAt) > new Date(remoteData.updatedAt)) {
+                    showConfirmDialog(
+                        '本地数据较新：\n' + favSyncTimeStr(favoritesData.updatedAt) + ' 由「' + (favoritesData.updatedBy || '本机') + '」更新。\n云端较旧：' + favSyncTimeStr(remoteData.updatedAt) + '。\n\n仍要用云端覆盖本地吗？未上传的本地改动将丢失。',
+                        applyPull
+                    );
+                } else {
+                    applyPull();
+                }
+            } catch (e) {
+                showToast('拉取失败：' + e.message, 'error');
+            }
+        }
+
+        async function favSyncMenu() {
+            const configured = isFavSyncConfigured();
+            let status;
+            if (configured) {
+                status = '<div>✅ ' + escapeHtml(favSyncConfig.owner + '/' + favSyncConfig.repo)
+                    + '<span style="color:#666;font-size:11px;"> @' + escapeHtml(favSyncBranchName()) + '</span></div>'
+                    + '<div style="color:#888;font-size:11px;margin-top:4px;">📄 ' + escapeHtml(favSyncNormalizedPath()) + ' · 💻 ' + escapeHtml(favSyncConfig.deviceName) + '</div>';
+            } else {
+                status = '<span style="color:#e67e22;">⚠️ 尚未配置，请先在「同步设置」中填写 GitHub 信息</span>';
+            }
+            const localTime = favoritesData.updatedAt ? favSyncTimeStr(favoritesData.updatedAt) : '暂无收藏';
+            const lastSync = favSyncConfig.lastSyncAt ? ('上次' + favSyncConfig.lastSyncAction + '：' + favSyncTimeStr(favSyncConfig.lastSyncAt)) : '从未同步';
+            const content = '<div style="display:flex;flex-direction:column;gap:14px;max-height:60vh;overflow-y:auto;">'
+                + '<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px;font-size:13px;color:#e6e6e6;line-height:1.6;">'
+                + '<div style="font-weight:500;margin-bottom:6px;">同步目标</div>'
+                + status
+                + '</div>'
+                + '<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px;font-size:12px;color:#888;line-height:1.8;">'
+                + '<div>本地：' + favoritesData.folders.length + ' 个文件夹 · ' + favoritesData.items.length + ' 个收藏 · ' + escapeHtml(localTime) + '</div>'
+                + '<div id="favSyncCloudStatus">云端：' + (configured ? '获取中…' : '未配置') + '</div>'
+                + '<div>' + escapeHtml(lastSync) + '</div>'
+                + '</div>'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + '<button class="btn btn-success" onclick="favCloudUpload()" style="flex:1;justify-content:center;">⬆️ 上传到云端</button>'
+                + '<button class="btn btn-info" onclick="favCloudPull()" style="flex:1;justify-content:center;">⬇️ 从云端拉取</button>'
+                + '</div>'
+                + '<button class="btn btn-secondary" onclick="closeModal();toggleSettingsPanel();" style="justify-content:center;">⚙️ 同步设置</button>'
+                + '</div>';
+            showModal('☁️ 收藏夹云同步', content);
+            if (!configured) return;
+            const el = document.getElementById('favSyncCloudStatus');
+            if (!el) return;
+            try {
+                const remote = await favCloudGet();
+                if (!remote.exists) {
+                    el.innerHTML = '云端：<span style="color:#e67e22;">暂无数据</span>';
+                } else {
+                    const d = favParseFavJson(remote.text);
+                    if (d) {
+                        el.innerHTML = '云端：' + (d.items || []).length + ' 个收藏 · 更新于 ' + escapeHtml(favSyncTimeStr(d.updatedAt))
+                            + (d.updatedBy ? '（' + escapeHtml(d.updatedBy) + '）' : '');
+                    } else {
+                        el.innerHTML = '云端：<span style="color:#e67e22;">文件格式异常</span>';
+                    }
+                }
+            } catch (e) {
+                el.innerHTML = '云端：<span style="color:#ff6b6b;">' + escapeHtml(e.message) + '</span>';
+            }
+        }
+
+        function saveModalFavSync() {
+            const owner = document.getElementById('favSyncOwner');
+            const repo = document.getElementById('favSyncRepo');
+            const token = document.getElementById('favSyncToken');
+            const branch = document.getElementById('favSyncBranch');
+            const path = document.getElementById('favSyncPath');
+            const device = document.getElementById('favSyncDevice');
+            if (owner) favSyncConfig.owner = owner.value.trim();
+            if (repo) favSyncConfig.repo = repo.value.trim();
+            if (token && token.value.trim()) favSyncConfig.token = token.value.trim();
+            if (branch) favSyncConfig.branch = branch.value.trim() || 'main';
+            if (path) favSyncConfig.path = path.value.trim() || 'favorites.json';
+            if (device) favSyncConfig.deviceName = device.value.trim() || favDefaultDeviceName();
+            saveFavSyncConfigToStorage();
+            if (!_silentSave) showToast('云同步配置已保存', 'success');
+        }
+
+        async function testFavSyncConnection() {
+            saveModalFavSync();
+            const el = document.getElementById('favSyncTestResult');
+            if (!isFavSyncConfigured()) {
+                if (el) el.innerHTML = '<span style="color:#ff6b6b;">请先填写用户名、仓库名和访问令牌</span>';
+                return;
+            }
+            if (el) el.innerHTML = '<span style="color:#888;">测试中…</span>';
+            try {
+                const res = await fetch(favSyncApiBase(), { headers: favSyncHeaders() });
+                if (res.status === 401) throw new Error('令牌无效或已过期（401）');
+                if (res.status === 404) throw new Error('仓库不存在或令牌无权访问（404）');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                if (el) el.innerHTML = '<span style="color:#00a86b;">✅ 连接成功</span>';
+                showToast('GitHub 连接成功', 'success');
+            } catch (e) {
+                const msg = /fetch/i.test(e.message) ? '网络请求失败' : e.message;
+                if (el) el.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(msg) + '</span>';
+            }
+        }
+
+        loadFavSyncConfig();
 
         // ESC 关闭收藏夹页面（modal 打开时优先交给 modal 处理）
         document.addEventListener('keydown', function(e) {
