@@ -1816,6 +1816,8 @@
             <button class="btn btn-secondary" onclick="favGoTo(null)" title="回到收藏夹根目录">🏠</button>
             <div class="fav-breadcrumb" id="favBreadcrumb"></div>
             <button class="btn btn-info" onclick="favSyncMenu()" id="favSyncBtn" title="云同步（多设备）">☁️ 同步</button>
+            <button class="btn btn-secondary" onclick="favExportData()" title="将收藏导出为 JSON 备份文件">📤 导出</button>
+            <button class="btn btn-secondary" onclick="favImportClick()" title="从 JSON 备份文件导入收藏">📥 导入</button>
             <button class="btn btn-primary" onclick="favCreateFolder()">📁 新建文件夹</button>
             <button class="btn btn-secondary" onclick="closeFavoritesPage()">✕ 关闭</button>
         </div>
@@ -1828,6 +1830,7 @@
 
     <!-- 隐藏的文件输入元素 -->
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
+    <input type="file" id="favImportFile" accept=".json,application/json" style="display: none;" onchange="handleFavImport(this)">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
@@ -2742,7 +2745,7 @@
                         </div>
                         <div style="margin-bottom: 12px;">
                             <label for="favSyncToken" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">访问令牌（Fine-grained PAT）：</label>
-                            <input type="password" id="favSyncToken" autocomplete="off" placeholder="github_pat_ 开头" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            <input type="password" id="favSyncToken" autocomplete="off" placeholder="github_pat_ 或 ghp_ 开头" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
                             <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 6px 0 0;">创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。Repository access 仅选择该仓库，权限只需 Contents: Read and write。令牌仅保存在本设备浏览器，不会写入代码；输入框留空表示保留已保存的令牌。</p>
                         </div>
                         <div style="margin-bottom: 12px;">
@@ -2752,9 +2755,11 @@
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <button class="btn btn-sm btn-primary" onclick="saveModalFavSync()">保存</button>
                             <button class="btn btn-sm btn-secondary" onclick="testFavSyncConnection()">测试连接</button>
+                            <button class="btn btn-sm btn-secondary" onclick="favSyncConfigImportClick()" title="从配置 MD / JSON 文件自动填入，免手动输入">📥 导入配置文件</button>
+                            <input type="file" id="favSyncImportFile" accept=".md,.markdown,.json,.txt" style="display: none;" onchange="handleFavSyncConfigImport(this)">
                             <span id="favSyncTestResult" style="font-size: 12px;"></span>
                         </div>
-                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。</p>
+                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。换新设备时，点「📥 导入配置文件」选择配置文档即可一键填入（令牌等敏感信息请勿公开分享）。</p>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
@@ -6366,6 +6371,158 @@
                 const msg = /fetch/i.test(e.message) ? '网络请求失败' : e.message;
                 if (el) el.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(msg) + '</span>';
             }
+        }
+
+        /* ---------- 配置文件导入 / 收藏夹导出与导入 ---------- */
+
+        // 解析配置文本：支持 ①MD 内 ```json 代码块 ②纯 JSON ③MD 配置表格
+        function favParseConfigText(text) {
+            const s = String(text || '');
+            const block = s.match(/```json\s*([\s\S]*?)```/i);
+            if (block) {
+                try {
+                    const j = JSON.parse(block[1]);
+                    if (j && (j.owner || j.repo || j.token)) return j;
+                } catch (e) {}
+            }
+            try {
+                const j2 = JSON.parse(s);
+                if (j2 && (j2.owner || j2.repo || j2.token)) return j2;
+            } catch (e) {}
+            const labels = {
+                'github 用户名': 'owner', '用户名': 'owner', 'owner': 'owner',
+                '仓库名': 'repo', '仓库': 'repo', 'repo': 'repo',
+                '分支': 'branch', 'branch': 'branch',
+                '文件路径': 'path', '路径': 'path', 'path': 'path',
+                '设备名称': 'deviceName', '设备名': 'deviceName', 'devicename': 'deviceName',
+                '访问令牌': 'token', '令牌': 'token', 'token': 'token'
+            };
+            const cfg = {};
+            s.split('\n').forEach(function(line) {
+                const mm = line.match(/^\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|?\s*$/);
+                if (!mm) return;
+                const key = labels[mm[1].toLowerCase()];
+                if (key && !cfg[key]) cfg[key] = mm[2].replace(/`/g, '').trim();
+            });
+            if (cfg.owner || cfg.repo || cfg.token) return cfg;
+            return null;
+        }
+
+        function favSyncConfigImportClick() {
+            const input = document.getElementById('favSyncImportFile');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function handleFavSyncConfigImport(inputEl) {
+            const file = inputEl && inputEl.files && inputEl.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                const cfg = favParseConfigText(reader.result);
+                if (!cfg) {
+                    showToast('无法识别配置文件：需为 JSON 文件，或含 JSON 配置块 / 配置表格的 MD 文档', 'error');
+                    return;
+                }
+                if (cfg.owner) favSyncConfig.owner = String(cfg.owner).trim();
+                if (cfg.repo) favSyncConfig.repo = String(cfg.repo).trim();
+                if (cfg.branch) favSyncConfig.branch = String(cfg.branch).trim() || 'main';
+                if (cfg.path) favSyncConfig.path = String(cfg.path).trim() || 'favorites.json';
+                if (cfg.deviceName) favSyncConfig.deviceName = String(cfg.deviceName).trim();
+                if (cfg.token) favSyncConfig.token = String(cfg.token).trim();
+                // 文件里若是通用设备名（如「iPad」），换设备导入时自动改为本机名称
+                const defaultNames = ['iPad', 'iPhone', 'Android设备', 'Mac', 'Windows设备', '我的设备'];
+                if (defaultNames.indexOf(favSyncConfig.deviceName) !== -1) {
+                    favSyncConfig.deviceName = favDefaultDeviceName();
+                }
+                saveFavSyncConfigToStorage();
+                const fields = {
+                    favSyncOwner: favSyncConfig.owner,
+                    favSyncRepo: favSyncConfig.repo,
+                    favSyncBranch: favSyncConfig.branch,
+                    favSyncPath: favSyncConfig.path,
+                    favSyncDevice: favSyncConfig.deviceName,
+                    favSyncToken: favSyncConfig.token
+                };
+                for (const id in fields) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = fields[id];
+                }
+                const resultEl = document.getElementById('favSyncTestResult');
+                if (resultEl) resultEl.innerHTML = '<span style="color:#00a86b;">✅ 已导入：' + escapeHtml(favSyncConfig.owner + '/' + favSyncConfig.repo) + '</span>';
+                showToast('配置已导入并保存，建议点「测试连接」验证', 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        function favExportData() {
+            if (!favoritesData.folders.length && !favoritesData.items.length) {
+                showToast('收藏夹为空，没有可导出的内容', 'error');
+                return;
+            }
+            const payload = {
+                version: 1,
+                app: 'my-html-editor',
+                exportedAt: new Date().toISOString(),
+                folders: favoritesData.folders,
+                items: favoritesData.items
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const d = new Date();
+            const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+            a.download = 'favorites-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json';
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            showToast('已导出 ' + favoritesData.folders.length + ' 个文件夹 · ' + favoritesData.items.length + ' 个收藏', 'success');
+        }
+
+        function favImportClick() {
+            const input = document.getElementById('favImportFile');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function handleFavImport(inputEl) {
+            const file = inputEl && inputEl.files && inputEl.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                const data = favParseFavJson(reader.result);
+                if (!data) {
+                    showToast('文件格式无效：请选择「📤 导出」生成的 JSON 备份文件', 'error');
+                    return;
+                }
+                const inFolders = Array.isArray(data.folders) ? data.folders : [];
+                const inItems = Array.isArray(data.items) ? data.items : [];
+                const folderIds = {};
+                favoritesData.folders.forEach(function(f) { folderIds[f.id] = true; });
+                const itemIds = {};
+                favoritesData.items.forEach(function(i) { itemIds[i.id] = true; });
+                const newFolders = inFolders.filter(function(f) { return f.id && !folderIds[f.id]; });
+                const newItems = inItems.filter(function(i) { return i.id && !itemIds[i.id]; });
+                if (!newFolders.length && !newItems.length) {
+                    showToast('文件中的收藏均已存在，无需导入', 'success');
+                    return;
+                }
+                showConfirmDialog(
+                    '将导入 ' + newFolders.length + ' 个新文件夹、' + newItems.length + ' 个新收藏。\n（合并模式，不影响现有收藏）',
+                    function() {
+                        newFolders.forEach(function(f) { favoritesData.folders.push(f); });
+                        newItems.forEach(function(i) { favoritesData.items.push(i); });
+                        saveFavorites();
+                        renderFavorites();
+                        showToast('导入成功：新增 ' + newFolders.length + ' 个文件夹 · ' + newItems.length + ' 个收藏', 'success');
+                    }
+                );
+            };
+            reader.readAsText(file);
         }
 
         loadFavSyncConfig();
