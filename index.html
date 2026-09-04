@@ -1331,6 +1331,352 @@
         .edit-toggle-btn:hover{border-color:#4a4a3a;background:#3a3a3a}
         .edit-toggle-btn.active{background:#0066ff;border-color:#0066ff;color:#fff}
         .edit-toggle-btn.active:hover{background:#0052cc}
+
+        /* ============ 收藏夹页面 ============ */
+        .favorites-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            width: 100dvw;
+            height: 100vh;
+            height: 100dvh;
+            background: #161616;
+            z-index: 9998;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            overscroll-behavior: none;
+        }
+
+        .favorites-page.show {
+            opacity: 1;
+        }
+
+        .modal-overlay.above-favorites {
+            z-index: 10000;
+        }
+
+        .fav-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            padding-top: max(10px, env(safe-area-inset-top));
+            background: #1a1a1a;
+            border-bottom: 1px solid #2a2a2a;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .fav-breadcrumb {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            min-width: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            font-size: 13px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .fav-breadcrumb::-webkit-scrollbar {
+            display: none;
+        }
+
+        .fav-crumb {
+            color: #4d94ff;
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: 5px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .fav-crumb:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .fav-crumb.active {
+            color: #e6e6e6;
+            cursor: default;
+            font-weight: 500;
+        }
+
+        .fav-crumb-sep {
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        .fav-drop-target {
+            outline: 2px dashed #0066ff !important;
+            outline-offset: -2px;
+            background: rgba(0, 102, 255, 0.14) !important;
+            border-color: #0066ff !important;
+        }
+
+        .fav-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+            gap: 10px;
+            padding: 16px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            align-content: start;
+        }
+
+        .fav-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 14px 8px 10px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            min-width: 0;
+        }
+
+        .fav-card:hover {
+            background: #222222;
+            border-color: #3a3a3a;
+            transform: translateY(-2px);
+        }
+
+        .fav-card:active {
+            transform: scale(0.96);
+        }
+
+        .fav-dragging {
+            opacity: 0.35;
+        }
+
+        .fav-icon {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        /* 纯CSS文件夹图标 */
+        .fav-folder-icon {
+            width: 62px;
+            height: 48px;
+            position: relative;
+        }
+
+        .fav-folder-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 3px;
+            width: 30px;
+            height: 13px;
+            background: linear-gradient(180deg, #5b8def, #4577d6);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .fav-folder-icon::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 0;
+            width: 62px;
+            height: 40px;
+            background: linear-gradient(180deg, #6fa0f5, #4a7de0);
+            border-radius: 5px;
+            box-shadow: 0 3px 8px rgba(74, 125, 224, 0.35);
+        }
+
+        /* 纯CSS HTML文件图标 */
+        .fav-file-icon {
+            width: 48px;
+            height: 58px;
+            background: linear-gradient(160deg, #2e2e2e, #202020);
+            border: 1px solid #3a3a3a;
+            border-radius: 7px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .fav-file-icon::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: -1px;
+            width: 15px;
+            height: 15px;
+            background: #e34f26;
+            border-radius: 0 7px 0 8px;
+        }
+
+        .fav-file-icon span {
+            color: #e34f26;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .fav-name {
+            color: #e6e6e6;
+            font-size: 12px;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.4;
+        }
+
+        .fav-meta {
+            color: #666;
+            font-size: 10px;
+            margin-top: 2px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .fav-more-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            background: rgba(30, 30, 30, 0.85);
+            border: 1px solid #3a3a3a;
+            color: #aaa;
+            font-size: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            padding: 0;
+            z-index: 5;
+        }
+
+        .fav-card:hover .fav-more-btn {
+            display: flex;
+        }
+
+        .fav-more-btn:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        @media (pointer: coarse) {
+            .fav-more-btn {
+                display: flex;
+                opacity: 0.75;
+            }
+        }
+
+        .fav-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 20px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .fav-empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .fav-empty-hint {
+            font-size: 12px;
+            color: #555;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+
+        .fav-statusbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            background: #0d0d0d;
+            color: #888;
+            font-size: 12px;
+            border-top: 1px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+
+        .fav-context-menu {
+            position: fixed;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            min-width: 170px;
+            padding: 4px;
+            display: none;
+        }
+
+        .fav-menu-item {
+            padding: 9px 12px;
+            color: #e6e6e6;
+            font-size: 13px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+
+        .fav-menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .fav-menu-danger {
+            color: #ff6b6b;
+        }
+
+        @media (max-width: 600px) {
+            .fav-breadcrumb {
+                order: 3;
+                flex-basis: 100%;
+                width: 100%;
+            }
+
+            .fav-toolbar {
+                gap: 6px;
+            }
+
+            .fav-grid {
+                grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+                gap: 6px;
+                padding: 10px;
+            }
+
+            .fav-toolbar .btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1391,6 +1737,14 @@
                             <span>▼</span>
                         </button>
                         <div class="dropdown-menu" id="previewDropdownMenu">
+                            <button class="btn btn-warning dropdown-item" onclick="showFavoriteDialog();closePreviewDropdown();" id="favoriteBtn">
+                                <span class="icon">⭐</span>
+                                收藏
+                            </button>
+                            <button class="btn btn-info dropdown-item" onclick="openFavoritesPage();closePreviewDropdown();" id="favoritesBtn">
+                                <span class="icon">🗂️</span>
+                                收藏夹
+                            </button>
                             <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel()" id="historyBtn">
                                 <span class="icon">🕒</span>
                                 历史
@@ -1454,6 +1808,22 @@
             </div>
         </div>
     </div>
+
+    <!-- 收藏夹页面（类似桌面文件管理器） -->
+    <div id="favoritesPage" class="favorites-page">
+        <div class="fav-toolbar">
+            <button class="btn btn-secondary" id="favBackBtn" onclick="favGoUp()" title="返回上一级">←</button>
+            <button class="btn btn-secondary" onclick="favGoTo(null)" title="回到收藏夹根目录">🏠</button>
+            <div class="fav-breadcrumb" id="favBreadcrumb"></div>
+            <button class="btn btn-primary" onclick="favCreateFolder()">📁 新建文件夹</button>
+            <button class="btn btn-secondary" onclick="closeFavoritesPage()">✕ 关闭</button>
+        </div>
+        <div class="fav-grid" id="favGrid"></div>
+        <div class="fav-statusbar" id="favStatusbar"></div>
+    </div>
+
+    <!-- 收藏夹右键菜单 -->
+    <div id="favContextMenu" class="fav-context-menu"></div>
 
     <!-- 隐藏的文件输入元素 -->
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
@@ -4445,6 +4815,7 @@
                         updateCharCount();
                     }
                     loadHistory();
+                    loadFavorites();
                     if (isIOS()) {
                         setTimeout(function() {
                             htmlEditor.focus();
@@ -4461,6 +4832,7 @@
                 }
                 
                 loadHistory();
+                loadFavorites();
                 
                 // iOS设备特殊处理
                 if (isIOS()) {
@@ -5021,6 +5393,574 @@
         }
 
         htmlEditor.addEventListener('scroll',syncHighlightScroll);
+
+        /* ==================== 收藏夹功能 ==================== */
+        const FAVORITES_STORAGE_KEY = 'htmlEditorFavorites';
+        let favoritesData = { folders: [], items: [] };
+        let favCurrentFolderId = null;
+        let favDragData = null;
+        let favInputDialogCallback = null;
+
+        function favGenerateId(prefix) {
+            return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 8);
+        }
+
+        function loadFavorites() {
+            try {
+                const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    favoritesData = {
+                        folders: Array.isArray(data.folders) ? data.folders : [],
+                        items: Array.isArray(data.items) ? data.items : []
+                    };
+                }
+            } catch (error) {
+                favoritesData = { folders: [], items: [] };
+            }
+        }
+
+        function saveFavorites() {
+            try {
+                localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoritesData));
+                return true;
+            } catch (error) {
+                showToast('保存失败：本地存储空间不足', 'error');
+                return false;
+            }
+        }
+
+        // 文件夹层级：根目录为0，最深3级
+        function getFavFolderDepth(folderId) {
+            let depth = 0;
+            let currentId = folderId;
+            while (currentId) {
+                depth++;
+                const f = favoritesData.folders.find(function(x) { return x.id === currentId; });
+                currentId = f ? f.parentId : null;
+            }
+            return depth;
+        }
+
+        // 以某文件夹为根的子树高度（自身为1）
+        function getFavSubtreeHeight(folderId) {
+            const children = favoritesData.folders.filter(function(f) { return f.parentId === folderId; });
+            let maxChild = 0;
+            for (const c of children) maxChild = Math.max(maxChild, getFavSubtreeHeight(c.id));
+            return 1 + maxChild;
+        }
+
+        // folderId 是否位于 ancestorId 的子树内
+        function isDescendantOf(folderId, ancestorId) {
+            let currentId = folderId;
+            while (currentId) {
+                if (currentId === ancestorId) return true;
+                const f = favoritesData.folders.find(function(x) { return x.id === currentId; });
+                currentId = f ? f.parentId : null;
+            }
+            return false;
+        }
+
+        function collectFavSubtreeFolderIds(folderId) {
+            const ids = [folderId];
+            const children = favoritesData.folders.filter(function(f) { return f.parentId === folderId; });
+            for (const c of children) {
+                ids.push.apply(ids, collectFavSubtreeFolderIds(c.id));
+            }
+            return ids;
+        }
+
+        // 树形排序（带depth），供下拉选择使用
+        function getSortedFolders() {
+            const result = [];
+            function walk(parentId, depth) {
+                const children = favoritesData.folders
+                    .filter(function(f) { return f.parentId === parentId; })
+                    .sort(function(a, b) { return a.name.localeCompare(b.name, 'zh-CN'); });
+                for (const c of children) {
+                    result.push({ id: c.id, name: c.name, depth: depth });
+                    walk(c.id, depth + 1);
+                }
+            }
+            walk(null, 0);
+            return result;
+        }
+
+        function getFolderPathArray(folderId) {
+            const path = [{ id: null, name: '⭐ 收藏夹' }];
+            const chain = [];
+            let currentId = folderId;
+            while (currentId) {
+                const f = favoritesData.folders.find(function(x) { return x.id === currentId; });
+                if (!f) break;
+                chain.unshift({ id: f.id, name: f.name });
+                currentId = f.parentId;
+            }
+            return path.concat(chain);
+        }
+
+        function getFavFolderName(folderId) {
+            if (!folderId) return '收藏夹（根目录）';
+            const f = favoritesData.folders.find(function(x) { return x.id === folderId; });
+            return f ? f.name : '未知文件夹';
+        }
+
+        // 收藏当前页面（弹窗选择目标文件夹）
+        function showFavoriteDialog() {
+            const content = htmlEditor.value.trim();
+            if (!content) { showToast('请先输入HTML内容再收藏', 'error'); return; }
+            const title = extractTitleFromCode(content);
+            const sorted = getSortedFolders();
+            let options = '<option value="">📁 收藏夹（根目录）</option>';
+            for (const f of sorted) {
+                const indent = '\u00A0\u00A0\u00A0'.repeat(f.depth) + (f.depth > 0 ? '└ ' : '');
+                options += '<option value="' + f.id + '">' + escapeHtml(indent + f.name) + '</option>';
+            }
+            const html = '<div style="display:flex;flex-direction:column;gap:16px;">'
+                + '<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:16px;">'
+                + '<div style="color:#888;font-size:12px;margin-bottom:6px;">将要收藏的页面</div>'
+                + '<div style="color:#e6e6e6;font-weight:500;font-size:14px;margin-bottom:6px;word-break:break-all;">' + escapeHtml(title) + '</div>'
+                + '<div style="color:#888;font-size:12px;">📊 ' + formatCodeSize(content) + ' · ' + content.length + ' 字符</div>'
+                + '</div>'
+                + '<div>'
+                + '<label style="display:block;color:#e6e6e6;margin-bottom:8px;font-size:13px;font-weight:500;">收藏位置</label>'
+                + '<select id="favTargetFolder" style="width:100%;padding:10px 12px;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;color:#e6e6e6;font-size:13px;outline:none;">'
+                + options + '</select>'
+                + '<div style="color:#666;font-size:11px;margin-top:8px;">不选择文件夹时，默认收藏到根目录</div>'
+                + '</div>'
+                + '<button class="btn btn-warning" onclick="doFavorite()" style="justify-content:center;">⭐ 确认收藏</button>'
+                + '</div>';
+            showModal('⭐ 收藏到收藏夹', html);
+        }
+
+        function doFavorite() {
+            const content = htmlEditor.value.trim();
+            if (!content) { showToast('请先输入HTML内容再收藏', 'error'); return; }
+            const select = document.getElementById('favTargetFolder');
+            const folderId = select ? (select.value || null) : null;
+            favoritesData.items.unshift({
+                id: favGenerateId('fi'),
+                title: extractTitleFromCode(content),
+                content: content,
+                folderId: folderId,
+                timestamp: new Date().toISOString(),
+                size: formatCodeSize(content)
+            });
+            if (saveFavorites()) {
+                closeModal();
+                showToast('已收藏到「' + getFavFolderName(folderId) + '」', 'success');
+            }
+        }
+
+        // 收藏夹页面（文件管理器）
+        function openFavoritesPage() {
+            const page = document.getElementById('favoritesPage');
+            if (!page) return;
+            page.style.display = 'flex';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() { page.classList.add('show'); });
+            });
+            const modalOverlay = document.getElementById('modalOverlay');
+            if (modalOverlay) modalOverlay.classList.add('above-favorites');
+            renderFavorites();
+            hideFavContextMenu();
+        }
+
+        function closeFavoritesPage() {
+            const page = document.getElementById('favoritesPage');
+            if (!page) return;
+            page.classList.remove('show');
+            setTimeout(function() { page.style.display = 'none'; }, 260);
+            const modalOverlay = document.getElementById('modalOverlay');
+            if (modalOverlay) modalOverlay.classList.remove('above-favorites');
+            hideFavContextMenu();
+            closeModal();
+        }
+
+        function renderFavorites() {
+            const grid = document.getElementById('favGrid');
+            if (!grid) return;
+
+            const bcEl = document.getElementById('favBreadcrumb');
+            if (bcEl) {
+                const path = getFolderPathArray(favCurrentFolderId);
+                let bc = '';
+                for (let i = 0; i < path.length; i++) {
+                    const p = path[i];
+                    const isLast = i === path.length - 1;
+                    if (isLast) {
+                        bc += '<span class="fav-crumb active">' + escapeHtml(p.name) + '</span>';
+                    } else {
+                        const arg = p.id === null ? 'null' : '\'' + p.id + '\'';
+                        bc += '<span class="fav-crumb" onclick="favGoTo(' + arg + ')"'
+                            + ' ondragover="favCrumbDragOver(event)" ondragleave="favCrumbDragLeave(event)"'
+                            + ' ondrop="favCrumbDrop(event, ' + arg + ')">' + escapeHtml(p.name) + '</span>'
+                            + '<span class="fav-crumb-sep">›</span>';
+                    }
+                }
+                bcEl.innerHTML = bc;
+            }
+
+            const folders = favoritesData.folders
+                .filter(function(f) { return f.parentId === favCurrentFolderId; })
+                .sort(function(a, b) { return a.name.localeCompare(b.name, 'zh-CN'); });
+            const items = favoritesData.items
+                .filter(function(i) { return (i.folderId || null) === favCurrentFolderId; })
+                .sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+
+            let html = '';
+            for (const f of folders) html += renderFavFolderCard(f);
+            for (const item of items) html += renderFavItemCard(item);
+            if (!html) {
+                html = '<div class="fav-empty"><div class="fav-empty-icon">⭐</div>'
+                    + '<div>这里还没有收藏</div>'
+                    + '<div class="fav-empty-hint">在预览菜单中点击「收藏」即可把当前页面收藏到这里<br>支持拖动页面到文件夹进行整理</div></div>';
+            }
+            grid.innerHTML = html;
+
+            const sb = document.getElementById('favStatusbar');
+            if (sb) {
+                sb.innerHTML = '<span>📁 ' + folders.length + ' 个文件夹 · 📄 ' + items.length + ' 个页面</span>'
+                    + '<span>当前 ' + getFavFolderDepth(favCurrentFolderId) + '/3 级 · 可拖动整理</span>';
+            }
+
+            const backBtn = document.getElementById('favBackBtn');
+            if (backBtn) backBtn.style.visibility = favCurrentFolderId ? 'visible' : 'hidden';
+        }
+
+        function renderFavFolderCard(f) {
+            const childCount = favoritesData.folders.filter(function(x) { return x.parentId === f.id; }).length
+                + favoritesData.items.filter(function(x) { return x.folderId === f.id; }).length;
+            return '<div class="fav-card" draggable="true" data-fav-id="' + f.id + '" data-fav-type="folder"'
+                + ' onclick="favOpenFolder(\'' + f.id + '\')"'
+                + ' oncontextmenu="showFavContextMenu(event, \'' + f.id + '\', true)"'
+                + ' ondragstart="favDragStart(event, \'' + f.id + '\', \'folder\')"'
+                + ' ondragend="favDragEnd(event)"'
+                + ' ondragover="favDragOver(event)" ondragleave="favDragLeave(event)"'
+                + ' ondrop="favDrop(event, \'' + f.id + '\')">'
+                + '<div class="fav-icon"><div class="fav-folder-icon"></div></div>'
+                + '<div class="fav-name" title="' + escapeHtml(f.name) + '">' + escapeHtml(f.name) + '</div>'
+                + '<div class="fav-meta">' + childCount + ' 个项目</div>'
+                + '<button class="fav-more-btn" onclick="event.stopPropagation();showFavMenuAtButton(event, \'' + f.id + '\', true)">⋯</button>'
+                + '</div>';
+        }
+
+        function renderFavItemCard(item) {
+            const title = item.title || '无标题';
+            const time = formatRelativeTime(item.timestamp);
+            return '<div class="fav-card" draggable="true" data-fav-id="' + item.id + '" data-fav-type="item"'
+                + ' onclick="favLoadItem(\'' + item.id + '\')"'
+                + ' oncontextmenu="showFavContextMenu(event, \'' + item.id + '\', false)"'
+                + ' ondragstart="favDragStart(event, \'' + item.id + '\', \'item\')"'
+                + ' ondragend="favDragEnd(event)">'
+                + '<div class="fav-icon"><div class="fav-file-icon"><span>&lt;/&gt;</span></div></div>'
+                + '<div class="fav-name" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>'
+                + '<div class="fav-meta" title="收藏于 ' + escapeHtml(time) + '">' + escapeHtml(item.size || '') + '</div>'
+                + '<button class="fav-more-btn" onclick="event.stopPropagation();showFavMenuAtButton(event, \'' + item.id + '\', false)">⋯</button>'
+                + '</div>';
+        }
+
+        function favGoTo(folderId) {
+            favCurrentFolderId = folderId || null;
+            hideFavContextMenu();
+            renderFavorites();
+        }
+
+        function favGoUp() {
+            if (!favCurrentFolderId) return;
+            const f = favoritesData.folders.find(function(x) { return x.id === favCurrentFolderId; });
+            favCurrentFolderId = f ? f.parentId : null;
+            renderFavorites();
+        }
+
+        function favOpenFolder(id) {
+            hideFavContextMenu();
+            favCurrentFolderId = id;
+            renderFavorites();
+        }
+
+        function favCreateFolder() {
+            const currentDepth = getFavFolderDepth(favCurrentFolderId);
+            if (currentDepth >= 3) {
+                showToast('当前已是最深层级，最多支持三级文件夹', 'error');
+                return;
+            }
+            showFavInputDialog('📁 新建文件夹（第 ' + (currentDepth + 1) + ' 级）', '请输入文件夹名称', '新建文件夹', function(name) {
+                favoritesData.folders.push({
+                    id: favGenerateId('ff'),
+                    name: name,
+                    parentId: favCurrentFolderId,
+                    createdAt: new Date().toISOString()
+                });
+                if (saveFavorites()) {
+                    renderFavorites();
+                    showToast('文件夹「' + name + '」已创建', 'success');
+                }
+            });
+        }
+
+        function favStartRename(id, isFolder) {
+            hideFavContextMenu();
+            const entry = isFolder
+                ? favoritesData.folders.find(function(f) { return f.id === id; })
+                : favoritesData.items.find(function(i) { return i.id === id; });
+            if (!entry) return;
+            showFavInputDialog('✏️ 重命名', '请输入新名称', isFolder ? entry.name : (entry.title || ''), function(newName) {
+                if (isFolder) entry.name = newName; else entry.title = newName;
+                if (saveFavorites()) {
+                    renderFavorites();
+                    showToast('已重命名', 'success');
+                }
+            });
+        }
+
+        function favStartDelete(id, isFolder) {
+            hideFavContextMenu();
+            if (isFolder) {
+                const folder = favoritesData.folders.find(function(f) { return f.id === id; });
+                if (!folder) return;
+                const subtreeIds = collectFavSubtreeFolderIds(id);
+                const itemCount = favoritesData.items.filter(function(i) { return subtreeIds.indexOf(i.folderId) !== -1; }).length;
+                showConfirmDialog('确定删除文件夹「' + folder.name + '」吗？其中 ' + itemCount + ' 个收藏页面将一并删除。', function() {
+                    favoritesData.folders = favoritesData.folders.filter(function(f) { return subtreeIds.indexOf(f.id) === -1; });
+                    favoritesData.items = favoritesData.items.filter(function(i) { return subtreeIds.indexOf(i.folderId) === -1; });
+                    if (subtreeIds.indexOf(favCurrentFolderId) !== -1) favCurrentFolderId = null;
+                    saveFavorites();
+                    renderFavorites();
+                    showToast('文件夹已删除', 'success');
+                });
+            } else {
+                showConfirmDialog('确定要删除这条收藏吗？', function() {
+                    favoritesData.items = favoritesData.items.filter(function(i) { return i.id !== id; });
+                    saveFavorites();
+                    renderFavorites();
+                    showToast('收藏已删除', 'success');
+                });
+            }
+        }
+
+        // 通过菜单「移动到…」（触屏设备无法拖拽时的替代方案）
+        function favMoveEntry(id, isFolder) {
+            hideFavContextMenu();
+            const entry = isFolder
+                ? favoritesData.folders.find(function(f) { return f.id === id; })
+                : favoritesData.items.find(function(i) { return i.id === id; });
+            if (!entry) return;
+            const subtreeHeight = isFolder ? getFavSubtreeHeight(id) : 1;
+            const sorted = getSortedFolders();
+            let options = '<option value="">📁 收藏夹（根目录）</option>';
+            for (const f of sorted) {
+                if (isFolder && (f.id === id || isDescendantOf(f.id, id))) continue;
+                const wouldExceed = getFavFolderDepth(f.id) + 1 + (subtreeHeight - 1) > 3;
+                const indent = '\u00A0\u00A0\u00A0'.repeat(f.depth) + (f.depth > 0 ? '└ ' : '');
+                const label = indent + f.name + (wouldExceed ? '（层级超限）' : '');
+                options += '<option value="' + f.id + '"' + (wouldExceed ? ' disabled' : '') + '>' + escapeHtml(label) + '</option>';
+            }
+            const currentFolderId = isFolder ? entry.parentId : entry.folderId;
+            const html = '<div style="display:flex;flex-direction:column;gap:14px;">'
+                + '<div>'
+                + '<label style="display:block;color:#e6e6e6;margin-bottom:8px;font-size:13px;font-weight:500;">移动「' + escapeHtml(isFolder ? entry.name : (entry.title || '无标题')) + '」到：</label>'
+                + '<select id="favMoveTarget" style="width:100%;padding:10px 12px;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;color:#e6e6e6;font-size:13px;outline:none;">'
+                + options + '</select>'
+                + '</div>'
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+                + '<button class="btn btn-secondary" onclick="closeModal()">取消</button>'
+                + '<button class="btn btn-primary" onclick="doFavMove(\'' + id + '\', ' + (isFolder ? 'true' : 'false') + ')">确定移动</button>'
+                + '</div></div>';
+            showModal('📤 移动到…', html);
+            setTimeout(function() {
+                const sel = document.getElementById('favMoveTarget');
+                if (sel) sel.value = currentFolderId || '';
+            }, 0);
+        }
+
+        function doFavMove(id, isFolder) {
+            const sel = document.getElementById('favMoveTarget');
+            if (!sel) return;
+            const target = sel.value || null;
+            closeModal();
+            moveFavEntry(id, isFolder, target);
+        }
+
+        // 核心移动逻辑（拖拽与菜单共用）
+        function moveFavEntry(id, isFolder, targetFolderId) {
+            if (isFolder) {
+                if (id === targetFolderId) return;
+                if (isDescendantOf(targetFolderId, id)) { showToast('不能移动到自身或其子文件夹内', 'error'); return; }
+                const folder = favoritesData.folders.find(function(f) { return f.id === id; });
+                if (!folder) return;
+                if ((folder.parentId || null) === (targetFolderId || null)) return;
+                const subtreeHeight = getFavSubtreeHeight(id);
+                const targetDepth = getFavFolderDepth(targetFolderId);
+                if (targetDepth + 1 + (subtreeHeight - 1) > 3) { showToast('移动后将超过三级文件夹限制', 'error'); return; }
+                folder.parentId = targetFolderId || null;
+            } else {
+                const item = favoritesData.items.find(function(i) { return i.id === id; });
+                if (!item) return;
+                if ((item.folderId || null) === (targetFolderId || null)) return;
+                item.folderId = targetFolderId || null;
+            }
+            if (saveFavorites()) {
+                renderFavorites();
+                showToast('已移动到「' + getFavFolderName(targetFolderId) + '」', 'success');
+            }
+        }
+
+        function favLoadItem(id) {
+            hideFavContextMenu();
+            const item = favoritesData.items.find(function(i) { return i.id === id; });
+            if (!item) return;
+            htmlEditor.value = item.content || '';
+            updatePreview();
+            updateHighlight();
+            updateCharCount();
+            closeFavoritesPage();
+            showToast('已加载收藏「' + (item.title || '无标题') + '」', 'success');
+        }
+
+        /* ---------- 拖拽 ---------- */
+        function favDragStart(event, id, type) {
+            favDragData = { id: id, type: type };
+            event.dataTransfer.effectAllowed = 'move';
+            try { event.dataTransfer.setData('text/plain', id); } catch (e) {}
+            const card = event.currentTarget;
+            setTimeout(function() { card.classList.add('fav-dragging'); }, 0);
+        }
+
+        function favDragEnd(event) {
+            document.querySelectorAll('.fav-dragging').forEach(function(el) { el.classList.remove('fav-dragging'); });
+            document.querySelectorAll('.fav-drop-target').forEach(function(el) { el.classList.remove('fav-drop-target'); });
+            favDragData = null;
+        }
+
+        function favDragOver(event) {
+            if (!favDragData) return;
+            const card = event.currentTarget;
+            if (favDragData.type === 'folder' && card.dataset.favType === 'folder' && card.dataset.favId === favDragData.id) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            card.classList.add('fav-drop-target');
+        }
+
+        function favDragLeave(event) {
+            event.currentTarget.classList.remove('fav-drop-target');
+        }
+
+        function favDrop(event, targetFolderId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('fav-drop-target');
+            if (!favDragData) return;
+            moveFavEntry(favDragData.id, favDragData.type === 'folder', targetFolderId);
+            favDragData = null;
+        }
+
+        function favCrumbDragOver(event) {
+            if (!favDragData) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            event.currentTarget.classList.add('fav-drop-target');
+        }
+
+        function favCrumbDragLeave(event) {
+            event.currentTarget.classList.remove('fav-drop-target');
+        }
+
+        function favCrumbDrop(event, folderId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('fav-drop-target');
+            if (!favDragData) return;
+            moveFavEntry(favDragData.id, favDragData.type === 'folder', folderId || null);
+            favDragData = null;
+        }
+
+        /* ---------- 右键菜单 / ⋯ 菜单 ---------- */
+        function showFavContextMenu(event, id, isFolder) {
+            event.preventDefault();
+            event.stopPropagation();
+            showFavMenuAt(event.clientX, event.clientY, id, isFolder);
+        }
+
+        function showFavMenuAtButton(event, id, isFolder) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            showFavMenuAt(Math.max(8, rect.right - 170), rect.bottom + 4, id, isFolder);
+        }
+
+        function showFavMenuAt(x, y, id, isFolder) {
+            const menu = document.getElementById('favContextMenu');
+            if (!menu) return;
+            let html = '';
+            if (isFolder) {
+                html += '<div class="fav-menu-item" onclick="favOpenFolder(\'' + id + '\')">📂 打开</div>'
+                    + '<div class="fav-menu-item" onclick="favMoveEntry(\'' + id + '\', true)">📤 移动到…</div>'
+                    + '<div class="fav-menu-item" onclick="favStartRename(\'' + id + '\', true)">✏️ 重命名</div>'
+                    + '<div class="fav-menu-item fav-menu-danger" onclick="favStartDelete(\'' + id + '\', true)">🗑️ 删除文件夹</div>';
+            } else {
+                html += '<div class="fav-menu-item" onclick="favLoadItem(\'' + id + '\')">📥 加载到编辑器</div>'
+                    + '<div class="fav-menu-item" onclick="favMoveEntry(\'' + id + '\', false)">📤 移动到…</div>'
+                    + '<div class="fav-menu-item" onclick="favStartRename(\'' + id + '\', false)">✏️ 重命名</div>'
+                    + '<div class="fav-menu-item fav-menu-danger" onclick="favStartDelete(\'' + id + '\', false)">🗑️ 删除收藏</div>';
+            }
+            menu.innerHTML = html;
+            menu.style.display = 'block';
+            const menuW = menu.offsetWidth || 170;
+            const menuH = menu.offsetHeight || 160;
+            let mx = x, my = y;
+            if (x + menuW > window.innerWidth - 8) mx = Math.max(8, window.innerWidth - menuW - 8);
+            if (y + menuH > window.innerHeight - 8) my = Math.max(8, window.innerHeight - menuH - 8);
+            menu.style.left = mx + 'px';
+            menu.style.top = my + 'px';
+        }
+
+        function hideFavContextMenu() {
+            const menu = document.getElementById('favContextMenu');
+            if (menu) menu.style.display = 'none';
+        }
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('favContextMenu');
+            if (menu && menu.style.display === 'block' && !menu.contains(e.target)) {
+                hideFavContextMenu();
+            }
+        });
+
+        /* ---------- 通用输入对话框 ---------- */
+        function showFavInputDialog(title, placeholder, defaultValue, onConfirm) {
+            favInputDialogCallback = onConfirm;
+            const html = '<div style="display:flex;flex-direction:column;gap:14px;">'
+                + '<input type="text" id="favDialogInput" placeholder="' + escapeHtml(placeholder || '') + '" value="' + escapeHtml(defaultValue || '') + '"'
+                + ' style="padding:10px 14px;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;color:#e6e6e6;font-size:14px;outline:none;"'
+                + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();confirmFavInputDialog();}">'
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+                + '<button class="btn btn-secondary" onclick="closeModal()">取消</button>'
+                + '<button class="btn btn-primary" onclick="confirmFavInputDialog()">确定</button>'
+                + '</div></div>';
+            showModal(title, html);
+            setTimeout(function() {
+                const input = document.getElementById('favDialogInput');
+                if (input) { input.focus(); input.select(); }
+            }, 50);
+        }
+
+        function confirmFavInputDialog() {
+            const input = document.getElementById('favDialogInput');
+            if (!input) return;
+            const value = input.value.trim();
+            const cb = favInputDialogCallback;
+            favInputDialogCallback = null;
+            closeModal();
+            if (value && cb) cb(value);
+            else if (!value) showToast('名称不能为空', 'error');
+        }
+
+        // ESC 关闭收藏夹页面（modal 打开时优先交给 modal 处理）
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            const page = document.getElementById('favoritesPage');
+            if (!page || page.style.display !== 'flex') return;
+            const modalOverlay = document.getElementById('modalOverlay');
+            if (modalOverlay && modalOverlay.classList.contains('show')) return;
+            closeFavoritesPage();
+        });
     </script>
 </body>
 </html>
