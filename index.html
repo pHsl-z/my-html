@@ -2759,7 +2759,7 @@
                             <input type="file" id="favSyncImportFile" accept=".md,.markdown,.json,.txt" style="display: none;" onchange="handleFavSyncConfigImport(this)">
                             <span id="favSyncTestResult" style="font-size: 12px;"></span>
                         </div>
-                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。换新设备时，点「📥 导入配置文件」选择配置文档即可一键填入（令牌等敏感信息请勿公开分享）。</p>
+                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。上传和拉取均为「合并模式」：多台设备的内容会自动合并保留（双方都不会被覆盖），删除也会跨设备生效。换新设备时，点「📥 导入配置文件」选择配置文档即可一键填入（令牌等敏感信息请勿公开分享）。</p>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
@@ -5455,7 +5455,7 @@
 
         /* ==================== 收藏夹功能 ==================== */
         const FAVORITES_STORAGE_KEY = 'htmlEditorFavorites';
-        let favoritesData = { folders: [], items: [] };
+        let favoritesData = { folders: [], items: [], deleted: [] };
         let favCurrentFolderId = null;
         let favDragData = null;
         let favInputDialogCallback = null;
@@ -5472,12 +5472,13 @@
                     favoritesData = {
                         folders: Array.isArray(data.folders) ? data.folders : [],
                         items: Array.isArray(data.items) ? data.items : [],
+                        deleted: Array.isArray(data.deleted) ? data.deleted : [],
                         updatedAt: data.updatedAt || null,
                         updatedBy: data.updatedBy || null
                     };
                 }
             } catch (error) {
-                favoritesData = { folders: [], items: [], updatedAt: null, updatedBy: null };
+                favoritesData = { folders: [], items: [], deleted: [], updatedAt: null, updatedBy: null };
             }
         }
 
@@ -5494,6 +5495,179 @@
                 showToast('保存失败：本地存储空间不足', 'error');
                 return false;
             }
+        }
+
+        /* ---------- ID 级合并核心（云同步 / 备份导入共用） ---------- */
+
+        // 条目有效时间戳：新数据用 updatedAt，旧数据兜底 timestamp/createdAt
+        function favEffectiveTs(entry) {
+            return (entry && (entry.updatedAt || entry.timestamp || entry.createdAt)) || '1970-01-01T00:00:00Z';
+        }
+
+        // 给条目盖"设备名 + 时间"戳（新建/编辑/移动/重命名时调用）
+        function favStamp(entry) {
+            entry.updatedAt = new Date().toISOString();
+            entry.updatedBy = (typeof favSyncConfig !== 'undefined' && favSyncConfig && favSyncConfig.deviceName) ? favSyncConfig.deviceName : '本机';
+            return entry;
+        }
+
+        // 记录删除墓碑（同步时让删除跨设备生效，90 天后自动过期）
+        function favAddTombstones(ids) {
+            if (!Array.isArray(ids) || !ids.length) return;
+            if (!Array.isArray(favoritesData.deleted)) favoritesData.deleted = [];
+            const now = new Date().toISOString();
+            favoritesData.deleted = favoritesData.deleted.filter(function(d) { return ids.indexOf(d.id) === -1; });
+            ids.forEach(function(id) { favoritesData.deleted.push({ id: id, deletedAt: now }); });
+        }
+
+        // 纯函数：把远端数据（云端或备份文件）与本地合并，返回 {folders, items, deleted, stats}，不修改 favoritesData
+        function favMergeData(remote) {
+            const remoteFolders = (remote && Array.isArray(remote.folders)) ? remote.folders : [];
+            const remoteItems = (remote && Array.isArray(remote.items)) ? remote.items : [];
+            const stats = { foldersFromRemote: 0, itemsFromRemote: 0, foldersUpdated: 0, itemsUpdated: 0, foldersLocalOnly: 0, itemsLocalOnly: 0, deletesApplied: 0, foldersMerged: 0 };
+
+            // 1. 墓碑并集，取每个 id 较新的删除时间；超过 90 天的自动清理
+            const tomb = {};
+            const localDeleted = Array.isArray(favoritesData.deleted) ? favoritesData.deleted : [];
+            const remoteDeleted = (remote && Array.isArray(remote.deleted)) ? remote.deleted : [];
+            localDeleted.concat(remoteDeleted).forEach(function(d) {
+                if (!d || !d.id) return;
+                const t = d.deletedAt || '';
+                if (!tomb[d.id] || new Date(t) > new Date(tomb[d.id])) tomb[d.id] = t;
+            });
+            const cutoff = Date.now() - 90 * 24 * 3600 * 1000;
+            Object.keys(tomb).forEach(function(id) {
+                if (!tomb[id] || new Date(tomb[id]).getTime() < cutoff) delete tomb[id];
+            });
+
+            // 2. 文件夹按 ID 取并集；同 ID 冲突保留时间较新的一版
+            const remoteFolderIds = {};
+            const folderMap = {};
+            favoritesData.folders.forEach(function(f) { folderMap[f.id] = f; });
+            remoteFolders.forEach(function(rf) {
+                if (!rf || !rf.id) return;
+                remoteFolderIds[rf.id] = true;
+                const lf = folderMap[rf.id];
+                if (!lf) { folderMap[rf.id] = rf; stats.foldersFromRemote++; }
+                else if (new Date(favEffectiveTs(rf)) > new Date(favEffectiveTs(lf))) { folderMap[rf.id] = rf; stats.foldersUpdated++; }
+            });
+            favoritesData.folders.forEach(function(f) { if (!remoteFolderIds[f.id]) stats.foldersLocalOnly++; });
+
+            // 3. 同位置同名文件夹自动合并为一个（两台设备各自建的"数学"），保留创建最早的那个
+            let folderList = Object.keys(folderMap).map(function(k) { return folderMap[k]; });
+            const remap = {};
+            function resolveId(id) {
+                let cur = id, guard = 0;
+                while (cur && remap[cur] !== undefined && guard++ < 20) cur = remap[cur];
+                return cur;
+            }
+            let pass = 0, deduped = true;
+            while (deduped && pass++ < 5) {
+                deduped = false;
+                const groups = {};
+                folderList.forEach(function(f) {
+                    const key = (resolveId(f.parentId) || '@root') + '|' + (f.name || '');
+                    (groups[key] = groups[key] || []).push(f);
+                });
+                Object.keys(groups).forEach(function(key) {
+                    const g = groups[key];
+                    if (g.length < 2) return;
+                    g.sort(function(a, b) { return new Date(favEffectiveTs(a)) < new Date(favEffectiveTs(b)) ? -1 : 1; });
+                    const survivor = g[0];
+                    const dupIds = {};
+                    g.slice(1).forEach(function(dup) { remap[dup.id] = survivor.id; dupIds[dup.id] = true; stats.foldersMerged++; });
+                    folderList = folderList.filter(function(f) { return !dupIds[f.id]; });
+                    deduped = true;
+                });
+            }
+            let folders = folderList.map(function(f) {
+                if (f.parentId && remap[f.parentId] !== undefined) return Object.assign({}, f, { parentId: resolveId(f.parentId) });
+                return f;
+            });
+
+            // 4. 收藏按 ID 取并集；同 ID 冲突保留较新；墓碑时间晚于条目时间 → 删除生效
+            const remoteItemIds = {};
+            const itemMap = {};
+            favoritesData.items.forEach(function(it) { itemMap[it.id] = it; });
+            remoteItems.forEach(function(rit) {
+                if (!rit || !rit.id) return;
+                remoteItemIds[rit.id] = true;
+                const lit = itemMap[rit.id];
+                if (!lit) { itemMap[rit.id] = rit; stats.itemsFromRemote++; }
+                else if (new Date(favEffectiveTs(rit)) > new Date(favEffectiveTs(lit))) { itemMap[rit.id] = rit; stats.itemsUpdated++; }
+            });
+            favoritesData.items.forEach(function(it) { if (!remoteItemIds[it.id]) stats.itemsLocalOnly++; });
+
+            const keptItems = [];
+            Object.keys(itemMap).forEach(function(id) {
+                const it = itemMap[id];
+                const t = tomb[id];
+                if (t && new Date(t) > new Date(favEffectiveTs(it))) {
+                    stats.deletesApplied++;
+                } else {
+                    if (t) delete tomb[id]; // 条目比墓碑新 = 删除后又重新收藏，墓碑作废
+                    keptItems.push(it);
+                }
+            });
+
+            // 文件夹墓碑同样生效
+            const keptFolders = [];
+            folders.forEach(function(f) {
+                const t = tomb[f.id];
+                if (t && new Date(t) > new Date(favEffectiveTs(f))) {
+                    stats.deletesApplied++;
+                } else {
+                    if (t) delete tomb[f.id];
+                    keptFolders.push(f);
+                }
+            });
+            folders = keptFolders;
+
+            // 5. 孤儿修复：指向不存在文件夹的条目归根目录；重定向被合并文件夹里的收藏
+            const folderIds = {};
+            folders.forEach(function(f) { folderIds[f.id] = true; });
+            folders = folders.map(function(f) {
+                if (f.parentId && !folderIds[f.parentId]) return Object.assign({}, f, { parentId: null });
+                return f;
+            });
+            const items = keptItems.map(function(it) {
+                const fid = it.folderId ? resolveId(it.folderId) : it.folderId;
+                const fixed = (fid && folderIds[fid]) ? fid : null;
+                if (fixed !== it.folderId) return Object.assign({}, it, { folderId: fixed });
+                return it;
+            });
+
+            const deleted = Object.keys(tomb).map(function(id) { return { id: id, deletedAt: tomb[id] }; });
+            return { folders: folders, items: items, deleted: deleted, stats: stats };
+        }
+
+        // 应用合并结果到本地并刷新界面
+        function favApplyMergeResult(result) {
+            favoritesData = {
+                folders: result.folders,
+                items: result.items,
+                deleted: result.deleted,
+                updatedAt: new Date().toISOString(),
+                updatedBy: (typeof favSyncConfig !== 'undefined' && favSyncConfig && favSyncConfig.deviceName) ? favSyncConfig.deviceName : ''
+            };
+            if (favCurrentFolderId && !favoritesData.folders.some(function(f) { return f.id === favCurrentFolderId; })) {
+                favCurrentFolderId = null;
+            }
+            saveFavorites(false);
+            renderFavorites();
+        }
+
+        // 构建上传云端的载荷（version 2 含逐条时间戳与删除墓碑）
+        function favBuildCloudPayload() {
+            return JSON.stringify({
+                version: 2,
+                app: 'my-html-editor',
+                updatedAt: new Date().toISOString(),
+                updatedBy: (typeof favSyncConfig !== 'undefined' && favSyncConfig && favSyncConfig.deviceName) ? favSyncConfig.deviceName : '',
+                folders: favoritesData.folders,
+                items: favoritesData.items,
+                deleted: Array.isArray(favoritesData.deleted) ? favoritesData.deleted : []
+            });
         }
 
         // 文件夹层级：根目录为0，最深3级
@@ -5604,14 +5778,16 @@
             if (!content) { showToast('请先输入HTML内容再收藏', 'error'); return; }
             const select = document.getElementById('favTargetFolder');
             const folderId = select ? (select.value || null) : null;
-            favoritesData.items.unshift({
+            const newItem = {
                 id: favGenerateId('fi'),
                 title: extractTitleFromCode(content),
                 content: content,
                 folderId: folderId,
                 timestamp: new Date().toISOString(),
                 size: formatCodeSize(content)
-            });
+            };
+            favStamp(newItem);
+            favoritesData.items.unshift(newItem);
             if (saveFavorites()) {
                 closeModal();
                 showToast('已收藏到「' + getFavFolderName(folderId) + '」', 'success');
@@ -5752,12 +5928,14 @@
                 return;
             }
             showFavInputDialog('📁 新建文件夹（第 ' + (currentDepth + 1) + ' 级）', '请输入文件夹名称', '新建文件夹', function(name) {
-                favoritesData.folders.push({
+                const newFolder = {
                     id: favGenerateId('ff'),
                     name: name,
                     parentId: favCurrentFolderId,
                     createdAt: new Date().toISOString()
-                });
+                };
+                favStamp(newFolder);
+                favoritesData.folders.push(newFolder);
                 if (saveFavorites()) {
                     renderFavorites();
                     showToast('文件夹「' + name + '」已创建', 'success');
@@ -5773,6 +5951,7 @@
             if (!entry) return;
             showFavInputDialog('✏️ 重命名', '请输入新名称', isFolder ? entry.name : (entry.title || ''), function(newName) {
                 if (isFolder) entry.name = newName; else entry.title = newName;
+                favStamp(entry);
                 if (saveFavorites()) {
                     renderFavorites();
                     showToast('已重命名', 'success');
@@ -5788,8 +5967,12 @@
                 const subtreeIds = collectFavSubtreeFolderIds(id);
                 const itemCount = favoritesData.items.filter(function(i) { return subtreeIds.indexOf(i.folderId) !== -1; }).length;
                 showConfirmDialog('确定删除文件夹「' + folder.name + '」吗？其中 ' + itemCount + ' 个收藏页面将一并删除。', function() {
+                    const removedItemIds = favoritesData.items
+                        .filter(function(i) { return subtreeIds.indexOf(i.folderId) !== -1; })
+                        .map(function(i) { return i.id; });
                     favoritesData.folders = favoritesData.folders.filter(function(f) { return subtreeIds.indexOf(f.id) === -1; });
                     favoritesData.items = favoritesData.items.filter(function(i) { return subtreeIds.indexOf(i.folderId) === -1; });
+                    favAddTombstones(subtreeIds.concat(removedItemIds));
                     if (subtreeIds.indexOf(favCurrentFolderId) !== -1) favCurrentFolderId = null;
                     saveFavorites();
                     renderFavorites();
@@ -5798,6 +5981,7 @@
             } else {
                 showConfirmDialog('确定要删除这条收藏吗？', function() {
                     favoritesData.items = favoritesData.items.filter(function(i) { return i.id !== id; });
+                    favAddTombstones([id]);
                     saveFavorites();
                     renderFavorites();
                     showToast('收藏已删除', 'success');
@@ -5860,11 +6044,13 @@
                 const targetDepth = getFavFolderDepth(targetFolderId);
                 if (targetDepth + 1 + (subtreeHeight - 1) > 3) { showToast('移动后将超过三级文件夹限制', 'error'); return; }
                 folder.parentId = targetFolderId || null;
+                favStamp(folder);
             } else {
                 const item = favoritesData.items.find(function(i) { return i.id === id; });
                 if (!item) return;
                 if ((item.folderId || null) === (targetFolderId || null)) return;
                 item.folderId = targetFolderId || null;
+                favStamp(item);
             }
             if (saveFavorites()) {
                 renderFavorites();
@@ -6187,60 +6373,63 @@
             saveFavSyncConfigToStorage();
         }
 
+        // 上传前先把云端内容合并到本地（双方内容都保留），再统一上传 → 云端始终是多设备内容的并集
         async function favCloudUpload() {
             if (!favSyncEnsureConfigured()) return;
             closeModal();
             showToast('正在上传到云端…', 'success');
             try {
                 const remote = await favCloudGet();
+                let sha = null;
+                let merged = null;
                 if (remote.exists) {
+                    sha = remote.sha;
                     const remoteData = favParseFavJson(remote.text);
-                    if (remoteData && remoteData.updatedAt && favoritesData.updatedAt &&
-                        new Date(remoteData.updatedAt) > new Date(favoritesData.updatedAt)) {
-                        showConfirmDialog(
-                            '云端数据较新：\n' + favSyncTimeStr(remoteData.updatedAt) + ' 由「' + (remoteData.updatedBy || '未知设备') + '」更新。\n\n确定要用本地数据覆盖云端吗？',
-                            async function() { await favDoUpload(remote.sha); }
-                        );
-                        return;
+                    if (remoteData) {
+                        merged = favMergeData(remoteData);
+                        favApplyMergeResult(merged);
                     }
-                    await favDoUpload(remote.sha);
-                } else {
-                    await favDoUpload(null);
                 }
+                await favDoUpload(sha, merged);
             } catch (e) {
                 showToast('上传失败：' + e.message, 'error');
             }
         }
 
-        async function favDoUpload(sha) {
+        async function favDoUpload(sha, merged) {
             try {
-                const payload = {
-                    version: 1,
-                    app: 'my-html-editor',
-                    updatedAt: new Date().toISOString(),
-                    updatedBy: favSyncConfig.deviceName,
-                    folders: favoritesData.folders,
-                    items: favoritesData.items
-                };
-                const jsonStr = JSON.stringify(payload);
-                let r = await favCloudPut(jsonStr, sha);
+                let r = await favCloudPut(favBuildCloudPayload(), sha);
                 if (r.conflict && sha) {
+                    // 云端刚被其他设备更新：重新拉取、再合并一次后重传
                     const remote = await favCloudGet();
-                    r = await favCloudPut(jsonStr, remote.exists ? remote.sha : null);
+                    if (remote.exists) {
+                        const remoteData = favParseFavJson(remote.text);
+                        if (remoteData) {
+                            merged = favMergeData(remoteData);
+                            favApplyMergeResult(merged);
+                        }
+                        sha = remote.sha;
+                    } else {
+                        sha = null;
+                    }
+                    r = await favCloudPut(favBuildCloudPayload(), sha);
                 }
                 if (r.status === 404) throw new Error('仓库或分支不存在，请检查设置（部分仓库默认分支为 master）');
-                if (r.conflict) throw new Error('云端数据刚被其他设备更新，请先拉取再上传');
+                if (r.conflict) throw new Error('云端数据刚被其他设备更新，请稍后重试');
                 if (!r.ok) throw new Error('HTTP ' + r.status);
-                favoritesData.updatedAt = payload.updatedAt;
-                favoritesData.updatedBy = payload.updatedBy;
-                saveFavorites(false);
                 saveFavSyncRecord('上传');
-                showToast('已上传到云端（' + favSyncConfig.repo + '/' + favSyncNormalizedPath() + '）', 'success');
+                let msg = '已上传到云端（' + favSyncConfig.repo + '/' + favSyncNormalizedPath() + '）';
+                const s = (merged && merged.stats) || null;
+                if (s && (s.itemsFromRemote || s.itemsUpdated || s.foldersFromRemote || s.foldersUpdated)) {
+                    msg += '，已合并云端内容：' + (s.itemsFromRemote + s.itemsUpdated) + ' 个收藏 · ' + (s.foldersFromRemote + s.foldersUpdated) + ' 个文件夹';
+                }
+                showToast(msg, 'success');
             } catch (e) {
                 showToast('上传失败：' + e.message, 'error');
             }
         }
 
+        // 拉取 = 云端与本地按 ID 合并：云端新增/较新的进入本地，本地独有的保留，删除墓碑生效
         async function favCloudPull() {
             if (!favSyncEnsureConfigured()) return;
             closeModal();
@@ -6256,33 +6445,52 @@
                     showToast('云端文件不是有效的收藏数据', 'error');
                     return;
                 }
-                const applyPull = function() {
-                    favoritesData = {
-                        folders: Array.isArray(remoteData.folders) ? remoteData.folders : [],
-                        items: Array.isArray(remoteData.items) ? remoteData.items : [],
-                        updatedAt: remoteData.updatedAt || new Date().toISOString(),
-                        updatedBy: remoteData.updatedBy || '云端'
-                    };
-                    if (favCurrentFolderId && !favoritesData.folders.some(function(f) { return f.id === favCurrentFolderId; })) {
-                        favCurrentFolderId = null;
-                    }
-                    saveFavorites(false);
-                    saveFavSyncRecord('拉取');
-                    renderFavorites();
-                    showToast('已从云端拉取：' + favoritesData.folders.length + ' 个文件夹 · ' + favoritesData.items.length + ' 个收藏', 'success');
-                };
-                if (remoteData.updatedAt && favoritesData.updatedAt &&
-                    new Date(favoritesData.updatedAt) > new Date(remoteData.updatedAt)) {
-                    showConfirmDialog(
-                        '本地数据较新：\n' + favSyncTimeStr(favoritesData.updatedAt) + ' 由「' + (favoritesData.updatedBy || '本机') + '」更新。\n云端较旧：' + favSyncTimeStr(remoteData.updatedAt) + '。\n\n仍要用云端覆盖本地吗？未上传的本地改动将丢失。',
-                        applyPull
-                    );
-                } else {
-                    applyPull();
-                }
+                const result = favMergeData(remoteData);
+                favApplyMergeResult(result);
+                saveFavSyncRecord('拉取');
+                const s = result.stats;
+                const parts = [];
+                if (s.itemsFromRemote) parts.push('新增 ' + s.itemsFromRemote + ' 个收藏');
+                if (s.foldersFromRemote) parts.push('新增 ' + s.foldersFromRemote + ' 个文件夹');
+                if (s.itemsUpdated) parts.push('更新 ' + s.itemsUpdated + ' 个收藏');
+                if (s.foldersUpdated) parts.push('更新 ' + s.foldersUpdated + ' 个文件夹');
+                if (s.foldersMerged) parts.push('合并 ' + s.foldersMerged + ' 个同名文件夹');
+                if (s.deletesApplied) parts.push('应用 ' + s.deletesApplied + ' 条删除');
+                showToast('已从云端拉取合并：' + (parts.length ? parts.join(' · ') : '云端没有本地缺少的新内容'), 'success');
             } catch (e) {
                 showToast('拉取失败：' + e.message, 'error');
             }
+        }
+
+        // 云端明细列表：按设备汇总数量 + 按更新时间倒序显示每条收藏来自哪台设备
+        function favRenderCloudList(d) {
+            const wrap = document.getElementById('favSyncCloudList');
+            if (!wrap) return;
+            const items = (d && Array.isArray(d.items)) ? d.items.slice() : [];
+            const folders = (d && Array.isArray(d.folders)) ? d.folders : [];
+            if (!items.length && !folders.length) {
+                wrap.innerHTML = '<div style="color:#888;font-size:12px;">云端暂无收藏内容</div>';
+                return;
+            }
+            items.sort(function(a, b) { return new Date(favEffectiveTs(b)) - new Date(favEffectiveTs(a)); });
+            const fallbackDev = (d && d.updatedBy) || '未知设备';
+            const byDevice = {};
+            items.forEach(function(it) {
+                const dev = it.updatedBy || fallbackDev;
+                byDevice[dev] = (byDevice[dev] || 0) + 1;
+            });
+            const devChips = Object.keys(byDevice).sort(function(a, b) { return byDevice[b] - byDevice[a]; }).map(function(dev) {
+                return '<span style="display:inline-block;background:#243447;border-radius:10px;padding:2px 10px;font-size:11px;color:#9ecbff;white-space:nowrap;">💻 ' + escapeHtml(dev) + ' · ' + byDevice[dev] + '</span>';
+            }).join(' ');
+            const rows = items.slice(0, 50).map(function(it) {
+                const dev = it.updatedBy || fallbackDev;
+                return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px dashed #2a2a2a;">'
+                    + '<span style="font-size:12px;color:#e6e6e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(it.title || '无标题') + '">' + escapeHtml(it.title || '无标题') + '</span>'
+                    + '<span style="font-size:11px;color:#888;white-space:nowrap;">💻 ' + escapeHtml(dev) + ' · ' + escapeHtml(favSyncTimeStr(favEffectiveTs(it))) + '</span>'
+                    + '</div>';
+            }).join('');
+            const more = items.length > 50 ? '<div style="color:#666;font-size:11px;padding-top:6px;">… 仅显示最近 50 条（云端共 ' + items.length + ' 条收藏 · ' + folders.length + ' 个文件夹）</div>' : '';
+            wrap.innerHTML = (devChips ? '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;">' + devChips + '</div>' : '') + rows + more;
         }
 
         async function favSyncMenu() {
@@ -6307,6 +6515,10 @@
                 + '<div id="favSyncCloudStatus">云端：' + (configured ? '获取中…' : '未配置') + '</div>'
                 + '<div>' + escapeHtml(lastSync) + '</div>'
                 + '</div>'
+                + '<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px;">'
+                + '<div style="font-weight:500;font-size:13px;color:#e6e6e6;margin-bottom:8px;">📋 云端内容（按时间倒序）</div>'
+                + '<div id="favSyncCloudList">' + (configured ? '<div style="color:#888;font-size:12px;">获取中…</div>' : '<div style="color:#888;font-size:12px;">未配置</div>') + '</div>'
+                + '</div>'
                 + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
                 + '<button class="btn btn-success" onclick="favCloudUpload()" style="flex:1;justify-content:center;">⬆️ 上传到云端</button>'
                 + '<button class="btn btn-info" onclick="favCloudPull()" style="flex:1;justify-content:center;">⬇️ 从云端拉取</button>'
@@ -6321,17 +6533,21 @@
                 const remote = await favCloudGet();
                 if (!remote.exists) {
                     el.innerHTML = '云端：<span style="color:#e67e22;">暂无数据</span>';
+                    favRenderCloudList(null);
                 } else {
                     const d = favParseFavJson(remote.text);
                     if (d) {
                         el.innerHTML = '云端：' + (d.items || []).length + ' 个收藏 · 更新于 ' + escapeHtml(favSyncTimeStr(d.updatedAt))
                             + (d.updatedBy ? '（' + escapeHtml(d.updatedBy) + '）' : '');
+                        favRenderCloudList(d);
                     } else {
                         el.innerHTML = '云端：<span style="color:#e67e22;">文件格式异常</span>';
                     }
                 }
             } catch (e) {
                 el.innerHTML = '云端：<span style="color:#ff6b6b;">' + escapeHtml(e.message) + '</span>';
+                const list = document.getElementById('favSyncCloudList');
+                if (list) list.innerHTML = '<div style="color:#ff6b6b;font-size:12px;">' + escapeHtml(e.message) + '</div>';
             }
         }
 
@@ -6462,11 +6678,12 @@
                 return;
             }
             const payload = {
-                version: 1,
+                version: 2,
                 app: 'my-html-editor',
                 exportedAt: new Date().toISOString(),
                 folders: favoritesData.folders,
-                items: favoritesData.items
+                items: favoritesData.items,
+                deleted: Array.isArray(favoritesData.deleted) ? favoritesData.deleted : []
             };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -6501,24 +6718,28 @@
                 }
                 const inFolders = Array.isArray(data.folders) ? data.folders : [];
                 const inItems = Array.isArray(data.items) ? data.items : [];
-                const folderIds = {};
-                favoritesData.folders.forEach(function(f) { folderIds[f.id] = true; });
-                const itemIds = {};
-                favoritesData.items.forEach(function(i) { itemIds[i.id] = true; });
-                const newFolders = inFolders.filter(function(f) { return f.id && !folderIds[f.id]; });
-                const newItems = inItems.filter(function(i) { return i.id && !itemIds[i.id]; });
-                if (!newFolders.length && !newItems.length) {
+                if (!inFolders.length && !inItems.length) {
+                    showToast('文件中没有可导入的内容', 'error');
+                    return;
+                }
+                const s = favMergeData(data).stats;
+                const changed = s.itemsFromRemote + s.foldersFromRemote + s.itemsUpdated + s.foldersUpdated + s.foldersMerged + s.deletesApplied;
+                if (!changed) {
                     showToast('文件中的收藏均已存在，无需导入', 'success');
                     return;
                 }
+                const lines = [];
+                if (s.itemsFromRemote) lines.push('· 新增 ' + s.itemsFromRemote + ' 个收藏');
+                if (s.foldersFromRemote) lines.push('· 新增 ' + s.foldersFromRemote + ' 个文件夹');
+                if (s.itemsUpdated) lines.push('· 更新 ' + s.itemsUpdated + ' 个收藏');
+                if (s.foldersUpdated) lines.push('· 更新 ' + s.foldersUpdated + ' 个文件夹');
+                if (s.foldersMerged) lines.push('· 合并 ' + s.foldersMerged + ' 个同名文件夹');
+                if (s.deletesApplied) lines.push('· 应用 ' + s.deletesApplied + ' 条删除记录');
                 showConfirmDialog(
-                    '将导入 ' + newFolders.length + ' 个新文件夹、' + newItems.length + ' 个新收藏。\n（合并模式，不影响现有收藏）',
+                    '合并导入预览：\n' + lines.join('\n') + '\n\n（合并模式：保留双方内容，不会误删本地收藏）',
                     function() {
-                        newFolders.forEach(function(f) { favoritesData.folders.push(f); });
-                        newItems.forEach(function(i) { favoritesData.items.push(i); });
-                        saveFavorites();
-                        renderFavorites();
-                        showToast('导入成功：新增 ' + newFolders.length + ' 个文件夹 · ' + newItems.length + ' 个收藏', 'success');
+                        favApplyMergeResult(favMergeData(data));
+                        showToast('导入完成', 'success');
                     }
                 );
             };
