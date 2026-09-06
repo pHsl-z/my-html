@@ -427,6 +427,35 @@
             text-align: center !important;
         }
 
+        /* AI文档 与 折叠箭头：两个独立按钮，中间竖线分隔 */
+        .panel-title-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .title-separator {
+            width: 1px;
+            height: 14px;
+            background: #4a4a4a;
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+
+        #editorToggleBtn {
+            padding: 0 2px;
+        }
+
+        /* 代码窗口折叠状态：只收起编辑区和状态栏，操作按钮保留在标题栏（AI文档右侧） */
+        .editor-panel.collapsed {
+            flex: 0 0 auto;
+            min-height: 0;
+        }
+
+        .editor-panel.collapsed .editor-wrapper,
+        .editor-panel.collapsed .status-bar {
+            display: none;
+        }
+
         /* 全屏预览样式 */
         .fullscreen-preview {
             position: fixed !important;
@@ -1681,12 +1710,50 @@
 </head>
 <body>
     <div class="container">
-        <div class="editor-panel">
+        <div class="editor-panel collapsed">
             <div class="panel-header">
                 <div class="panel-title">
-                    <button class="btn btn-link" onclick="showHelp()" style="background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" type="button">
-                        <span>AI文档</span>
-                    </button>
+                    <div class="dropdown">
+                        <div class="panel-title-group">
+                            <button class="btn btn-link dropdown-toggle" onclick="toggleAiDocDropdown()" id="aiDocDropdownBtn" type="button">
+                                <span>AI文档</span>
+                            </button>
+                            <span class="title-separator"></span>
+                            <button class="btn btn-link" onclick="toggleEditorPanel()" id="editorToggleBtn" type="button" title="折叠 / 打开代码窗口">
+                                <span id="editorToggleArrow">▼</span>
+                            </button>
+                        </div>
+                        <div class="dropdown-menu" id="aiDocDropdownMenu">
+                            <button class="btn btn-warning dropdown-item" onclick="showHelp();closeAiDocDropdown();" id="aiDocWelcomeBtn" type="button">
+                                <span class="icon">🎉</span>
+                                欢迎界面
+                            </button>
+                            <button class="btn btn-warning dropdown-item" onclick="showFavoriteDialog();closeAiDocDropdown();" id="favoriteBtn" type="button">
+                                <span class="icon">⭐</span>
+                                收藏
+                            </button>
+                            <button class="btn btn-info dropdown-item" onclick="openFavoritesPage();closeAiDocDropdown();" id="favoritesBtn" type="button">
+                                <span class="icon">🗂️</span>
+                                收藏夹
+                            </button>
+                            <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel();closeAiDocDropdown();" id="historyBtn" type="button">
+                                <span class="icon">🕒</span>
+                                历史
+                            </button>
+                            <button class="btn btn-primary dropdown-item" onclick="toggleSharePanel();closeAiDocDropdown();" id="shareBtn" type="button">
+                                <span class="icon">🔗</span>
+                                分享
+                            </button>
+                            <button class="btn btn-warning dropdown-item" onclick="showTemplatePanel();closeAiDocDropdown();" id="templateDropdownBtn" type="button">
+                                <span class="icon">📋</span>
+                                模板
+                            </button>
+                            <button class="btn btn-info dropdown-item" onclick="toggleSettingsPanel();closeAiDocDropdown();" id="settingsBtn" type="button">
+                                <span class="icon">⚙️</span>
+                                设置
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="copyEditorContent()" id="copyBtn" type="button">
@@ -1737,31 +1804,7 @@
                             <span>▼</span>
                         </button>
                         <div class="dropdown-menu" id="previewDropdownMenu">
-                            <button class="btn btn-warning dropdown-item" onclick="showFavoriteDialog();closePreviewDropdown();" id="favoriteBtn">
-                                <span class="icon">⭐</span>
-                                收藏
-                            </button>
-                            <button class="btn btn-info dropdown-item" onclick="openFavoritesPage();closePreviewDropdown();" id="favoritesBtn">
-                                <span class="icon">🗂️</span>
-                                收藏夹
-                            </button>
-                            <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel()" id="historyBtn">
-                                <span class="icon">🕒</span>
-                                历史
-                            </button>
-                            <button class="btn btn-primary dropdown-item" onclick="toggleSharePanel()" id="shareBtn">
-                                <span class="icon">🔗</span>
-                                分享
-                            </button>
-                            <button class="btn btn-warning dropdown-item" onclick="showTemplatePanel();closePreviewDropdown();" id="templateDropdownBtn">
-                                <span class="icon">📋</span>
-                                模板
-                            </button>
-                            <button class="btn btn-info dropdown-item" onclick="toggleSettingsPanel()" id="settingsBtn">
-                                <span class="icon">⚙️</span>
-                                设置
-                            </button>
-                            <button class="btn btn-success dropdown-item" onclick="downloadHTML()" id="exportHtmlBtn">
+                            <button class="btn btn-success dropdown-item" onclick="downloadHTML()" id="exportHtmlBtn" type="button">
                                 <span class="icon">💾</span>
                                 导出HTML
                             </button>
@@ -2503,6 +2546,51 @@
                 dropdownBtn.querySelector('span:last-child').textContent = '▼';
                 document.removeEventListener('click', closePreviewDropdownOnClickOutside);
             }
+        }
+
+        /* ---------- AI文档下拉菜单 + 代码窗口折叠 ---------- */
+        function toggleAiDocDropdown() {
+            const dropdownMenu = document.getElementById('aiDocDropdownMenu');
+            if (!dropdownMenu) return;
+            dropdownMenu.classList.toggle('show');
+            if (dropdownMenu.classList.contains('show')) {
+                document.addEventListener('click', closeAiDocDropdownOnClickOutside);
+            } else {
+                document.removeEventListener('click', closeAiDocDropdownOnClickOutside);
+            }
+        }
+
+        function closeAiDocDropdown() {
+            const dropdownMenu = document.getElementById('aiDocDropdownMenu');
+            if (dropdownMenu) dropdownMenu.classList.remove('show');
+            document.removeEventListener('click', closeAiDocDropdownOnClickOutside);
+        }
+
+        function closeAiDocDropdownOnClickOutside(event) {
+            const dropdownBtn = document.getElementById('aiDocDropdownBtn');
+            const dropdownMenu = document.getElementById('aiDocDropdownMenu');
+            if ((!dropdownBtn || !dropdownBtn.contains(event.target)) &&
+                (!dropdownMenu || !dropdownMenu.contains(event.target))) {
+                closeAiDocDropdown();
+            }
+        }
+
+        // 折叠/打开左侧 HTML 代码窗口（默认折叠，编辑内容与预览不受影响）
+        function toggleEditorPanel() {
+            closeAiDocDropdown();
+            const panel = document.querySelector('.editor-panel');
+            const arrow = document.getElementById('editorToggleArrow');
+            if (!panel) return;
+            const collapsed = panel.classList.toggle('collapsed');
+            if (arrow) arrow.textContent = collapsed ? '▼' : '▲';
+        }
+
+        // 预览区是 iframe，点击其内部时父页面收不到 click 事件，改由 window blur 关闭所有下拉菜单
+        function closeAllDropdowns() {
+            const aiMenu = document.getElementById('aiDocDropdownMenu');
+            if (aiMenu && aiMenu.classList.contains('show')) closeAiDocDropdown();
+            const pvMenu = document.getElementById('previewDropdownMenu');
+            if (pvMenu && pvMenu.classList.contains('show')) closePreviewDropdown();
         }
         
         // 面板切换函数 - 改为弹窗显示
@@ -3430,6 +3518,7 @@
 
         // 移动设备优化：处理页面切换和后台运行
         window.addEventListener('blur', function() {
+            closeAllDropdowns();
             safeSetItem('htmlEditorContent', htmlEditor.value);
             // iOS 后台切换兜底：blur 时也保存历史记录
             if (htmlEditor.value.trim() && htmlEditor.value !== lastContent) {
