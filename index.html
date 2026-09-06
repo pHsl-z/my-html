@@ -1431,11 +1431,11 @@
             flex-shrink: 0;
         }
 
-        /* 标题行：收藏夹 + 关闭按钮 */
+        /* 标题行：收藏夹 + 视图/排序控件 + 关闭按钮 */
         .fav-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 8px;
             min-height: 36px;
         }
 
@@ -1444,6 +1444,31 @@
             font-weight: 600;
             color: #e6e6e6;
             letter-spacing: 0.5px;
+        }
+
+        /* 收藏夹 / 提示词 标签页切换 */
+        .fav-tabs {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .fav-tab {
+            padding: 6px 12px;
+            background: #242424;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #aaa;
+            font-size: 13.5px;
+            line-height: 1;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .fav-tab.active {
+            background: #0e5a3a;
+            border-color: #1d7a52;
+            color: #d9ffee;
         }
 
         .fav-close-btn {
@@ -1473,7 +1498,7 @@
             transform: scale(0.92);
         }
 
-        /* 导航行：返回/主页/面包屑/视图切换/排序 */
+        /* 导航行：返回 + 面包屑 */
         .fav-nav {
             display: flex;
             align-items: center;
@@ -1481,11 +1506,13 @@
             min-width: 0;
         }
 
+        /* 视图/排序控件：标题行内靠右，紧邻关闭按钮 */
         .fav-viewsort {
             display: flex;
             align-items: center;
             gap: 4px;
             flex-shrink: 0;
+            margin-left: auto;
         }
 
         .fav-vs-btn {
@@ -1967,14 +1994,18 @@
                 width: 100%;
             }
 
-            .fav-viewsort {
-                margin-left: auto;
-            }
-
             .fav-toolbar {
                 gap: 6px;
                 padding: 8px 10px 10px;
                 padding-top: max(8px, env(safe-area-inset-top, 44px));
+            }
+
+            .fav-header {
+                gap: 6px;
+            }
+
+            .fav-sort-select {
+                padding: 0 2px;
             }
 
             .fav-grid {
@@ -2004,9 +2035,111 @@
                 font-size: 12px;
             }
 
-            .fav-title {
-                font-size: 16px;
+            .fav-tab {
+                padding: 5px 9px;
+                font-size: 12.5px;
             }
+        }
+
+        /* ---------- 提示词（收藏夹页面内嵌的标签页） ---------- */
+        .prompt-list {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px;
+        }
+
+        .prompt-row {
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .prompt-row:active {
+            background: #262626;
+        }
+
+        .prompt-row-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prompt-row-title {
+            flex: 1;
+            min-width: 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #e6e6e6;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .prompt-row-preview {
+            font-size: 12.5px;
+            color: #9a9a9a;
+            line-height: 1.55;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .prompt-row-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 11.5px;
+            color: #777;
+        }
+
+        .prompt-copy-btn {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            font-size: 12.5px;
+            background: #0e5a3a;
+            color: #b8f5d8;
+            border: 1px solid #1d7a52;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .prompt-copy-btn:active {
+            background: #14724c;
+        }
+
+        .prompt-more-btn {
+            flex-shrink: 0;
+            width: 32px;
+            height: 30px;
+            background: #2a2a2a;
+            color: #bbb;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .prompt-empty {
+            padding: 60px 20px;
+            text-align: center;
+            color: #888;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .prompt-empty span {
+            font-size: 13px;
+            color: #666;
         }
     </style>
 </head>
@@ -2037,6 +2170,10 @@
                             <button class="btn btn-info dropdown-item" onclick="openFavoritesPage();closeAiDocDropdown();" id="favoritesBtn" type="button">
                                 <span class="icon">🗂️</span>
                                 收藏夹
+                            </button>
+                            <button class="btn btn-success dropdown-item" onclick="openPromptsPage();closeAiDocDropdown();" id="promptsBtn" type="button">
+                                <span class="icon">💬</span>
+                                提示词
                             </button>
                             <button class="btn btn-secondary dropdown-item" onclick="toggleHistoryPanel();closeAiDocDropdown();" id="historyBtn" type="button">
                                 <span class="icon">🕒</span>
@@ -2158,14 +2295,11 @@
     <div id="favoritesPage" class="favorites-page">
         <div class="fav-toolbar">
             <div class="fav-header">
-                <div class="fav-title">收藏夹</div>
-                <button class="fav-close-btn" onclick="closeFavoritesPage()" title="关闭收藏夹" aria-label="关闭">✕</button>
-            </div>
-            <div class="fav-nav">
-                <button class="btn btn-secondary" id="favBackBtn" onclick="favGoUp()" title="返回上一级">←</button>
-                <button class="btn btn-secondary" onclick="favGoTo(null)" title="回到收藏夹根目录">🏠</button>
-                <div class="fav-breadcrumb" id="favBreadcrumb"></div>
-                <div class="fav-viewsort">
+                <div class="fav-tabs">
+                    <button class="fav-tab active" id="favTabFavBtn" onclick="setFavActiveTab('fav')">🗂️ 收藏夹</button>
+                    <button class="fav-tab" id="favTabPromptBtn" onclick="setFavActiveTab('prompt')">💬 提示词</button>
+                </div>
+                <div class="fav-viewsort" id="favViewsort">
                     <button class="fav-vs-btn active" id="favViewGridBtn" onclick="setFavViewMode('grid')" title="图标视图">▦</button>
                     <button class="fav-vs-btn" id="favViewListBtn" onclick="setFavViewMode('list')" title="列表视图">☰</button>
                     <select id="favSortSelect" class="fav-sort-select" onchange="setFavSortBy(this.value)" title="排序方式">
@@ -2176,16 +2310,29 @@
                     </select>
                     <button class="fav-vs-btn" id="favSortDirBtn" onclick="toggleFavSortDir()" title="切换升序 / 降序">↓</button>
                 </div>
+                <button class="fav-close-btn" onclick="closeFavoritesPage()" title="关闭收藏夹" aria-label="关闭">✕</button>
             </div>
-            <div class="fav-actions">
-                <button class="btn btn-info" onclick="favSyncMenu()" id="favSyncBtn" title="云同步（多设备）">☁️ 同步</button>
+            <div class="fav-nav" id="favNavRow">
+                <button class="btn btn-secondary" id="favBackBtn" onclick="favGoUp()" title="返回上一级">←</button>
+                <div class="fav-breadcrumb" id="favBreadcrumb"></div>
+            </div>
+            <div class="fav-actions" id="favActionsRow">
+                <button class="btn btn-info" onclick="favSyncMenu()" id="favSyncBtn" title="云同步（多设备，含提示词）">☁️ 同步</button>
                 <button class="btn btn-secondary" onclick="favExportData()" title="将收藏导出为 JSON 备份文件">📤 导出</button>
                 <button class="btn btn-secondary" onclick="favImportClick()" title="从 JSON 备份文件导入收藏">📥 导入</button>
                 <button class="btn btn-primary" onclick="favCreateFolder()">📁 新建文件夹</button>
             </div>
+            <div class="fav-actions" id="promptActionsRow" style="display:none;">
+                <button class="btn btn-info" onclick="favSyncMenu()" title="云同步（多设备，含收藏夹）">☁️ 同步</button>
+                <button class="btn btn-primary" onclick="showPromptEditor(null)">➕ 新建提示词</button>
+                <button class="btn btn-secondary" onclick="newPromptFromClipboard()" title="读取剪贴板内容，新建一条提示词">📋 从剪贴板新建</button>
+                <button class="btn btn-secondary" onclick="exportPrompts()" title="将提示词导出为 JSON 备份文件">📤 导出</button>
+                <button class="btn btn-secondary" onclick="importPromptsClick()" title="从 JSON 备份文件导入提示词">📥 导入</button>
+            </div>
         </div>
         <div class="fav-grid" id="favGrid"></div>
         <div class="fav-list" id="favList"></div>
+        <div class="prompt-list" id="promptList" style="display:none;"></div>
         <div class="fav-statusbar" id="favStatusbar"></div>
     </div>
 
@@ -2195,6 +2342,7 @@
     <!-- 隐藏的文件输入元素 -->
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
     <input type="file" id="favImportFile" accept=".json,application/json" style="display: none;" onchange="handleFavImport(this)">
+    <input type="file" id="promptImportFile" accept=".json,application/json" style="display: none;" onchange="handlePromptsImport(this)">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
@@ -6139,7 +6287,15 @@
             });
 
             const deleted = Object.keys(tomb).map(function(id) { return { id: id, deletedAt: tomb[id] }; });
-            return { folders: folders, items: items, deleted: deleted, stats: stats };
+
+            // 6. 提示词同样按 ID 合并（云端与收藏夹存同一份数据文件）
+            const promptsMerged = favMergePrompts(
+                (remote && Array.isArray(remote.prompts)) ? remote.prompts : [],
+                (remote && Array.isArray(remote.promptsDeleted)) ? remote.promptsDeleted : []
+            );
+            Object.assign(stats, promptsMerged.stats);
+
+            return { folders: folders, items: items, deleted: deleted, prompts: promptsMerged.items, promptsDeleted: promptsMerged.deleted, stats: stats };
         }
 
         // 应用合并结果到本地并刷新界面
@@ -6156,9 +6312,14 @@
             }
             saveFavorites(false);
             renderFavorites();
+            if (result.prompts) {
+                promptsData = { items: result.prompts, deleted: result.promptsDeleted || [] };
+                savePrompts();
+                renderPrompts();
+            }
         }
 
-        // 构建上传云端的载荷（version 2 含逐条时间戳与删除墓碑）
+        // 构建上传云端的载荷（version 2 含逐条时间戳、删除墓碑与提示词）
         function favBuildCloudPayload() {
             return JSON.stringify({
                 version: 2,
@@ -6167,7 +6328,9 @@
                 updatedBy: (typeof favSyncConfig !== 'undefined' && favSyncConfig && favSyncConfig.deviceName) ? favSyncConfig.deviceName : '',
                 folders: favoritesData.folders,
                 items: favoritesData.items,
-                deleted: Array.isArray(favoritesData.deleted) ? favoritesData.deleted : []
+                deleted: Array.isArray(favoritesData.deleted) ? favoritesData.deleted : [],
+                prompts: Array.isArray(promptsData.items) ? promptsData.items : [],
+                promptsDeleted: Array.isArray(promptsData.deleted) ? promptsData.deleted : []
             });
         }
 
@@ -6299,13 +6462,19 @@
         function openFavoritesPage() {
             const page = document.getElementById('favoritesPage');
             if (!page) return;
+            loadPrompts();
             page.style.display = 'flex';
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() { page.classList.add('show'); });
             });
             const modalOverlay = document.getElementById('modalOverlay');
             if (modalOverlay) modalOverlay.classList.add('above-favorites');
-            renderFavorites();
+            try {
+                const savedTab = localStorage.getItem(FAV_TAB_STORAGE_KEY);
+                if (savedTab === 'prompt') favActiveTab = 'prompt';
+                else if (savedTab === 'fav') favActiveTab = 'fav';
+            } catch (e) { }
+            setFavActiveTab(favActiveTab);
             hideFavContextMenu();
         }
 
@@ -6367,7 +6536,7 @@
             if (!gridHtml) {
                 gridHtml = '<div class="fav-empty"><div class="fav-empty-icon">⭐</div>'
                     + '<div>这里还没有收藏</div>'
-                    + '<div class="fav-empty-hint">在预览菜单中点击「收藏」即可把当前页面收藏到这里<br>支持拖动页面到文件夹进行整理</div></div>';
+                    + '<div class="fav-empty-hint">在「AI 文档」菜单中点击「收藏」即可把当前页面收藏到这里<br>支持拖动页面到文件夹进行整理</div></div>';
             }
             grid.innerHTML = gridHtml;
 
@@ -6377,18 +6546,21 @@
             if (!listHtml) {
                 listHtml = '<div class="fav-empty"><div class="fav-empty-icon">⭐</div>'
                     + '<div>这里还没有收藏</div>'
-                    + '<div class="fav-empty-hint">在预览菜单中点击「收藏」即可把当前页面收藏到这里<br>支持拖动页面到文件夹进行整理</div></div>';
+                    + '<div class="fav-empty-hint">在「AI 文档」菜单中点击「收藏」即可把当前页面收藏到这里<br>支持拖动页面到文件夹进行整理</div></div>';
             }
             if (list) list.innerHTML = listHtml;
 
             const sb = document.getElementById('favStatusbar');
-            if (sb) {
+            if (sb && favActiveTab !== 'prompt') {
                 sb.innerHTML = '<span>📁 ' + folders.length + ' 个文件夹 · 📄 ' + items.length + ' 个页面</span>'
                     + '<span>当前 ' + getFavFolderDepth(favCurrentFolderId) + '/3 级 · 可拖动整理</span>';
             }
 
             const backBtn = document.getElementById('favBackBtn');
             if (backBtn) backBtn.style.visibility = favCurrentFolderId ? 'visible' : 'hidden';
+            // 根目录时整行隐藏返回+面包屑，避免空行占位
+            const navRow = document.getElementById('favNavRow');
+            if (navRow) navRow.style.display = favCurrentFolderId ? '' : 'none';
         }
 
         // 列表视图行：文件夹或收藏条目
@@ -6903,7 +7075,7 @@
         async function favCloudPut(jsonStr, sha) {
             const headers = Object.assign({}, favSyncHeaders(), { 'Content-Type': 'application/json' });
             const body = {
-                message: '📁 更新收藏夹（' + favSyncConfig.deviceName + '）',
+                message: '📁 更新收藏夹与提示词（' + favSyncConfig.deviceName + '）',
                 content: favB64Encode(jsonStr),
                 branch: favSyncBranchName()
             };
@@ -6975,7 +7147,10 @@
                 let msg = '已上传到云端（' + favSyncConfig.repo + '/' + favSyncNormalizedPath() + '）';
                 const s = (merged && merged.stats) || null;
                 if (s && (s.itemsFromRemote || s.itemsUpdated || s.foldersFromRemote || s.foldersUpdated)) {
-                    msg += '，已合并云端内容：' + (s.itemsFromRemote + s.itemsUpdated) + ' 个收藏 · ' + (s.foldersFromRemote + s.foldersUpdated) + ' 个文件夹';
+                    msg += '，已合并云端收藏：' + (s.itemsFromRemote + s.itemsUpdated) + ' 个收藏 · ' + (s.foldersFromRemote + s.foldersUpdated) + ' 个文件夹';
+                }
+                if (s && (s.promptsFromRemote || s.promptsUpdated)) {
+                    msg += (msg.indexOf('合并') > -1 ? '' : '，已合并') + '云端提示词：' + (s.promptsFromRemote + s.promptsUpdated) + ' 条';
                 }
                 showToast(msg, 'success');
             } catch (e) {
@@ -7009,41 +7184,45 @@
                 if (s.itemsUpdated) parts.push('更新 ' + s.itemsUpdated + ' 个收藏');
                 if (s.foldersUpdated) parts.push('更新 ' + s.foldersUpdated + ' 个文件夹');
                 if (s.foldersMerged) parts.push('合并 ' + s.foldersMerged + ' 个同名文件夹');
+                if (s.promptsFromRemote) parts.push('新增 ' + s.promptsFromRemote + ' 条提示词');
+                if (s.promptsUpdated) parts.push('更新 ' + s.promptsUpdated + ' 条提示词');
                 if (s.deletesApplied) parts.push('应用 ' + s.deletesApplied + ' 条删除');
+                if (s.promptDeletesApplied) parts.push('应用 ' + s.promptDeletesApplied + ' 条提示词删除');
                 showToast('已从云端拉取合并：' + (parts.length ? parts.join(' · ') : '云端没有本地缺少的新内容'), 'success');
             } catch (e) {
                 showToast('拉取失败：' + e.message, 'error');
             }
         }
 
-        // 云端明细列表：按设备汇总数量 + 按更新时间倒序显示每条收藏来自哪台设备
+        // 云端明细列表：按设备汇总数量 + 按更新时间倒序显示每条收藏/提示词来自哪台设备
         function favRenderCloudList(d) {
             const wrap = document.getElementById('favSyncCloudList');
             if (!wrap) return;
             const items = (d && Array.isArray(d.items)) ? d.items.slice() : [];
             const folders = (d && Array.isArray(d.folders)) ? d.folders : [];
-            if (!items.length && !folders.length) {
+            const prompts = (d && Array.isArray(d.prompts)) ? d.prompts.slice() : [];
+            if (!items.length && !folders.length && !prompts.length) {
                 wrap.innerHTML = '<div style="color:#888;font-size:12px;">云端暂无收藏内容</div>';
                 return;
             }
-            items.sort(function(a, b) { return new Date(favEffectiveTs(b)) - new Date(favEffectiveTs(a)); });
             const fallbackDev = (d && d.updatedBy) || '未知设备';
+            const all = [];
+            items.forEach(function(it) { all.push({ type: '收藏', title: it.title || '无标题', dev: it.updatedBy || fallbackDev, ts: favEffectiveTs(it) }); });
+            prompts.forEach(function(p) { all.push({ type: '提示词', title: p.title || '未命名', dev: p.updatedBy || fallbackDev, ts: promptEffectiveTs(p) }); });
+            all.sort(function(a, b) { return new Date(b.ts) - new Date(a.ts); });
             const byDevice = {};
-            items.forEach(function(it) {
-                const dev = it.updatedBy || fallbackDev;
-                byDevice[dev] = (byDevice[dev] || 0) + 1;
-            });
+            all.forEach(function(x) { byDevice[x.dev] = (byDevice[x.dev] || 0) + 1; });
             const devChips = Object.keys(byDevice).sort(function(a, b) { return byDevice[b] - byDevice[a]; }).map(function(dev) {
                 return '<span style="display:inline-block;background:#243447;border-radius:10px;padding:2px 10px;font-size:11px;color:#9ecbff;white-space:nowrap;">💻 ' + escapeHtml(dev) + ' · ' + byDevice[dev] + '</span>';
             }).join(' ');
-            const rows = items.slice(0, 50).map(function(it) {
-                const dev = it.updatedBy || fallbackDev;
+            const typeIcon = { '收藏': '⭐', '提示词': '💬' };
+            const rows = all.slice(0, 50).map(function(x) {
                 return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px dashed #2a2a2a;">'
-                    + '<span style="font-size:12px;color:#e6e6e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(it.title || '无标题') + '">' + escapeHtml(it.title || '无标题') + '</span>'
-                    + '<span style="font-size:11px;color:#888;white-space:nowrap;">💻 ' + escapeHtml(dev) + ' · ' + escapeHtml(favSyncTimeStr(favEffectiveTs(it))) + '</span>'
+                    + '<span style="font-size:12px;color:#e6e6e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(x.title) + '">' + (typeIcon[x.type] || '') + ' ' + escapeHtml(x.title) + '</span>'
+                    + '<span style="font-size:11px;color:#888;white-space:nowrap;">💻 ' + escapeHtml(x.dev) + ' · ' + escapeHtml(favSyncTimeStr(x.ts)) + '</span>'
                     + '</div>';
             }).join('');
-            const more = items.length > 50 ? '<div style="color:#666;font-size:11px;padding-top:6px;">… 仅显示最近 50 条（云端共 ' + items.length + ' 条收藏 · ' + folders.length + ' 个文件夹）</div>' : '';
+            const more = all.length > 50 ? '<div style="color:#666;font-size:11px;padding-top:6px;">… 仅显示最近 50 条（云端共 ' + items.length + ' 条收藏 · ' + folders.length + ' 个文件夹 · ' + prompts.length + ' 条提示词）</div>' : '';
             wrap.innerHTML = (devChips ? '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;">' + devChips + '</div>' : '') + rows + more;
         }
 
@@ -7300,16 +7479,348 @@
             reader.readAsText(file);
         }
 
+        /* ---------- 提示词模板（云同步并入收藏夹同一份数据文件） ---------- */
+        const PROMPTS_STORAGE_KEY = 'htmlEditorPrompts';
+        const FAV_TAB_STORAGE_KEY = 'htmlEditorFavActiveTab';
+        var promptsData = { items: [], deleted: [] };
+        var promptEditingId = null;
+        var favActiveTab = 'fav';
+
+        function loadPrompts() {
+            try {
+                const raw = localStorage.getItem(PROMPTS_STORAGE_KEY);
+                if (raw) {
+                    const d = JSON.parse(raw);
+                    if (d && Array.isArray(d.items)) {
+                        promptsData = { items: d.items, deleted: Array.isArray(d.deleted) ? d.deleted : [] };
+                    }
+                }
+            } catch (e) { }
+        }
+
+        function savePrompts() {
+            try {
+                localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(promptsData));
+            } catch (e) {
+                showToast('保存失败：本地存储空间不足', 'error');
+            }
+        }
+
+        function promptEffectiveTs(p) {
+            return (p && (p.updatedAt || p.createdAt)) || '1970-01-01T00:00:00Z';
+        }
+
+        function promptDeviceName() {
+            return (typeof favSyncConfig !== 'undefined' && favSyncConfig && favSyncConfig.deviceName) ? favSyncConfig.deviceName : '';
+        }
+
+        // 收藏夹页面标签页切换：收藏夹 / 提示词
+        function setFavActiveTab(tab) {
+            favActiveTab = (tab === 'prompt') ? 'prompt' : 'fav';
+            try { localStorage.setItem(FAV_TAB_STORAGE_KEY, favActiveTab); } catch (e) { }
+            const isPrompt = favActiveTab === 'prompt';
+            const tabFav = document.getElementById('favTabFavBtn');
+            const tabPrompt = document.getElementById('favTabPromptBtn');
+            if (tabFav) tabFav.classList.toggle('active', !isPrompt);
+            if (tabPrompt) tabPrompt.classList.toggle('active', isPrompt);
+            const show = function(id, showIt) { const el = document.getElementById(id); if (el) el.style.display = showIt ? '' : 'none'; };
+            show('favViewsort', !isPrompt);
+            show('favNavRow', !isPrompt);
+            show('favActionsRow', !isPrompt);
+            show('promptActionsRow', isPrompt);
+            show('favGrid', !isPrompt);
+            show('favList', !isPrompt);
+            show('promptList', isPrompt);
+            hideFavContextMenu();
+            if (isPrompt) renderPrompts();
+            else renderFavorites();
+        }
+
+        // 兼容入口：AI 文档菜单「提示词」→ 打开收藏夹页面并切到提示词标签
+        function openPromptsPage() {
+            openFavoritesPage();
+            setFavActiveTab('prompt');
+        }
+
+        function renderPrompts() {
+            const list = document.getElementById('promptList');
+            if (!list) return;
+            if (!Array.isArray(promptsData.items)) promptsData.items = [];
+            const items = promptsData.items.slice().sort(function(a, b) {
+                return new Date(promptEffectiveTs(b)) - new Date(promptEffectiveTs(a));
+            });
+            if (!items.length) {
+                list.innerHTML = '<div class="prompt-empty">💬 还没有提示词<br><span>点击「➕ 新建提示词」或「📋 从剪贴板新建」添加一条</span></div>';
+            } else {
+                let html = '';
+                items.forEach(function(p) {
+                    const preview = (p.content || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+                    html += '<div class="prompt-row" onclick="showPromptEditor(\'' + p.id + '\')">'
+                        + '<div class="prompt-row-top">'
+                        + '<div class="prompt-row-title">' + escapeHtml(p.title || '未命名') + '</div>'
+                        + '<button class="prompt-copy-btn" onclick="event.stopPropagation();copyPromptToClipboard(\'' + p.id + '\')" title="复制到剪贴板">📋 复制</button>'
+                        + '<button class="prompt-more-btn" onclick="event.stopPropagation();showPromptMenuAtButton(event, \'' + p.id + '\')" title="更多操作">⋯</button>'
+                        + '</div>'
+                        + (preview ? '<div class="prompt-row-preview">' + escapeHtml(preview) + '</div>' : '')
+                        + '<div class="prompt-row-meta"><span>' + formatRelativeTime(promptEffectiveTs(p)) + '</span><span>' + (p.content || '').length + ' 字符</span></div>'
+                        + '</div>';
+                });
+                list.innerHTML = html;
+            }
+            if (favActiveTab === 'prompt') {
+                const bar = document.getElementById('favStatusbar');
+                if (bar) bar.textContent = '共 ' + promptsData.items.length + ' 条提示词';
+            }
+        }
+
+        function showPromptEditor(id, prefillContent) {
+            const p = id ? promptsData.items.find(function(x) { return x.id === id; }) : null;
+            promptEditingId = id || null;
+            const html = '<div style="display:flex;flex-direction:column;gap:12px;">'
+                + '<input type="text" id="promptTitleInput" placeholder="提示词标题（例如：几何模型识别）"'
+                + ' style="padding:10px 14px;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;color:#e6e6e6;font-size:14px;outline:none;">'
+                + '<textarea id="promptContentInput" rows="10" placeholder="提示词内容，支持多行文本"'
+                + ' style="padding:10px 14px;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;color:#e6e6e6;font-size:13px;line-height:1.6;outline:none;resize:vertical;font-family:inherit;"></textarea>'
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+                + '<button class="btn btn-secondary" onclick="closeModal()">取消</button>'
+                + '<button class="btn btn-primary" onclick="savePromptFromEditor()">保存</button>'
+                + '</div></div>';
+            showModal(p ? '编辑提示词' : '新建提示词', html);
+            setTimeout(function() {
+                const t = document.getElementById('promptTitleInput');
+                const c = document.getElementById('promptContentInput');
+                if (t) t.value = p ? (p.title || '') : '';
+                if (c) c.value = p ? (p.content || '') : (prefillContent || '');
+                if (t && !p) t.focus();
+            }, 50);
+        }
+
+        function savePromptFromEditor() {
+            const t = document.getElementById('promptTitleInput');
+            const c = document.getElementById('promptContentInput');
+            if (!t || !c) return;
+            const title = t.value.trim();
+            const content = c.value;
+            if (!title) { showToast('标题不能为空', 'error'); return; }
+            if (!content.trim()) { showToast('内容不能为空', 'error'); return; }
+            const now = new Date().toISOString();
+            const dev = promptDeviceName();
+            if (promptEditingId) {
+                const p = promptsData.items.find(function(x) { return x.id === promptEditingId; });
+                if (p) { p.title = title; p.content = content; p.updatedAt = now; if (dev) p.updatedBy = dev; }
+            } else {
+                const np = {
+                    id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+                    title: title,
+                    content: content,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                if (dev) np.updatedBy = dev;
+                promptsData.items.push(np);
+            }
+            savePrompts();
+            closeModal();
+            renderPrompts();
+            showToast(promptEditingId ? '提示词已更新' : '提示词已保存', 'success');
+            promptEditingId = null;
+        }
+
+        function copyPromptToClipboard(id) {
+            const p = promptsData.items.find(function(x) { return x.id === id; });
+            if (!p || !(p.content || '').trim()) { showToast('该提示词内容为空', 'error'); return; }
+            const text = p.content;
+            const label = p.title || '未命名';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showToast('已复制「' + label + '」', 'success');
+                }).catch(function() { fallbackCopyText(text, label); });
+            } else {
+                fallbackCopyText(text, label);
+            }
+        }
+
+        function fallbackCopyText(text, label) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;z-index:-1;';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            try {
+                document.execCommand('copy');
+                showToast('已复制「' + label + '」', 'success');
+            } catch (e) {
+                showToast('复制失败，请点开提示词后手动复制', 'error');
+            }
+            document.body.removeChild(ta);
+        }
+
+        function showPromptMenuAtButton(event, id) {
+            const menu = document.getElementById('favContextMenu');
+            if (!menu) return;
+            menu.innerHTML = '<div class="fav-menu-item" onclick="copyPromptToClipboard(\'' + id + '\')">📋 复制</div>'
+                + '<div class="fav-menu-item" onclick="showPromptEditor(\'' + id + '\')">✏️ 编辑</div>'
+                + '<div class="fav-menu-item fav-menu-danger" onclick="deletePrompt(\'' + id + '\')">🗑️ 删除</div>';
+            menu.style.display = 'block';
+            const rect = event.currentTarget.getBoundingClientRect();
+            const menuW = menu.offsetWidth || 150;
+            const menuH = menu.offsetHeight || 120;
+            let mx = Math.max(8, rect.right - menuW), my = rect.bottom + 4;
+            if (mx + menuW > window.innerWidth - 8) mx = Math.max(8, window.innerWidth - menuW - 8);
+            if (my + menuH > window.innerHeight - 8) my = Math.max(8, rect.top - menuH - 4);
+            menu.style.left = mx + 'px';
+            menu.style.top = my + 'px';
+        }
+
+        function deletePrompt(id) {
+            const p = promptsData.items.find(function(x) { return x.id === id; });
+            if (!p) return;
+            showConfirmDialog('确定删除提示词「' + (p.title || '未命名') + '」吗？', function() {
+                const now = new Date().toISOString();
+                promptsData.items = promptsData.items.filter(function(x) { return x.id !== id; });
+                if (!Array.isArray(promptsData.deleted)) promptsData.deleted = [];
+                promptsData.deleted = promptsData.deleted.filter(function(d) { return d.id !== id; });
+                promptsData.deleted.push({ id: id, deletedAt: now });
+                savePrompts();
+                renderPrompts();
+                showToast('已删除（同步后其他设备也会删除）', 'success');
+            });
+        }
+
+        // 提示词与远端按 ID 合并：并集 + 较新优先 + 删除墓碑（与收藏夹同一套逻辑）
+        function favMergePrompts(remoteItems, remoteDeleted) {
+            const rItems = Array.isArray(remoteItems) ? remoteItems : [];
+            const rDeleted = Array.isArray(remoteDeleted) ? remoteDeleted : [];
+            const stats = { promptsFromRemote: 0, promptsUpdated: 0, promptsLocalOnly: 0, promptDeletesApplied: 0 };
+
+            const tomb = {};
+            (Array.isArray(promptsData.deleted) ? promptsData.deleted : []).concat(rDeleted).forEach(function(d) {
+                if (!d || !d.id) return;
+                const t = d.deletedAt || '';
+                if (!tomb[d.id] || new Date(t) > new Date(tomb[d.id])) tomb[d.id] = t;
+            });
+            const cutoff = Date.now() - 90 * 24 * 3600 * 1000;
+            Object.keys(tomb).forEach(function(id) {
+                if (!tomb[id] || new Date(tomb[id]).getTime() < cutoff) delete tomb[id];
+            });
+
+            const map = {};
+            promptsData.items.forEach(function(p) { map[p.id] = p; });
+            const remoteIds = {};
+            rItems.forEach(function(rp) {
+                if (!rp || !rp.id) return;
+                remoteIds[rp.id] = true;
+                const lp = map[rp.id];
+                if (!lp) { map[rp.id] = rp; stats.promptsFromRemote++; }
+                else if (new Date(promptEffectiveTs(rp)) > new Date(promptEffectiveTs(lp))) { map[rp.id] = rp; stats.promptsUpdated++; }
+            });
+            promptsData.items.forEach(function(p) { if (!remoteIds[p.id]) stats.promptsLocalOnly++; });
+
+            const items = [];
+            Object.keys(map).forEach(function(id) {
+                const p = map[id];
+                const t = tomb[id];
+                if (t && new Date(t) > new Date(promptEffectiveTs(p))) {
+                    stats.promptDeletesApplied++;
+                } else {
+                    if (t) delete tomb[id];
+                    items.push(p);
+                }
+            });
+            const deleted = Object.keys(tomb).map(function(id) { return { id: id, deletedAt: tomb[id] }; });
+            return { items: items, deleted: deleted, stats: stats };
+        }
+
+        async function newPromptFromClipboard() {
+            let prefill = '';
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    prefill = (await navigator.clipboard.readText()) || '';
+                }
+            } catch (e) { }
+            if (prefill.trim()) {
+                showPromptEditor(null, prefill);
+                showToast('已读取剪贴板，补充标题后保存', 'success');
+            } else {
+                showPromptEditor(null, '');
+                showToast('无法读取剪贴板，请在内容框中手动粘贴', 'error');
+            }
+        }
+
+        function exportPrompts() {
+            if (!promptsData.items.length) {
+                showToast('还没有提示词可导出', 'error');
+                return;
+            }
+            const payload = {
+                version: 2,
+                app: 'my-html-editor',
+                type: 'prompts',
+                exportedAt: new Date().toISOString(),
+                items: promptsData.items,
+                deleted: Array.isArray(promptsData.deleted) ? promptsData.deleted : []
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const d = new Date();
+            const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+            a.download = 'prompts-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json';
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            showToast('已导出 ' + promptsData.items.length + ' 条提示词', 'success');
+        }
+
+        function importPromptsClick() {
+            const input = document.getElementById('promptImportFile');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function handlePromptsImport(inputEl) {
+            const file = inputEl && inputEl.files && inputEl.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                let data = null;
+                try { data = JSON.parse(reader.result); } catch (e) { }
+                const inItems = data && Array.isArray(data.items)
+                    ? data.items.filter(function(x) { return x && typeof x.content === 'string'; }) : [];
+                if (!inItems.length) {
+                    showToast('文件格式无效：请选择「📤 导出」生成的提示词备份文件', 'error');
+                    return;
+                }
+                const before = promptsData.items.length;
+                const merged = favMergePrompts(inItems, Array.isArray(data.deleted) ? data.deleted : []);
+                promptsData.items = merged.items;
+                promptsData.deleted = merged.deleted;
+                savePrompts();
+                renderPrompts();
+                const added = merged.stats.promptsFromRemote;
+                const updated = merged.stats.promptsUpdated;
+                const deletes = merged.stats.promptDeletesApplied;
+                showToast('导入完成：新增 ' + added + ' 条' + (updated ? '，更新 ' + updated + ' 条' : '') + (deletes ? '，应用 ' + deletes + ' 条删除' : '') + '（原 ' + before + ' 条）', 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        loadPrompts();
+
         loadFavSyncConfig();
 
         // ESC 关闭收藏夹页面（modal 打开时优先交给 modal 处理）
         document.addEventListener('keydown', function(e) {
             if (e.key !== 'Escape') return;
-            const page = document.getElementById('favoritesPage');
-            if (!page || page.style.display !== 'flex') return;
             const modalOverlay = document.getElementById('modalOverlay');
             if (modalOverlay && modalOverlay.classList.contains('show')) return;
-            closeFavoritesPage();
+            const page = document.getElementById('favoritesPage');
+            if (page && page.style.display === 'flex') closeFavoritesPage();
         });
     </script>
 </body>
