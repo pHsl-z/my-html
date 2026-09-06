@@ -1424,7 +1424,8 @@
             flex-direction: column;
             gap: 8px;
             padding: 10px 16px 12px;
-            padding-top: max(10px, env(safe-area-inset-top));
+            /* 顶部避开 iOS 状态栏/灵动岛：safe-area 不足时兜底 44px */
+            padding-top: max(10px, env(safe-area-inset-top, 44px));
             background: #1a1a1a;
             border-bottom: 1px solid #2a2a2a;
             flex-shrink: 0;
@@ -1973,6 +1974,7 @@
             .fav-toolbar {
                 gap: 6px;
                 padding: 8px 10px 10px;
+                padding-top: max(8px, env(safe-area-inset-top, 44px));
             }
 
             .fav-grid {
@@ -2156,7 +2158,7 @@
     <div id="favoritesPage" class="favorites-page">
         <div class="fav-toolbar">
             <div class="fav-header">
-                <div class="fav-title">⭐ 收藏夹</div>
+                <div class="fav-title">收藏夹</div>
                 <button class="fav-close-btn" onclick="closeFavoritesPage()" title="关闭收藏夹" aria-label="关闭">✕</button>
             </div>
             <div class="fav-nav">
@@ -6226,7 +6228,7 @@
         }
 
         function getFolderPathArray(folderId) {
-            const path = [{ id: null, name: '⭐ 收藏夹' }];
+            // 只返回文件夹链，不包含根节点（根目录由标题"收藏夹"标识，避免字样重复）
             const chain = [];
             let currentId = folderId;
             while (currentId) {
@@ -6235,7 +6237,7 @@
                 chain.unshift({ id: f.id, name: f.name });
                 currentId = f.parentId;
             }
-            return path.concat(chain);
+            return chain;
         }
 
         function getFavFolderName(folderId) {
@@ -6327,21 +6329,28 @@
             const bcEl = document.getElementById('favBreadcrumb');
             if (bcEl) {
                 const path = getFolderPathArray(favCurrentFolderId);
-                let bc = '';
-                for (let i = 0; i < path.length; i++) {
-                    const p = path[i];
-                    const isLast = i === path.length - 1;
-                    if (isLast) {
-                        bc += '<span class="fav-crumb active">' + escapeHtml(p.name) + '</span>';
-                    } else {
-                        const arg = p.id === null ? 'null' : '\'' + p.id + '\'';
-                        bc += '<span class="fav-crumb" onclick="favGoTo(' + arg + ')"'
-                            + ' ondragover="favCrumbDragOver(event)" ondragleave="favCrumbDragLeave(event)"'
-                            + ' ondrop="favCrumbDrop(event, ' + arg + ')">' + escapeHtml(p.name) + '</span>'
-                            + '<span class="fav-crumb-sep">›</span>';
+                if (!path.length) {
+                    // 根目录：标题已是"收藏夹"，隐藏面包屑避免字样重复
+                    bcEl.innerHTML = '';
+                    bcEl.style.display = 'none';
+                } else {
+                    bcEl.style.display = '';
+                    let bc = '';
+                    for (let i = 0; i < path.length; i++) {
+                        const p = path[i];
+                        const isLast = i === path.length - 1;
+                        if (isLast) {
+                            bc += '<span class="fav-crumb active">' + escapeHtml(p.name) + '</span>';
+                        } else {
+                            const arg = p.id === null ? 'null' : '\'' + p.id + '\'';
+                            bc += '<span class="fav-crumb" onclick="favGoTo(' + arg + ')"'
+                                + ' ondragover="favCrumbDragOver(event)" ondragleave="favCrumbDragLeave(event)"'
+                                + ' ondrop="favCrumbDrop(event, ' + arg + ')">' + escapeHtml(p.name) + '</span>'
+                                + '<span class="fav-crumb-sep">›</span>';
+                        }
                     }
+                    bcEl.innerHTML = bc;
                 }
-                bcEl.innerHTML = bc;
             }
 
             const filteredFolders = favoritesData.folders
