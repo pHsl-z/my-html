@@ -7207,23 +7207,29 @@
             }
             const fallbackDev = (d && d.updatedBy) || '未知设备';
             const all = [];
-            items.forEach(function(it) { all.push({ type: '收藏', title: it.title || '无标题', dev: it.updatedBy || fallbackDev, ts: favEffectiveTs(it) }); });
-            prompts.forEach(function(p) { all.push({ type: '提示词', title: p.title || '未命名', dev: p.updatedBy || fallbackDev, ts: promptEffectiveTs(p) }); });
+            items.forEach(function(it) { all.push({ type: 'fav', title: it.title || '无标题', dev: it.updatedBy || fallbackDev, ts: favEffectiveTs(it) }); });
+            prompts.forEach(function(p) { all.push({ type: 'prompt', title: p.title || '未命名', dev: p.updatedBy || fallbackDev, ts: promptEffectiveTs(p) }); });
             all.sort(function(a, b) { return new Date(b.ts) - new Date(a.ts); });
             const byDevice = {};
             all.forEach(function(x) { byDevice[x.dev] = (byDevice[x.dev] || 0) + 1; });
             const devChips = Object.keys(byDevice).sort(function(a, b) { return byDevice[b] - byDevice[a]; }).map(function(dev) {
                 return '<span style="display:inline-block;background:#243447;border-radius:10px;padding:2px 10px;font-size:11px;color:#9ecbff;white-space:nowrap;">💻 ' + escapeHtml(dev) + ' · ' + byDevice[dev] + '</span>';
             }).join(' ');
-            const typeIcon = { '收藏': '⭐', '提示词': '💬' };
+            const typeBadge = {
+                fav: '<span style="display:inline-block;background:#4a3a17;border:1px solid #7a5c1e;border-radius:4px;padding:0 5px;font-size:10.5px;color:#ffd57a;white-space:nowrap;flex-shrink:0;">⭐ 收藏</span>',
+                prompt: '<span style="display:inline-block;background:#0e3d2a;border:1px solid #1d7a52;border-radius:4px;padding:0 5px;font-size:10.5px;color:#8fe6b8;white-space:nowrap;flex-shrink:0;">💬 提示词</span>'
+            };
             const rows = all.slice(0, 50).map(function(x) {
                 return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px dashed #2a2a2a;">'
-                    + '<span style="font-size:12px;color:#e6e6e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(x.title) + '">' + (typeIcon[x.type] || '') + ' ' + escapeHtml(x.title) + '</span>'
+                    + '<span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;color:#e6e6e6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(x.title) + '">'
+                    + (typeBadge[x.type] || '')
+                    + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(x.title) + '</span></span>'
                     + '<span style="font-size:11px;color:#888;white-space:nowrap;">💻 ' + escapeHtml(x.dev) + ' · ' + escapeHtml(favSyncTimeStr(x.ts)) + '</span>'
                     + '</div>';
             }).join('');
-            const more = all.length > 50 ? '<div style="color:#666;font-size:11px;padding-top:6px;">… 仅显示最近 50 条（云端共 ' + items.length + ' 条收藏 · ' + folders.length + ' 个文件夹 · ' + prompts.length + ' 条提示词）</div>' : '';
-            wrap.innerHTML = (devChips ? '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;">' + devChips + '</div>' : '') + rows + more;
+            const summaryLine = '<div style="color:#aaa;font-size:11px;margin-bottom:6px;">云端共 ⭐ ' + items.length + ' 条收藏 · 📁 ' + folders.length + ' 个文件夹 · 💬 ' + prompts.length + ' 条提示词</div>';
+            const more = all.length > 50 ? '<div style="color:#666;font-size:11px;padding-top:6px;">… 仅显示最近 50 条，按时间倒序</div>' : '';
+            wrap.innerHTML = (devChips ? '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;">' + devChips + '</div>' : '') + summaryLine + rows + more;
         }
 
         async function favSyncMenu() {
