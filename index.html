@@ -1150,19 +1150,32 @@
         }
 
         .modal-close {
-            background: none;
-            border: none;
-            color: #888888;
-            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 50%;
+            color: #aaa;
+            font-size: 17px;
+            font-weight: 400;
+            line-height: 1;
             cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
         }
 
         .modal-close:hover {
-            color: #e6e6e6;
-            background: #3a3a3a;
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+            color: #fff;
+        }
+
+        .modal-close:active {
+            transform: scale(0.92);
         }
 
         .modal-content {
@@ -2283,7 +2296,7 @@
         <div class="modal-container">
             <div class="modal-header">
                 <h3 id="modalTitle" class="modal-title">标题</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
             <div id="modalContent" class="modal-content">
                 <!-- 动态内容将在这里插入 -->
