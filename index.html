@@ -5212,19 +5212,105 @@
                 const issues = await checkPreviewPageOverflow();
                 if (issues.length) {
                     const detail = issues.map(function(x) { return '第 ' + x.page + ' 页（超出约 ' + x.mm + 'mm）'; }).join('、');
-                    showConfirmDialog('打印预检：检测到 ' + detail + ' 超过 A4 纸高度。\n打印时超出的部分会被切到下一页，后面每一页整体顺移，页码全部错位。\n\n建议先精简对应页的内容再打印。\n是否仍要继续打印？', function() {
-                        printPreviewProceed();
+                    showPrintPrecheckDialog(detail, issues, function() {
+                        printPreviewProceed(false);
+                    }, function() {
+                        printPreviewProceed(true);
                     });
                     return;
                 }
             } catch (e) {
                 // 预检失败不拦打印
             }
-            printPreviewProceed();
+            printPreviewProceed(false);
+        }
+
+        // 打印预检三键弹框：取消 / 直接打印 / 缩放打印
+        function showPrintPrecheckDialog(detail, issues, onDirect, onScale) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;';
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'background:#2a2a2a;border:1px solid #3a3a3a;border-radius:12px;padding:24px;max-width:340px;width:90%;text-align:center;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+
+            const msg = document.createElement('p');
+            msg.style.cssText = 'margin:0 0 20px;font-size:15px;line-height:1.55;white-space:pre-line;';
+            msg.textContent = '打印预检：检测到 ' + detail + ' 超过 A4 纸高度。\n打印时超出的部分会被切到下一页，后面每一页整体顺移，页码全部错位。';
+
+            const scaleInfo = document.createElement('p');
+            scaleInfo.style.cssText = 'margin:-8px 0 20px;font-size:13px;line-height:1.5;color:#bbb;';
+            scaleInfo.textContent = '「缩放打印」会把超出的页整体等比缩小到 A4 纸内（本页约缩至 ' + Math.round(297 / (297 + issues[0].mm) * 100) + '%），字号略小但每页内容完整、分页不错位。';
+
+            const btnGroup = document.createElement('div');
+            btnGroup.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap;';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = '取消';
+            cancelBtn.style.cssText = 'padding:10px 16px;border-radius:8px;border:1px solid #3a3a3a;background:#404040;color:#fff;font-size:14px;cursor:pointer;min-width:72px;';
+            cancelBtn.onclick = function() { document.body.removeChild(overlay); };
+
+            const directBtn = document.createElement('button');
+            directBtn.textContent = '直接打印';
+            directBtn.style.cssText = 'padding:10px 16px;border-radius:8px;border:1px solid #3a3a3a;background:#555;color:#fff;font-size:14px;cursor:pointer;min-width:80px;';
+            directBtn.onclick = function() { document.body.removeChild(overlay); onDirect(); };
+
+            const scaleBtn = document.createElement('button');
+            scaleBtn.textContent = '缩放打印';
+            scaleBtn.style.cssText = 'padding:10px 16px;border-radius:8px;border:none;background:#00a86b;color:#fff;font-size:14px;cursor:pointer;min-width:88px;font-weight:500;';
+            scaleBtn.onclick = function() { document.body.removeChild(overlay); onScale(); };
+
+            btnGroup.appendChild(cancelBtn);
+            btnGroup.appendChild(directBtn);
+            btnGroup.appendChild(scaleBtn);
+            dialog.appendChild(msg);
+            dialog.appendChild(scaleInfo);
+            dialog.appendChild(btnGroup);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) document.body.removeChild(overlay);
+            });
+
+            scaleBtn.focus();
+        }
+
+        // 对预览中超高的 .page 应用等比缩放，使其恰好放入 A4 纸高
+        // 返回恢复函数；无页面或出错返回 null
+        function applyScaleToFitPages(pDoc) {
+            try {
+                if (!pDoc) return null;
+                var pages = pDoc.querySelectorAll('.page');
+                if (!pages.length) return null;
+                var pxPerMm = 96 / 25.4;
+                var paperWmm = pages[0].getBoundingClientRect().width / pxPerMm;
+                var targetHmm = paperWmm > 260 ? 210 : 297;
+                var touched = [];
+                for (var i = 0; i < pages.length; i++) {
+                    var p = pages[i];
+                    var hmm = p.getBoundingClientRect().height / pxPerMm;
+                    if (hmm <= targetHmm + 1) continue;
+                    var k = targetHmm / hmm;
+                    touched.push({ el: p, style: p.getAttribute('style') });
+                    p.style.transform = 'scale(' + k + ')';
+                    p.style.transformOrigin = 'top left';
+                    p.style.position = 'relative';
+                    p.style.left = (paperWmm * (1 - k) / 2) + 'mm';
+                    // scale 不改变布局高度，负 margin 把缩放后的剩余占位收回来
+                    p.style.marginBottom = (-(hmm - targetHmm)) + 'mm';
+                }
+                if (!touched.length) return null;
+                return function() {
+                    touched.forEach(function(r) {
+                        if (r.style === null) r.el.removeAttribute('style');
+                        else r.el.setAttribute('style', r.style);
+                    });
+                };
+            } catch (e) { return null; }
         }
 
         // 打印函数
-        function printPreviewProceed() {
+        function printPreviewProceed(scaleToFit) {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
 
@@ -5233,7 +5319,10 @@
                     showToast('预览内容为空，请先输入一些内容', 'error');
                     return;
                 }
-                
+
+                var revertScale = null;
+                if (scaleToFit) revertScale = applyScaleToFitPages(previewDoc);
+
                 if (isIOS()) {
                     try {
                         sessionStorage.setItem('_iosPrintEditor', htmlEditor.value);
@@ -5274,13 +5363,13 @@
                 const printStyle = document.createElement('style');
                 printStyle.textContent = `
                     @media print {
-                        @page { margin: 1cm; }
-                        body { 
+                        @page { margin: ${scaleToFit ? '0' : '1cm'}; }
+                        body {
                             margin: 0;
                             padding: 0;
                             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
                         }
-                        * { 
+                        * {
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
@@ -5288,6 +5377,7 @@
                 `;
                 previewDoc.head.appendChild(printStyle);
                 previewFrame.contentWindow.print();
+                if (revertScale) revertScale();
                 setTimeout(() => {
                     if (printStyle.parentNode) {
                         printStyle.parentNode.removeChild(printStyle);
