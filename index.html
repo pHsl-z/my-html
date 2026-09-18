@@ -5164,11 +5164,70 @@
             return trimmed;
         }
 
-        // 打印函数
-        function printCurrentPreview() {
+        // 打印预检：测量预览中每个 .page 的实际高度是否超过 A4 纸
+        // 返回 [{page: 页码, mm: 超出毫米数}]；无 .page 结构或测量失败返回 []
+        function checkPreviewPageOverflow() {
+            return new Promise(function(resolve) {
+                var pDoc;
+                try { pDoc = previewFrame.contentDocument || previewFrame.contentWindow.document; } catch (e) { pDoc = null; }
+                if (!pDoc) { resolve([]); return; }
+                var pages = pDoc.querySelectorAll('.page');
+                if (!pages.length) { resolve([]); return; }
+
+                var measure = function() {
+                    try {
+                        var pxPerMm = 96 / 25.4;
+                        // 横版 A4（宽约 297mm）时纸高按 210mm 判断
+                        var pageHmm = 297;
+                        if (pages[0].getBoundingClientRect().width > 260 * pxPerMm) pageHmm = 210;
+                        var issues = [];
+                        for (var i = 0; i < pages.length; i++) {
+                            var over = (pages[i].getBoundingClientRect().height - pageHmm * pxPerMm) / pxPerMm;
+                            if (over > 1) issues.push({ page: i + 1, mm: Math.round(over) });
+                        }
+                        resolve(issues);
+                    } catch (e) { resolve([]); }
+                };
+
+                // 等预览内 MathJax 排版完成再测量（最多 3.5 秒），否则公式高度不准
+                try {
+                    var mjx = previewFrame.contentWindow.MathJax;
+                    if (mjx && mjx.startup && mjx.startup.promise) {
+                        Promise.race([mjx.startup.promise, new Promise(function(r) { setTimeout(r, 3500); })]).then(measure, measure);
+                    } else {
+                        measure();
+                    }
+                } catch (e) { measure(); }
+            });
+        }
+
+        // 打印入口：先预检分页超界，再执行打印
+        async function printCurrentPreview() {
             try {
                 const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-                
+                if (!previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+                    showToast('预览内容为空，请先输入一些内容', 'error');
+                    return;
+                }
+                const issues = await checkPreviewPageOverflow();
+                if (issues.length) {
+                    const detail = issues.map(function(x) { return '第 ' + x.page + ' 页（超出约 ' + x.mm + 'mm）'; }).join('、');
+                    showConfirmDialog('打印预检：检测到 ' + detail + ' 超过 A4 纸高度。\n打印时超出的部分会被切到下一页，后面每一页整体顺移，页码全部错位。\n\n建议先精简对应页的内容再打印。\n是否仍要继续打印？', function() {
+                        printPreviewProceed();
+                    });
+                    return;
+                }
+            } catch (e) {
+                // 预检失败不拦打印
+            }
+            printPreviewProceed();
+        }
+
+        // 打印函数
+        function printPreviewProceed() {
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+
                 // 检查预览内容是否为空
                 if (!previewDoc.body || !previewDoc.body.innerHTML.trim()) {
                     showToast('预览内容为空，请先输入一些内容', 'error');
