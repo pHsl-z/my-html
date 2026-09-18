@@ -770,41 +770,7 @@
                     min-height: 36px !important; /* 减小按钮高度 */
                     border-radius: 6px !important;
                 }
-                
-                /* 分享面板特殊优化 */
-                .share-panel .share-content {
-                    padding: 16px !important; /* 减少内容内边距 */
-                    max-height: calc(90vh - 60px) !important; /* 重新计算最大高度 */
-                }
-                
-                .share-panel .share-description {
-                    font-size: 13px !important; /* 减小描述文字 */
-                    margin-bottom: 12px !important; /* 减少间距 */
-                }
-                
-                .share-panel .share-link-container {
-                    margin-bottom: 16px !important; /* 减少间距 */
-                }
-                
-                .share-panel .share-link-input {
-                    font-size: 12px !important; /* 减小输入框字体 */
-                    padding: 8px 10px !important; /* 减少输入框内边距 */
-                }
-                
-                .share-panel .share-actions {
-                    margin-bottom: 16px !important; /* 减少间距 */
-                    gap: 6px !important; /* 减少按钮间距 */
-                }
-                
-                .share-panel .share-history-section {
-                    margin-bottom: 16px !important; /* 减少间距 */
-                    padding: 12px !important; /* 减少历史区域内边距 */
-                }
-                
-                .share-panel .share-history-list {
-                    max-height: 150px !important; /* 减少历史列表高度 */
-                }
-                
+
                 /* 面板内容区域 */
                 .history-list,
                 .settings-content {
@@ -813,7 +779,7 @@
                     overflow-y: auto !important;
                     -webkit-overflow-scrolling: touch !important;
                 }
-                
+
 
             }
         }
@@ -1234,22 +1200,9 @@
                 gap: 6px !important;
             }
 
-            .settings-section {
-                margin-bottom: 16px !important;
-                padding-bottom: 12px !important;
-            }
-
-            .setting-item {
-                margin-bottom: 12px !important;
-            }
-
             .setting-label {
                 font-size: 14px !important;
                 margin-bottom: 6px !important;
-            }
-
-            .setting-description {
-                font-size: 12px !important;
             }
 
             .btn-sm {
@@ -1352,12 +1305,7 @@
                     max-height: calc(75vh - 60px) !important;
                     padding: 12px 16px !important;
                 }
-                
-                .settings-control {
-                    flex-direction: row !important; /* 横屏时恢复横向布局 */
-                    flex-wrap: wrap !important;
-                }
-                
+
                 .setting-input {
                     flex: 1 !important;
                     min-width: 120px !important;
@@ -1398,7 +1346,6 @@
         .highlight-layer .token-comment{color:#6a9955}
         .highlight-layer .token-doctype{color:#569cd6}
         .highlight-layer .token-text{color:#d4d4d4}
-        .highlight-layer .token-entity{color:#dcdcaa}
         .highlight-modified{background:rgba(255,198,109,.25);border-radius:3px}
         .code-editor{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;background:transparent;color:transparent;caret-color:#ffffff;z-index:2}
         .edit-toggle-btn{padding:4px 12px;border:1px solid #3a3a3a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all .2s;background:#2a2a2a;color:#888;display:flex;align-items:center;gap:4px;-webkit-user-select:none;user-select:none}
@@ -1450,13 +1397,6 @@
             align-items: center;
             gap: 8px;
             min-height: 36px;
-        }
-
-        .fav-title {
-            font-size: 17px;
-            font-weight: 600;
-            color: #e6e6e6;
-            letter-spacing: 0.5px;
         }
 
         /* 收藏夹 / 提示词 标签页切换 */
@@ -4005,7 +3945,7 @@
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
-            return div.innerHTML;
+            return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
         
         document.addEventListener('visibilitychange', function() {
@@ -5499,13 +5439,7 @@
                         htmlEditor.focus();
                         htmlEditor.blur();
                     }, 500);
-                    
-                    console.log('检测到iOS设备，已应用兼容性优化');
                 }
-                
-                console.log('HTML编辑器已加载，历史记录功能已初始化');
-                console.log('当前历史记录数量:', historyRecords.length);
-                console.log('分享基础URL:', shareBaseUrl || '使用当前页面URL');
             } catch (error) {
                 handleIOSError('页面加载', error);
             }
@@ -5789,15 +5723,20 @@
             if(m){
                 result+=m[1]+m[2];
                 var rest=tag.substring(m[0].length);
+                var selfClose='';
+                if(rest.charAt(rest.length-1)==='>'){
+                    rest=rest.slice(0,-1);
+                    if(rest.charAt(rest.length-1)==='/'){ selfClose='/'; rest=rest.slice(0,-1); }
+                }
                 rest=rest.replace(/\s([a-zA-Z0-9_\-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g,function(match,name,double,single,unquoted){
                     var attr=' <span class="token-attr">'+name+'</span>';
                     var val=double||single||unquoted;
                     if(val!==undefined){
-                        attr+='=<span class="token-string">'+(double?'"'+double+'"':single?"'"+single+"'":val)+'</span>';
+                        attr+='=<span class="token-string">'+(double?'"'+escapeHtmlTokens(double)+'"':single?"'"+escapeHtmlTokens(single)+"'":escapeHtmlTokens(val))+'</span>';
                     }
                     return attr;
                 });
-                result+=rest.replace(/>/g,'&gt;');
+                result+=rest+selfClose+'&gt;';
             }else{
                 result+=escapeHtmlTokens(tag.substring(1));
             }
@@ -6609,7 +6548,7 @@
             const id = entry.id;
             const title = isFolder ? entry.name : (entry.title || '无标题');
             const device = entry.updatedBy || '';
-            const time = formatRelativeTime(isFolder ? favEffectiveTs(entry) : entry.timestamp);
+            const time = formatRelativeTime(favEffectiveTs(entry));
             const childCount = isFolder
                 ? favoritesData.folders.filter(function(x) { return x.parentId === id; }).length
                   + favoritesData.items.filter(function(x) { return x.folderId === id; }).length
@@ -6656,7 +6595,7 @@
 
         function renderFavItemCard(item) {
             const title = item.title || '无标题';
-            const time = formatRelativeTime(item.timestamp);
+            const time = formatRelativeTime(favEffectiveTs(item));
             return '<div class="fav-card" draggable="true" data-fav-id="' + item.id + '" data-fav-type="item"'
                 + ' onclick="favLoadItem(\'' + item.id + '\')"'
                 + ' oncontextmenu="showFavContextMenu(event, \'' + item.id + '\', false)"'
