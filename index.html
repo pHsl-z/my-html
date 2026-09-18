@@ -2135,6 +2135,21 @@
             background: #14724c;
         }
 
+        .prompt-export-btn {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            font-size: 12.5px;
+            background: #1c3a5e;
+            color: #bcd8f5;
+            border: 1px solid #2a5d9f;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .prompt-export-btn:active {
+            background: #24507f;
+        }
+
         .prompt-more-btn {
             flex-shrink: 0;
             width: 32px;
@@ -7593,6 +7608,7 @@
                         + '<div class="prompt-row-top">'
                         + '<div class="prompt-row-title">' + escapeHtml(p.title || '未命名') + '</div>'
                         + '<button class="prompt-copy-btn" onclick="event.stopPropagation();copyPromptToClipboard(\'' + p.id + '\')" title="复制到剪贴板">📋 复制</button>'
+                        + '<button class="prompt-export-btn" onclick="event.stopPropagation();exportPromptToMarkdown(\'' + p.id + '\')" title="导出为 Markdown 文档">📤 导出</button>'
                         + '<button class="prompt-more-btn" onclick="event.stopPropagation();showPromptMenuAtButton(event, \'' + p.id + '\')" title="更多操作">⋯</button>'
                         + '</div>'
                         + (preview ? '<div class="prompt-row-preview">' + escapeHtml(preview) + '</div>' : '')
@@ -7672,6 +7688,44 @@
             } else {
                 fallbackCopyText(text, label);
             }
+        }
+
+        function exportPromptToMarkdown(id) {
+            const p = promptsData.items.find(function(x) { return x.id === id; });
+            if (!p || !(p.content || '').trim()) { showToast('该提示词内容为空，无法导出', 'error'); return; }
+            const title = p.title || '未命名';
+            const fmt = function(iso) {
+                if (!iso) return '—';
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '—';
+                const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+                return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            };
+            const lines = [
+                '# ' + title,
+                '',
+                '> 导出自：AI 文档 · 提示词收藏夹  ',
+                '> 创建时间：' + fmt(p.createdAt) + ' · 更新时间：' + fmt(promptEffectiveTs(p)) + (p.updatedBy ? ' · 来源设备：' + p.updatedBy : ''),
+                '',
+                '---',
+                '',
+                p.content || '',
+                ''
+            ];
+            const md = lines.join('\n');
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const safeName = (title.replace(/[\\/:*?"<>|#^\[\]]/g, ' ').replace(/\s+/g, ' ').trim() || 'prompt').slice(0, 60);
+            a.href = url;
+            a.download = safeName + '.md';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 300);
+            showToast('已导出「' + title + '.md」', 'success');
         }
 
         function fallbackCopyText(text, label) {
