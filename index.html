@@ -5327,32 +5327,25 @@
                     try {
                         sessionStorage.setItem('_iosPrintEditor', htmlEditor.value);
                         sessionStorage.setItem('_iosPrintFlag', '1');
-                        sessionStorage.setItem('_iosPrintReturn', location.href);
                     } catch(e) {}
 
                     var pDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
                     var fullHtml = '<!DOCTYPE html><html>' + pDoc.documentElement.innerHTML + '</html>';
 
-                    var printBar = '<div id="_printBar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font-size:14px;font-family:-apple-system,sans-serif;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;box-sizing:border-box;">'
+                    var printBar = '<div id="_printBar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font-size:14px;font-family:-apple-system,sans-serif;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;">'
                         + '<span>🖨️ 打印预览</span>'
-                        + '<div style="display:flex;gap:6px;">'
-                        + '<button onclick="_doPrintNow()" style="background:#00a86b;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:13px;">🖨️ 立即打印</button>'
-                        + '<button onclick="_goBack()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:13px;">↩ 返回编辑器</button>'
-                        + '</div></div>'
+                        + '<button onclick="_doReload()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:13px;">↩ 返回编辑器</button></div>'
                         + '<style>@media print{#_printBar{display:none !important;}}</style>';
 
                     var printScript = '<scr' + 'ipt>' +
-                        'var _userPrinted=false,_backed=false,_autoTried=false;' +
-                        'function _goBack(){if(_backed)return;_backed=true;' +
-                        'var u=null;try{u=sessionStorage.getItem("_iosPrintReturn");sessionStorage.removeItem("_iosPrintReturn");}catch(e){}' +
-                        'setTimeout(function(){try{if(u){location.href=u;}else{history.back();}}catch(e){try{history.back();}catch(e2){}}},50);}' +
-                        'function _doPrintNow(){_userPrinted=true;try{window.print();}catch(e){}}' +
-                        'function _autoPrint(){if(_autoTried)return;_autoTried=true;try{window.print();}catch(e){}}' +
-                        'window.onafterprint=function(){setTimeout(_goBack,600);};' +
-                        'window.addEventListener("focus",function(){if(_userPrinted){setTimeout(_goBack,1500);}});' +
-                        'if(document.readyState==="complete"){setTimeout(_autoPrint,1200);}' +
-                        'else{window.addEventListener("load",function(){setTimeout(_autoPrint,1200);});setTimeout(_autoPrint,8000);}' +
-                        'setTimeout(_goBack,60000);' +
+                        'var _reloaded=false;' +
+                        'function _doReload(){if(!_reloaded){_reloaded=true;setTimeout(function(){location.reload();},50);}}' +
+                        'window.onafterprint=function(){setTimeout(_doReload,400);};' +
+                        'window.addEventListener("focus",function(){setTimeout(_doReload,1200);});' +
+                        'function _goPrint(){try{window.print();}catch(e){}}' +
+                        'if(document.readyState==="complete"){setTimeout(_goPrint,900);}' +
+                        'else{window.addEventListener("load",function(){setTimeout(_goPrint,900);});setTimeout(_goPrint,8000);}' +
+                        'setTimeout(_doReload,30000);' +
                     '</scr' + 'ipt>';
 
                     if (fullHtml.indexOf('</body>') !== -1) {
@@ -5361,32 +5354,9 @@
                         fullHtml += printBar + printScript;
                     }
 
-                    // iOS 上 document.write 大文档易截断导致空白，优先走 Blob URL 整页加载
-                    var blobOk = false;
-                    try {
-                        var printBlob = new Blob([fullHtml], { type: 'text/html' });
-                        var printUrl = URL.createObjectURL(printBlob);
-                        location.href = printUrl;
-                        blobOk = true;
-                    } catch (e) { blobOk = false; }
-
-                    if (!blobOk) {
-                        document.open();
-                        document.write(fullHtml);
-                        document.close();
-                        return;
-                    }
-
-                    // Blob 导航罕见失败时的兜底：2.5s 后仍停留在编辑器则回退 document.write
-                    setTimeout(function() {
-                        try {
-                            if (location.protocol !== 'blob:' && document.getElementById('previewFrame')) {
-                                document.open();
-                                document.write(fullHtml);
-                                document.close();
-                            }
-                        } catch (e) {}
-                    }, 2500);
+                    document.open();
+                    document.write(fullHtml);
+                    document.close();
                     return;
                 }
                 
@@ -5583,7 +5553,6 @@
                 
                 if (sessionStorage.getItem('_iosPrintFlag') === '1') {
                     sessionStorage.removeItem('_iosPrintFlag');
-                    try { sessionStorage.removeItem('_iosPrintReturn'); } catch(e) {}
                     var savedEditor = sessionStorage.getItem('_iosPrintEditor');
                     if (savedEditor !== null) {
                         htmlEditor.value = savedEditor;
