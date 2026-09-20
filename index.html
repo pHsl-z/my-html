@@ -5236,21 +5236,36 @@
                     fullHtml = fullHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
 
                     var printCss = '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}</style>';
-                    var noticeBar = fit.scaled.length
-                        ? '<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;text-align:center;">🖨️ 已自动缩放 ' + scaledText + ' 以适配 A4 纸，打印完成后自动返回</div><style>@media print{div[style*="z-index:99999"]{display:none !important;}}</style>'
-                        : '';
-                    if (fullHtml.indexOf('</head>') !== -1) fullHtml = fullHtml.replace('</head>', printCss + '</head>');
+
+                    // 常驻控制条：自动打印未弹出时点「立即打印」，自动返回失效时点「返回编辑器」
+                    var barText = fit.scaled.length ? '🖨️ 已自动缩放 ' + scaledText + ' 适配 A4' : '🖨️ 打印预览';
+                    var bar = '<div id="_pbar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;">'
+                        + '<span>' + barText + '</span>'
+                        + '<button onclick="window.print()" style="background:#00a86b;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">🖨️ 立即打印</button>'
+                        + '<button onclick="location.reload()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">↩ 返回编辑器</button>'
+                        + '</div>'
+                        + '<style>@media print{#_pbar{display:none !important;}}</style>';
+
+                    // 打印面板关闭（含取消）后自动返回编辑器；绝不用定时器盲刷，
+                    // 否则 reload 会和异步弹出的打印面板竞争，导致面板被取消或回不去
+                    // 注意：innerHTML 插入的 <script> 不会执行，必须直接挂在 window 上
+                    var goBack = function() { setTimeout(function() { location.reload(); }, 400); };
+
+                    if (/<\/head>/i.test(fullHtml)) fullHtml = fullHtml.replace(/<\/head>/i, printCss + '</head>');
                     else fullHtml = printCss + fullHtml;
-                    if (noticeBar && fullHtml.indexOf('<body') !== -1) fullHtml = fullHtml.replace(/<body([^>]*)>/, '<body$1>' + noticeBar);
+                    if (/<body[^>]*>/i.test(fullHtml)) fullHtml = fullHtml.replace(/<body([^>]*)>/i, '<body$1>' + bar);
+                    else fullHtml += bar;
 
                     // DOM 整体替换当前页（比 document.write 稳定，无大文档截断白屏问题）
                     document.documentElement.innerHTML = fullHtml;
 
-                    // 仍在用户手势调用栈内：iOS 必弹打印面板
-                    window.print();
+                    // 面板关闭（含取消）后自动返回；处理器挂在 window 上，
+                    // 不随 DOM 替换而失效
+                    window.onafterprint = goBack;
 
-                    // print() 返回即打印面板已关闭（iOS 的 print 为阻塞式），回编辑器恢复内容
-                    setTimeout(function() { location.reload(); }, 600);
+                    // 仍在用户手势调用栈内：iOS 必弹打印面板；万一被系统丢弃，
+                    // 屏幕上的「立即打印」按钮就是兜底入口
+                    window.print();
                     return;
                 }
 
