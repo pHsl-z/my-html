@@ -5235,11 +5235,18 @@
                     if (fit.revert) fit.revert();
                     fullHtml = fullHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
 
-                    var printCss = '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}</style>';
+                    // 统一接管 viewport：剥离文档自带的（部分带 viewport-fit=cover，
+                    // 会让固定在 top:0 的控制条顶进灵动岛/刘海点不到），
+                    // 换成确定的配置，使 env(safe-area-inset-*) 生效可用
+                    fullHtml = fullHtml.replace(/<meta(?=[^>]*name=["']?viewport["']?)[^>]*>/gi, '');
+
+                    var printCss = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+                        + '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}</style>';
 
                     // 常驻控制条：自动打印未弹出时点「立即打印」，自动返回失效时点「返回编辑器」
+                    // padding-top 加安全区高度，避开灵动岛/状态栏
                     var barText = fit.scaled.length ? '🖨️ 已自动缩放 ' + scaledText + ' 适配 A4' : '🖨️ 打印预览';
-                    var bar = '<div id="_pbar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;">'
+                    var bar = '<div id="_pbar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 9px);display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;">'
                         + '<span>' + barText + '</span>'
                         + '<button onclick="window.print()" style="background:#00a86b;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">🖨️ 立即打印</button>'
                         + '<button onclick="location.reload()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">↩ 返回编辑器</button>'
