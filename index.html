@@ -2612,6 +2612,10 @@
                         var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
                         if(doc&&doc.body)protectStructure(doc);
                     }catch(e){}
+                    try{
+                        var zdoc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                        injectPreviewGestureZoom(zdoc);
+                    }catch(e){}
                     applyEditMode();
                 }, 50);
             } catch (error) {
@@ -2630,6 +2634,7 @@
                 var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
                 if(doc&&doc.body){
                     protectStructure(doc);
+                    injectPreviewGestureZoom(doc);
                     applyEditMode();
                 }
             }catch(e){}
@@ -2853,6 +2858,150 @@
                     console.log('预览滚动优化错误:', error);
                 }
             }
+        }
+
+        // 预览自由缩放：双指捏合缩放 + 双指拖动平移（单指保持原生滚动）
+        // iOS 上 iframe 内的触摸事件不会冒泡到父页面，手势必须监听在预览文档内部；
+        // transform 作用在 body 上，缩放指示按钮挂在 documentElement 上，避免被 body 的 transform 带走
+        function injectPreviewGestureZoom(doc) {
+            try {
+                if (!doc || !doc.documentElement || !doc.body) return;
+                if (doc.__pzInit) return;
+                doc.__pzInit = true;
+
+                var MIN = 0.3, MAX = 6;
+                var scale = 1, tx = 0, ty = 0;
+                var pill = null;
+                var root = doc.documentElement;
+                var g = null;
+
+                function metrics() {
+                    var de = doc.documentElement, b = doc.body, w = doc.defaultView;
+                    return {
+                        sx: w.scrollX || de.scrollLeft || b.scrollLeft || 0,
+                        sy: w.scrollY || de.scrollTop || b.scrollTop || 0,
+                        vw: de.clientWidth,
+                        vh: de.clientHeight,
+                        cw: Math.max(b.scrollWidth, de.scrollWidth),
+                        ch: Math.max(b.scrollHeight, de.scrollHeight)
+                    };
+                }
+
+                // 平移范围：内容比视口小时居中，比视口大时至少留 40px 在视口内
+                function clampAxis(t, s, vis, contentScaled) {
+                    if (contentScaled <= vis) return s + (vis - contentScaled) / 2;
+                    var lo = s - contentScaled + 40;
+                    var hi = s + vis - 40;
+                    return Math.min(hi, Math.max(lo, t));
+                }
+
+                function ensurePill() {
+                    if (pill && pill.parentNode) return;
+                    pill = doc.createElement('div');
+                    pill.id = '__pzPill';
+                    pill.style.cssText = 'position:fixed;right:12px;bottom:14px;z-index:2147483647;background:rgba(26,26,26,.92);color:#e6e6e6;font:12px -apple-system,BlinkMacSystemFont,sans-serif;padding:7px 12px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;';
+                    pill.addEventListener('click', function () { reset(); });
+                    root.appendChild(pill);
+                }
+
+                function clearTransform() {
+                    doc.body.style.removeProperty('transform');
+                    doc.body.style.removeProperty('transform-origin');
+                    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+                }
+
+                function reset() {
+                    scale = 1; tx = 0; ty = 0; g = null;
+                    clearTransform();
+                }
+
+                function apply() {
+                    if (scale === 1 && tx === 0 && ty === 0) { clearTransform(); return; }
+                    var m = metrics();
+                    tx = clampAxis(tx, m.sx, m.vw, m.cw * scale);
+                    ty = clampAxis(ty, m.sy, m.vh, m.ch * scale);
+                    doc.body.style.setProperty('transform', 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')', 'important');
+                    doc.body.style.setProperty('transform-origin', '0 0', 'important');
+                    ensurePill();
+                    pill.textContent = '🔍 ' + Math.round(scale * 100) + '% · 点击重置';
+                }
+
+                function dist(t) {
+                    var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+                    return Math.sqrt(dx * dx + dy * dy);
+                }
+                function mid(t) {
+                    return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
+                }
+                function baseline(touches) {
+                    var m = metrics(), c = mid(touches);
+                    g = { d0: dist(touches) || 1, scale0: scale, tx0: tx, ty0: ty, mx0: c.x, my0: c.y, sx0: m.sx, sy0: m.sy };
+                }
+
+                // capture 阶段监听，先于文档内其他 bubble 监听器执行
+                doc.addEventListener('touchstart', function (e) {
+                    if (e.touches.length === 2) baseline(e.touches);
+                }, { capture: true, passive: true });
+
+                doc.addEventListener('touchmove', function (e) {
+                    if (!g || e.touches.length !== 2) return;
+                    e.preventDefault();
+                    var d = dist(e.touches) || 1, c = mid(e.touches);
+                    scale = Math.min(MAX, Math.max(MIN, g.scale0 * d / g.d0));
+                    // 手势起点中点对应的 body 布局坐标，让该点始终跟在双指中点下
+                    var px = (g.mx0 + g.sx0 - g.tx0) / g.scale0;
+                    var py = (g.my0 + g.sy0 - g.ty0) / g.scale0;
+                    tx = c.x + g.sx0 - px * scale;
+                    ty = c.y + g.sy0 - py * scale;
+                    apply();
+                }, { capture: true, passive: false });
+
+                function endGesture(e) {
+                    if (e.touches.length === 2) { baseline(e.touches); return; }
+                    if (e.touches.length < 2) {
+                        g = null;
+                        if (Math.abs(scale - 1) < 0.03) reset();
+                    }
+                }
+                doc.addEventListener('touchend', endGesture, { capture: true, passive: true });
+                doc.addEventListener('touchcancel', endGesture, { capture: true, passive: true });
+
+                // 桌面：Ctrl/Cmd + 滚轮（含触控板捏合）缩放，缩放中心跟随光标
+                doc.addEventListener('wheel', function (e) {
+                    if (!(e.ctrlKey || e.metaKey)) return;
+                    e.preventDefault();
+                    var m = metrics();
+                    var f = Math.exp(-e.deltaY * 0.002);
+                    var ns = Math.min(MAX, Math.max(MIN, scale * f));
+                    var px = (e.clientX + m.sx - tx) / scale;
+                    var py = (e.clientY + m.sy - ty) / scale;
+                    tx = e.clientX + m.sx - px * ns;
+                    ty = e.clientY + m.sy - py * ns;
+                    scale = ns;
+                    apply();
+                }, { passive: false });
+
+                // 打印前调用：清除缩放状态，避免 transform 干扰 A4 测量与排版
+                doc.__pzReset = function () { try { reset(); } catch (e) {} };
+                // 序列化预览 DOM 前调用：临时摘除缩放痕迹，返回恢复函数
+                doc.__pzSuspend = function () {
+                    try {
+                        if (scale === 1 && tx === 0 && ty === 0 && !(pill && pill.parentNode)) return null;
+                        var ts = doc.body.style.getPropertyValue('transform');
+                        var tp = doc.body.style.getPropertyPriority('transform');
+                        var to = doc.body.style.getPropertyValue('transform-origin');
+                        var hadPill = !!(pill && pill.parentNode);
+                        if (hadPill) pill.parentNode.removeChild(pill);
+                        doc.body.style.removeProperty('transform');
+                        doc.body.style.removeProperty('transform-origin');
+                        return function () {
+                            if (ts) doc.body.style.setProperty('transform', ts, tp || '');
+                            if (to) doc.body.style.setProperty('transform-origin', to);
+                            if (hadPill) ensurePill();
+                        };
+                    } catch (e) { return null; }
+                };
+            } catch (e) {}
         }
 
         function clearEditor() {
@@ -5214,6 +5363,9 @@
                     return;
                 }
 
+                // 清除预览自由缩放状态，避免 transform 干扰页面测量与打印排版
+                try { if (previewDoc.__pzReset) previewDoc.__pzReset(); } catch (e) {}
+
                 const firstPage = previewDoc.querySelector('.page');
                 const pxPerMm = 96 / 25.4;
                 const landscape = firstPage && firstPage.getBoundingClientRect().width / pxPerMm > 260;
@@ -5998,7 +6150,10 @@
             try{
                 var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
                 protectStructure(doc);
+                var pzRestore=null;
+                if(doc.__pzSuspend)pzRestore=doc.__pzSuspend();
                 var editedHtml=doc.documentElement.outerHTML;
+                if(pzRestore)pzRestore();
                 var cleaned=editedHtml.replace(/\u200B/g,'');
                 var currentCleaned=htmlEditor.value.replace(/\u200B/g,'');
                 if(cleaned&&cleaned!==currentCleaned){
