@@ -2741,37 +2741,41 @@
                     return;
                 }
 
-                var existingScrollStyle = previewDoc.getElementById('__editorScrollStyle');
-                if (existingScrollStyle) existingScrollStyle.remove();
-                const style = previewDoc.createElement('style');
-                style.id = '__editorScrollStyle';
-                style.textContent = `
-                    /* iOS Safari滚动优化 */
-                    html, body {
-                        -webkit-overflow-scrolling: touch !important;
-                        overscroll-behavior: contain !important;
-                        touch-action: pan-x pan-y !important;
-                        overflow: auto !important;
-                        position: relative !important;
+                // 该样式仅 iOS 需要；在桌面端它会让 body 变成滚不动的滚动容器，
+                // 且 overscroll-behavior:contain 切断滚轮向视口的冒泡，导致双指滑动失效
+                if (isIOS()) {
+                    var existingScrollStyle = previewDoc.getElementById('__editorScrollStyle');
+                    if (existingScrollStyle) existingScrollStyle.remove();
+                    const style = previewDoc.createElement('style');
+                    style.id = '__editorScrollStyle';
+                    style.textContent = `
+                        /* iOS Safari滚动优化 */
+                        html, body {
+                            -webkit-overflow-scrolling: touch !important;
+                            overscroll-behavior: contain !important;
+                            touch-action: pan-x pan-y !important;
+                            overflow: auto !important;
+                            position: relative !important;
+                        }
+
+                        body {
+                            min-height: 100vh !important;
+                            overflow-x: auto !important;
+                            overflow-y: auto !important;
+                        }
+
+                        * {
+                            -webkit-overflow-scrolling: touch !important;
+                        }
+                    `;
+
+                    if (previewDoc.head) {
+                        previewDoc.head.appendChild(style);
+                    } else {
+                        const head = previewDoc.createElement('head');
+                        head.appendChild(style);
+                        previewDoc.documentElement.insertBefore(head, previewDoc.body);
                     }
-                    
-                    body {
-                        min-height: 100vh !important;
-                        overflow-x: auto !important;
-                        overflow-y: auto !important;
-                    }
-                    
-                    * {
-                        -webkit-overflow-scrolling: touch !important;
-                    }
-                `;
-                
-                if (previewDoc.head) {
-                    previewDoc.head.appendChild(style);
-                } else {
-                    const head = previewDoc.createElement('head');
-                    head.appendChild(style);
-                    previewDoc.documentElement.insertBefore(head, previewDoc.body);
                 }
                 
                 if (isIOS()) {
@@ -2860,9 +2864,13 @@
             }
         }
 
-        // 预览自由缩放：双指捏合缩放 + 双指拖动平移（单指保持原生滚动）
-        // iOS 上 iframe 内的触摸事件不会冒泡到父页面，手势必须监听在预览文档内部；
-        // transform 作用在 body 上，缩放指示按钮挂在 documentElement 上，避免被 body 的 transform 带走
+        // 预览自由缩放 v2：缩放只作用于 body 的 transform:scale，平移完全交给原生滚动
+        // v1 的 translate 方案会让根滚动区不随缩放扩展（Chromium/WebKit 的根滚动区
+        // 不把 body 的变换包围盒算进可滚动范围），缩放后内容大部分滚不到。
+        // v2 改为纯 scale + 滚动锚定，并在缩放期间把 body 临时设为 overflow:visible，
+        // 使完整内容并入根滚动区；滚轮/触摸板/触摸滚动的惯性全部走原生。
+        // 触摸事件监听在预览文档内部（iOS 上 iframe 内的触摸事件不会冒泡到父页面）；
+        // 缩放指示按钮挂在 documentElement 上，避免被 body 的 transform 带走。
         function injectPreviewGestureZoom(doc) {
             try {
                 if (!doc || !doc.documentElement || !doc.body) return;
@@ -2870,29 +2878,16 @@
                 doc.__pzInit = true;
 
                 var MIN = 0.3, MAX = 6;
-                var scale = 1, tx = 0, ty = 0;
+                var scale = 1;
                 var pill = null;
                 var root = doc.documentElement;
-                var g = null;
+                var win = doc.defaultView;
 
-                function metrics() {
-                    var de = doc.documentElement, b = doc.body, w = doc.defaultView;
+                function maxScroll() {
                     return {
-                        sx: w.scrollX || de.scrollLeft || b.scrollLeft || 0,
-                        sy: w.scrollY || de.scrollTop || b.scrollTop || 0,
-                        vw: de.clientWidth,
-                        vh: de.clientHeight,
-                        cw: Math.max(b.scrollWidth, de.scrollWidth),
-                        ch: Math.max(b.scrollHeight, de.scrollHeight)
+                        x: Math.max(0, root.scrollWidth - root.clientWidth),
+                        y: Math.max(0, root.scrollHeight - root.clientHeight)
                     };
-                }
-
-                // 平移范围：内容比视口小时居中，比视口大时至少留 40px 在视口内
-                function clampAxis(t, s, vis, contentScaled) {
-                    if (contentScaled <= vis) return s + (vis - contentScaled) / 2;
-                    var lo = s - contentScaled + 40;
-                    var hi = s + vis - 40;
-                    return Math.min(hi, Math.max(lo, t));
                 }
 
                 function ensurePill() {
@@ -2900,104 +2895,132 @@
                     pill = doc.createElement('div');
                     pill.id = '__pzPill';
                     pill.style.cssText = 'position:fixed;right:12px;bottom:14px;z-index:2147483647;background:rgba(26,26,26,.92);color:#e6e6e6;font:12px -apple-system,BlinkMacSystemFont,sans-serif;padding:7px 12px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;';
-                    pill.addEventListener('click', function () { reset(); });
+                    pill.addEventListener('click', function () { applyTransform(1); });
                     root.appendChild(pill);
                 }
 
-                function clearTransform() {
-                    doc.body.style.removeProperty('transform');
-                    doc.body.style.removeProperty('transform-origin');
-                    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+                function applyTransform(s) {
+                    scale = s;
+                    if (s === 1) {
+                        doc.body.style.removeProperty('transform');
+                        doc.body.style.removeProperty('transform-origin');
+                        doc.body.style.removeProperty('overflow');
+                        if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+                        // 变换移除后滚动位置可能越界，触发一次钳制
+                        try { win.scrollTo(win.scrollX, win.scrollY); } catch (e) {}
+                    } else {
+                        doc.body.style.setProperty('transform', 'scale(' + s + ')', 'important');
+                        doc.body.style.setProperty('transform-origin', '0 0', 'important');
+                        doc.body.style.setProperty('overflow', 'visible', 'important');
+                        // 宽文档在 s=1 时可能停在 body 内部滚动上，统一并入根滚动前先归零，
+                        // 锚定计算已把 body 偏移折算进内容坐标
+                        try { doc.body.scrollLeft = 0; doc.body.scrollTop = 0; } catch (e) {}
+                        ensurePill();
+                        pill.textContent = '🔍 ' + Math.round(s * 100) + '% · 点击重置';
+                    }
                 }
 
-                function reset() {
-                    scale = 1; tx = 0; ty = 0; g = null;
-                    clearTransform();
-                }
-
-                function apply() {
-                    if (scale === 1 && tx === 0 && ty === 0) { clearTransform(); return; }
-                    var m = metrics();
-                    tx = clampAxis(tx, m.sx, m.vw, m.cw * scale);
-                    ty = clampAxis(ty, m.sy, m.vh, m.ch * scale);
-                    doc.body.style.setProperty('transform', 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')', 'important');
-                    doc.body.style.setProperty('transform-origin', '0 0', 'important');
-                    ensurePill();
-                    pill.textContent = '🔍 ' + Math.round(scale * 100) + '% · 点击重置';
+                // 缩放到 s1，并保持视口中 (ax, ay) 处的内容点缩放后仍在原位
+                function zoomTo(s1, ax, ay) {
+                    var s0 = scale;
+                    var cx = doc.body.scrollLeft + (win.scrollX + ax) / s0;
+                    var cy = doc.body.scrollTop + (win.scrollY + ay) / s0;
+                    applyTransform(s1);
+                    var m = maxScroll();
+                    var rx = Math.min(m.x, Math.max(0, cx * s1 - ax));
+                    var ry = Math.min(m.y, Math.max(0, cy * s1 - ay));
+                    win.scrollTo(rx, ry);
                 }
 
                 function dist(t) {
                     var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
                     return Math.sqrt(dx * dx + dy * dy);
                 }
-                function mid(t) {
-                    return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
-                }
-                function baseline(touches) {
-                    var m = metrics(), c = mid(touches);
-                    g = { d0: dist(touches) || 1, scale0: scale, tx0: tx, ty0: ty, mx0: c.x, my0: c.y, sx0: m.sx, sy0: m.sy };
-                }
+                function midX(t) { return (t[0].clientX + t[1].clientX) / 2; }
+                function midY(t) { return (t[0].clientY + t[1].clientY) / 2; }
 
-                // capture 阶段监听，先于文档内其他 bubble 监听器执行
+                // 双指手势：平移分量交给原生滚动，距离变化分量作为捏合缩放
+                var tg = null;
                 doc.addEventListener('touchstart', function (e) {
-                    if (e.touches.length === 2) baseline(e.touches);
+                    if (e.touches.length === 2) {
+                        tg = { d0: dist(e.touches) || 1, s0: scale, lx: midX(e.touches), ly: midY(e.touches) };
+                    } else {
+                        tg = null;
+                    }
                 }, { capture: true, passive: true });
 
                 doc.addEventListener('touchmove', function (e) {
-                    if (!g || e.touches.length !== 2) return;
+                    if (!tg || e.touches.length !== 2) return;
                     e.preventDefault();
-                    var d = dist(e.touches) || 1, c = mid(e.touches);
-                    scale = Math.min(MAX, Math.max(MIN, g.scale0 * d / g.d0));
-                    // 手势起点中点对应的 body 布局坐标，让该点始终跟在双指中点下
-                    var px = (g.mx0 + g.sx0 - g.tx0) / g.scale0;
-                    var py = (g.my0 + g.sy0 - g.ty0) / g.scale0;
-                    tx = c.x + g.sx0 - px * scale;
-                    ty = c.y + g.sy0 - py * scale;
-                    apply();
+                    var mx = midX(e.touches), my = midY(e.touches);
+                    win.scrollBy(tg.lx - mx, tg.ly - my);
+                    tg.lx = mx; tg.ly = my;
+                    var s1 = Math.min(MAX, Math.max(MIN, tg.s0 * (dist(e.touches) || 1) / tg.d0));
+                    zoomTo(s1, mx, my);
                 }, { capture: true, passive: false });
 
-                function endGesture(e) {
-                    if (e.touches.length === 2) { baseline(e.touches); return; }
-                    if (e.touches.length < 2) {
-                        g = null;
-                        if (Math.abs(scale - 1) < 0.03) reset();
-                    }
+                function touchEnd(e) {
+                    if (e.touches.length >= 2) return;
+                    tg = null;
+                    if (Math.abs(scale - 1) < 0.03) applyTransform(1);
                 }
-                doc.addEventListener('touchend', endGesture, { capture: true, passive: true });
-                doc.addEventListener('touchcancel', endGesture, { capture: true, passive: true });
+                doc.addEventListener('touchend', touchEnd, { capture: true, passive: true });
+                doc.addEventListener('touchcancel', touchEnd, { capture: true, passive: true });
 
-                // 桌面：Ctrl/Cmd + 滚轮（含触控板捏合）缩放，缩放中心跟随光标
+                // 桌面：Ctrl/Cmd + 滚轮（Chromium 触控板捏合）缩放，缩放中心跟随光标
                 doc.addEventListener('wheel', function (e) {
                     if (!(e.ctrlKey || e.metaKey)) return;
                     e.preventDefault();
-                    var m = metrics();
-                    var f = Math.exp(-e.deltaY * 0.002);
-                    var ns = Math.min(MAX, Math.max(MIN, scale * f));
-                    var px = (e.clientX + m.sx - tx) / scale;
-                    var py = (e.clientY + m.sy - ty) / scale;
-                    tx = e.clientX + m.sx - px * ns;
-                    ty = e.clientY + m.sy - py * ns;
-                    scale = ns;
-                    apply();
+                    var s1 = Math.min(MAX, Math.max(MIN, scale * Math.exp(-e.deltaY * 0.002)));
+                    if (Math.abs(s1 - 1) < 0.03) s1 = 1;
+                    zoomTo(s1, e.clientX, e.clientY);
                 }, { passive: false });
 
+                // Safari 桌面：触控板捏合走 gesture* 事件（无坐标，锚定取视口中心）
+                // iOS 上 gesture* 会与 touch 事件同时触发，tg 存在时让触摸路径接管
+                var sg = null;
+                doc.addEventListener('gesturestart', function (e) {
+                    e.preventDefault();
+                    sg = { s0: scale };
+                }, { capture: true });
+                doc.addEventListener('gesturechange', function (e) {
+                    if (!sg || tg || !isFinite(e.scale) || e.scale === 0) return;
+                    e.preventDefault();
+                    var s1 = Math.min(MAX, Math.max(MIN, sg.s0 * e.scale));
+                    if (Math.abs(s1 - 1) < 0.03) s1 = 1;
+                    zoomTo(s1, win.innerWidth / 2, win.innerHeight / 2);
+                }, { capture: true });
+                doc.addEventListener('gestureend', function (e) {
+                    e.preventDefault();
+                    sg = null;
+                    if (Math.abs(scale - 1) < 0.03) applyTransform(1);
+                }, { capture: true });
+
                 // 打印前调用：清除缩放状态，避免 transform 干扰 A4 测量与排版
-                doc.__pzReset = function () { try { reset(); } catch (e) {} };
+                doc.__pzReset = function () { try { applyTransform(1); } catch (e) {} };
                 // 序列化预览 DOM 前调用：临时摘除缩放痕迹，返回恢复函数
                 doc.__pzSuspend = function () {
                     try {
-                        if (scale === 1 && tx === 0 && ty === 0 && !(pill && pill.parentNode)) return null;
-                        var ts = doc.body.style.getPropertyValue('transform');
-                        var tp = doc.body.style.getPropertyPriority('transform');
-                        var to = doc.body.style.getPropertyValue('transform-origin');
+                        if (scale === 1 && !(pill && pill.parentNode)) return null;
+                        var st = doc.body.style;
+                        var snap = {
+                            transform: st.getPropertyValue('transform'),
+                            origin: st.getPropertyValue('transform-origin'),
+                            overflow: st.getPropertyValue('overflow')
+                        };
                         var hadPill = !!(pill && pill.parentNode);
                         if (hadPill) pill.parentNode.removeChild(pill);
-                        doc.body.style.removeProperty('transform');
-                        doc.body.style.removeProperty('transform-origin');
+                        st.removeProperty('transform');
+                        st.removeProperty('transform-origin');
+                        st.removeProperty('overflow');
                         return function () {
-                            if (ts) doc.body.style.setProperty('transform', ts, tp || '');
-                            if (to) doc.body.style.setProperty('transform-origin', to);
-                            if (hadPill) ensurePill();
+                            if (snap.transform) st.setProperty('transform', snap.transform, 'important');
+                            if (snap.origin) st.setProperty('transform-origin', snap.origin, 'important');
+                            if (snap.overflow) st.setProperty('overflow', snap.overflow, 'important');
+                            if (hadPill) {
+                                ensurePill();
+                                pill.textContent = '🔍 ' + Math.round(scale * 100) + '% · 点击重置';
+                            }
                         };
                     } catch (e) { return null; }
                 };
