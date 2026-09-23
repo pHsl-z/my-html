@@ -2607,6 +2607,10 @@
                 }
                 
                 setTimeout(() => {
+                    try{
+                        var sdoc=previewFrame.contentDocument||previewFrame.contentWindow.document;
+                        if(sdoc&&sdoc.body)sanitizePreviewDoc(sdoc);
+                    }catch(e){}
                     enhancePreviewScrolling();
                     try{
                         var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
@@ -2633,6 +2637,7 @@
             try{
                 var doc=previewFrame.contentDocument||previewFrame.contentWindow.document;
                 if(doc&&doc.body){
+                    sanitizePreviewDoc(doc);
                     protectStructure(doc);
                     injectPreviewGestureZoom(doc);
                     applyEditMode();
@@ -2731,6 +2736,30 @@
                     showToast('预览显示失败', 'error');
                 }
             }
+        }
+
+        // 清理"从浏览器存储网页再导入"时烘焙进文档源码的应用痕迹：
+        // - #__editorScrollStyle：本应由应用注入的滚动样式。烘焙副本里 overflow:auto
+        //   会让 body 变成滚不动的滚动容器、overscroll-behavior:contain 切断滚轮向
+        //   视口的冒泡，导致桌面端双指滑动完全失效。iOS 端 enhancePreviewScrolling
+        //   会移除旧副本并重新注入，故此处仅在非 iOS 清理。
+        // - body 上烘焙的编辑态痕迹（contenteditable / cursor / outline），
+        //   随后 applyEditMode 会按当前模式重新设置。
+        function sanitizePreviewDoc(doc) {
+            try {
+                if (!doc || !doc.documentElement || !doc.body) return;
+                if (!isIOS()) {
+                    var baked = doc.getElementById('__editorScrollStyle');
+                    while (baked) {
+                        baked.parentNode.removeChild(baked);
+                        baked = doc.getElementById('__editorScrollStyle');
+                    }
+                }
+                if (doc.body.hasAttribute('contenteditable')) doc.body.removeAttribute('contenteditable');
+                doc.body.style.removeProperty('cursor');
+                doc.body.style.removeProperty('outline');
+                doc.body.style.removeProperty('user-select');
+            } catch (e) {}
         }
 
         function enhancePreviewScrolling() {
@@ -2882,6 +2911,7 @@
                 var pill = null;
                 var root = doc.documentElement;
                 var win = doc.defaultView;
+                var savedRootOverflow = undefined;
 
                 function maxScroll() {
                     return {
@@ -2905,6 +2935,11 @@
                         doc.body.style.removeProperty('transform');
                         doc.body.style.removeProperty('transform-origin');
                         doc.body.style.removeProperty('overflow');
+                        if (savedRootOverflow !== undefined) {
+                            if (savedRootOverflow.v) root.style.setProperty('overflow', savedRootOverflow.v, savedRootOverflow.p || '');
+                            else root.style.removeProperty('overflow');
+                            savedRootOverflow = undefined;
+                        }
                         if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
                         // 变换移除后滚动位置可能越界，触发一次钳制
                         try { win.scrollTo(win.scrollX, win.scrollY); } catch (e) {}
@@ -2912,6 +2947,16 @@
                         doc.body.style.setProperty('transform', 'scale(' + s + ')', 'important');
                         doc.body.style.setProperty('transform-origin', '0 0', 'important');
                         doc.body.style.setProperty('overflow', 'visible', 'important');
+                        // 固定大小页面常带 html{overflow:hidden}，根滚动器会因此拒绝
+                        // 用户滚轮/触摸输入（overflow:hidden 只允许程序化滚动），
+                        // 缩放期间临时改为 auto 让双指平移可用，重置时还原
+                        if (savedRootOverflow === undefined) {
+                            savedRootOverflow = {
+                                v: root.style.getPropertyValue('overflow'),
+                                p: root.style.getPropertyPriority('overflow')
+                            };
+                        }
+                        root.style.setProperty('overflow', 'auto', 'important');
                         // 宽文档在 s=1 时可能停在 body 内部滚动上，统一并入根滚动前先归零，
                         // 锚定计算已把 body 偏移折算进内容坐标
                         try { doc.body.scrollLeft = 0; doc.body.scrollTop = 0; } catch (e) {}
@@ -3008,15 +3053,21 @@
                             origin: st.getPropertyValue('transform-origin'),
                             overflow: st.getPropertyValue('overflow')
                         };
+                        var rootSnap = {
+                            v: root.style.getPropertyValue('overflow'),
+                            p: root.style.getPropertyPriority('overflow')
+                        };
                         var hadPill = !!(pill && pill.parentNode);
                         if (hadPill) pill.parentNode.removeChild(pill);
                         st.removeProperty('transform');
                         st.removeProperty('transform-origin');
                         st.removeProperty('overflow');
+                        root.style.removeProperty('overflow');
                         return function () {
                             if (snap.transform) st.setProperty('transform', snap.transform, 'important');
                             if (snap.origin) st.setProperty('transform-origin', snap.origin, 'important');
                             if (snap.overflow) st.setProperty('overflow', snap.overflow, 'important');
+                            if (rootSnap.v) root.style.setProperty('overflow', rootSnap.v, rootSnap.p || '');
                             if (hadPill) {
                                 ensurePill();
                                 pill.textContent = '🔍 ' + Math.round(scale * 100) + '% · 点击重置';
