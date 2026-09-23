@@ -2229,6 +2229,10 @@
                                 <span class="icon">📄</span>
                                 PDF多方案导出
                             </button>
+                            <button class="btn btn-info dropdown-item" onclick="exportToPdf();closePreviewDropdown();" id="exportPdfQuickBtn">
+                                <span class="icon">📄</span>
+                                导出PDF
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2242,9 +2246,9 @@
                         <span class="icon">🖨️</span>
                         打印
                     </button>
-                    <button class="btn btn-primary" onclick="exportToPdf()" id="downloadBtn">
-                        <span class="icon">📄</span>
-                        PDF
+                    <button class="btn btn-primary" onclick="exportToImage()" id="exportImageBtn">
+                        <span class="icon">🖼️</span>
+                        导出图片
                     </button>
                 </div>
             </div>
@@ -2327,7 +2331,7 @@
         const charCount = document.getElementById('charCount');
         const pasteBtn = document.getElementById('pasteBtn');
         const clearBtn = document.getElementById('clearBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtn = document.getElementById('exportImageBtn');
         const openBtn = document.getElementById('openBtn');
         const copyBtn = document.getElementById('copyBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -4419,14 +4423,17 @@
                 const filename = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') + '.pdf';
 
                 const iframe = document.createElement('iframe');
-                iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;height:10000px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:transparent;';
+                // 视口高取常规值而非超大值：烘焙样式常含 min-height:100vh，
+                // 超高视口会把 body 无限撑高，导出内容底部出现大片空白
+                iframe.style.cssText = 'position:fixed;left:0;top:0;width:' + containerWidthPx + 'px;height:900px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:transparent;';
                 document.body.appendChild(iframe);
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                 iframeDoc.open();
                 iframeDoc.write(content);
                 iframeDoc.close();
+                sanitizePreviewDoc(iframeDoc);
 
-                await new Promise(r => setTimeout(r, 800));
+                await waitForIframeRender(iframeDoc, 12000);
 
                 try {
                     const contentHeight = iframeDoc.documentElement.scrollHeight || iframeDoc.body.scrollHeight || 1000;
@@ -4504,6 +4511,202 @@
             } catch (error) {
                 showToast('导出失败: ' + error.message, 'error');
             }
+        }
+
+        // 等待离屏 iframe 渲染完成：高度连续稳定视为排版结束；
+        // 文档引用了 MathJax 但尚未加载完成时不算稳定，最后再等一次 MathJax 排版
+        function waitForIframeRender(iframeDoc, timeoutMs) {
+            return new Promise(function(resolve) {
+                var win = iframeDoc.defaultView;
+                var start = Date.now();
+                var lastH = -1, stable = 0;
+                var timer = setInterval(function() {
+                    var h = 0;
+                    try {
+                        h = Math.max(iframeDoc.documentElement.scrollHeight,
+                                     iframeDoc.body ? iframeDoc.body.scrollHeight : 0);
+                    } catch (e) {}
+                    if (h === lastH) stable++; else { stable = 0; lastH = h; }
+                    var mjLoading = false;
+                    try {
+                        if (!win.MathJax && iframeDoc.querySelector('script[src*="mathjax"]')) mjLoading = true;
+                    } catch (e) {}
+                    if ((stable >= 5 && !mjLoading) || Date.now() - start >= timeoutMs) {
+                        clearInterval(timer);
+                        var mjPromise = null;
+                        try {
+                            if (win.MathJax && win.MathJax.startup && win.MathJax.startup.promise) {
+                                mjPromise = win.MathJax.startup.promise;
+                            }
+                        } catch (e) {}
+                        if (mjPromise) {
+                            Promise.race([mjPromise, new Promise(function(r) { setTimeout(r, 5000); })]).then(resolve, resolve);
+                        } else {
+                            resolve();
+                        }
+                    }
+                }, 300);
+            });
+        }
+
+        // 整页导出为 PNG 长图：文字与公式无损，iOS 相册原生支持
+        async function exportToImage() {
+            const content = htmlEditor.value.trim();
+            if (!content) {
+                showToast('请先输入内容', 'error');
+                return;
+            }
+            try {
+                const previewDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) {
+                    showToast('预览内容为空，请先输入内容', 'error');
+                    return;
+                }
+                if (typeof html2canvas === 'undefined') {
+                    showToast('图片导出库未加载，请检查网络连接后刷新页面', 'error');
+                    return;
+                }
+
+                showToast('正在生成图片...', 'info');
+
+                var titleMatch = (content.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+                var title = (titleMatch && titleMatch.trim()) || 'export';
+                const filename = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_') + '.png';
+
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;left:0;top:0;width:900px;height:900px;z-index:9999;opacity:0.01;pointer-events:none;border:none;background:transparent;';
+                document.body.appendChild(iframe);
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(content);
+                    iframeDoc.close();
+                    sanitizePreviewDoc(iframeDoc);
+
+                    await waitForIframeRender(iframeDoc, 12000);
+
+                    // 内容真实宽度 = body 直接子元素的跨度（最右 - 最左）。
+                    // scrollWidth 在内容窄于视口时返回视口宽（900），
+                    // 会把视口宽误当内容宽，导出图片右侧留大片空白
+                    let contentWidth = 0;
+                    try {
+                        var kids = iframeDoc.body.children;
+                        var minLeft = Infinity, maxRight = 0;
+                        for (var i = 0; i < kids.length; i++) {
+                            var kr = kids[i].getBoundingClientRect();
+                            if (kr.width <= 0) continue;
+                            if (kr.left < minLeft) minLeft = kr.left;
+                            if (kr.right > maxRight) maxRight = kr.right;
+                        }
+                        if (maxRight > 0) contentWidth = Math.ceil(maxRight - minLeft);
+                    } catch (e) {}
+                    if (!contentWidth || contentWidth < 100) {
+                        try {
+                            contentWidth = iframeDoc.documentElement.scrollWidth;
+                        } catch (e) {}
+                    }
+                    if (!contentWidth || contentWidth < 100) contentWidth = 794;
+                    contentWidth = contentWidth + 4;
+
+                    iframe.style.width = contentWidth + 'px';
+                    await new Promise(r => setTimeout(r, 300));
+
+                    let actualHeight = Math.max(
+                        iframeDoc.documentElement.scrollHeight,
+                        iframeDoc.body.scrollHeight,
+                        iframeDoc.body.offsetHeight,
+                        iframeDoc.body.clientHeight
+                    );
+                    iframe.style.height = (actualHeight + 50) + 'px';
+                    await new Promise(r => setTimeout(r, 200));
+
+                    // 移动端 canvas 有面积上限（iOS 新机型约 2.68 亿像素），
+                    // scale=2 超限时按比例降级，保底 1 倍
+                    let scale = 2;
+                    var area = contentWidth * actualHeight;
+                    var MAX_CANVAS_AREA = 268435456;
+                    if (area * 4 > MAX_CANVAS_AREA) {
+                        scale = Math.max(1, Math.sqrt(MAX_CANVAS_AREA / area));
+                    }
+
+                    const renderOpts = function(s) {
+                        return {
+                            scale: s,
+                            useCORS: true,
+                            logging: false,
+                            backgroundColor: '#ffffff',
+                            width: contentWidth,
+                            windowWidth: contentWidth,
+                            height: actualHeight,
+                            windowHeight: actualHeight
+                        };
+                    };
+
+                    let canvas;
+                    try {
+                        canvas = await html2canvas(iframeDoc.body, renderOpts(scale));
+                    } catch (e) {
+                        if (scale > 1) {
+                            canvas = await html2canvas(iframeDoc.body, renderOpts(1));
+                        } else {
+                            throw e;
+                        }
+                    }
+
+                    const blob = await new Promise(function(resolve, reject) {
+                        try {
+                            canvas.toBlob(function(b) {
+                                if (b) resolve(b);
+                                else reject(new Error('生成图片数据失败'));
+                            }, 'image/png');
+                        } catch (e) { reject(e); }
+                    });
+
+                    if (isIOS()) {
+                        showImageSaveModal(blob, filename);
+                    } else {
+                        fallbackDownload(blob, filename);
+                    }
+                } finally {
+                    try { document.body.removeChild(iframe); } catch (e) {}
+                }
+            } catch (error) {
+                showToast('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // iOS：Safari 下载只会存到"文件"，展示长按保存界面让用户直接存入相册
+        function showImageSaveModal(blob, filename) {
+            if (window.__lastExportedImageURL) {
+                try { URL.revokeObjectURL(window.__lastExportedImageURL); } catch (e) {}
+            }
+            const url = URL.createObjectURL(blob);
+            window.__lastExportedImageURL = url;
+            const sizeKB = blob.size > 1048576
+                ? (blob.size / 1048576).toFixed(1) + ' MB'
+                : Math.round(blob.size / 1024) + ' KB';
+            const content =
+                '<div style="text-align:center;">' +
+                '<p style="color:#bbb;font-size:14px;margin:0 0 12px;line-height:1.6;">长按下方图片，在弹出菜单中选择<br><b style="color:#fff;">「存储到照片」</b>即可存入相册</p>' +
+                '<img id="exportedImageImg" src="' + url + '" alt="导出图片" ' +
+                'style="max-width:100%;border:1px solid #3a3a3a;border-radius:8px;' +
+                'user-select:none;-webkit-user-select:none;-webkit-touch-callout:default;">' +
+                '<p style="color:#777;font-size:12px;margin:10px 0 14px;">PNG · ' + sizeKB + '</p>' +
+                '<button class="btn btn-secondary" onclick="downloadExportedImage(\'' + filename + '\')" ' +
+                'style="padding:8px 20px;">📥 下载到"文件"</button>' +
+                '</div>';
+            showModal('导出图片', content);
+        }
+
+        function downloadExportedImage(filename) {
+            if (!window.__lastExportedImageURL) return;
+            const a = document.createElement('a');
+            a.href = window.__lastExportedImageURL;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('已开始下载', 'success');
         }
 
         function fallbackDownload(blob, filename) {
