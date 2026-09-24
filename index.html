@@ -2783,10 +2783,14 @@
                     style.id = '__editorScrollStyle';
                     style.textContent = `
                         /* iOS Safari滚动优化 */
+                        /* 注意：不能加 touch-action:pan-x pan-y——它会让浏览器无条件
+                           接管单指滑动（preventDefault 也拦不住），可交互文档（可拖指针
+                           的时钟、滑块、画板等）的手势会被抢走导致完全拖不动。
+                           单指手势的标准仲裁：文档在 touchstart 里 preventDefault 即可
+                           独占该手势，否则放行给原生平移滚动 */
                         html, body {
                             -webkit-overflow-scrolling: touch !important;
                             overscroll-behavior: contain !important;
-                            touch-action: pan-x pan-y !important;
                             overflow: auto !important;
                             position: relative !important;
                         }
@@ -2809,6 +2813,35 @@
                         head.appendChild(style);
                         previewDoc.documentElement.insertBefore(head, previewDoc.body);
                     }
+
+                    // 兼容垫片：部分文档（AI 生成代码高发）把 preventDefault 误调在
+                    // Touch 对象上（如 handleMouseDown(touch) 内 touch.preventDefault()）。
+                    // WebKit 的 Touch.prototype 虽原生带一个遗留的 preventDefault，但对
+                    // 分发中的事件未必生效，这里无条件替换为委托版：转发给当前正在
+                    // 分发的触摸事件，保证手势被正确独占（否则浏览器会接管滑动）
+                    if (!previewDoc.__touchCompat) {
+                        previewDoc.__touchCompat = true;
+                        try {
+                            var pw = previewDoc.defaultView;
+                            if (pw.Touch && pw.Touch.prototype) {
+                                var curEvent = null;
+                                var track = function (e) { curEvent = e; };
+                                // touchend 也允许垫片转发（有文档用它抑制合成 click），
+                                // 分发同步完成后再清除引用
+                                var trackEnd = function (e) {
+                                    curEvent = e;
+                                    setTimeout(function () { curEvent = null; }, 0);
+                                };
+                                previewDoc.addEventListener('touchstart', track, true);
+                                previewDoc.addEventListener('touchmove', track, true);
+                                previewDoc.addEventListener('touchend', trackEnd, true);
+                                previewDoc.addEventListener('touchcancel', trackEnd, true);
+                                pw.Touch.prototype.preventDefault = function () {
+                                    if (curEvent && curEvent.cancelable) curEvent.preventDefault();
+                                };
+                            }
+                        } catch (compatError) {}
+                    }
                 }
                 
                 if (isIOS()) {
@@ -2818,14 +2851,9 @@
                         try {
                             const previewBody = previewDoc.body;
                             if (previewBody) {
-                                previewBody.addEventListener('touchstart', function(e) {
-                                    e.stopPropagation();
-                                }, { passive: true });
-                                
-                                previewBody.addEventListener('touchmove', function(e) {
-                                    e.stopPropagation();
-                                }, { passive: true });
-                                
+                                // 不能在 body 上 stopPropagation 触摸事件：大量可交互文档
+                                // （时钟、画板、滑块）把 touchmove 挂在 document 上，
+                                // body 拦截会让它们完全收不到移动事件
                                 previewBody.style.overflow = 'auto';
                                 previewBody.style.webkitOverflowScrolling = 'touch';
                             }
@@ -3000,7 +3028,10 @@
 
                 doc.addEventListener('touchmove', function (e) {
                     if (!tg || e.touches.length !== 2) return;
+                    // 双指手势归缩放/平移所有：阻断文档自身的 touchmove 处理器，
+                    // 避免捏合起手时第一指落在可交互元素（如时钟指针）上被同时拖动
                     e.preventDefault();
+                    e.stopPropagation();
                     var mx = midX(e.touches), my = midY(e.touches);
                     win.scrollBy(tg.lx - mx, tg.ly - my);
                     tg.lx = mx; tg.ly = my;
