@@ -5724,25 +5724,44 @@
                     // 面板关闭（含取消）后自动返回；处理器挂在 window 上，
                     // 不随 DOM 替换而失效。
                     // iOS 已知怪癖（WebKit bug 245171 / 316284，实测 iOS 26）：
-                    // print() 调用后、打印面板还开着的 1 秒内，afterprint 就会
-                    // "假触发"一到两轮。此刻绝不能 reload——用户还在看预览，
-                    // 底层页面一旦换页，iOS 打印预览重渲染（如调整打印百分比）
-                    // 就会抓到空白文档，预览全白。
-                    // 因此只把距上次 print() 1.5 秒之后的 afterprint 视为
-                    // 面板真正关闭的信号；过早的一律忽略，返回兜底靠控制条按钮。
+                    // print() 调用后、打印面板还开着的时候，afterprint 就会
+                    // "假触发"（面板弹出 + 每次调整打印百分比重渲染都会来）。
+                    // 此刻绝不能 reload——用户还在看预览，底层页面一旦换页，
+                    // iOS 打印预览重渲染就会抓到空白文档，预览全白。
                     window.__iosPrintAt = Date.now();
                     window.__printReturned = false;
+                    window.__sawBlur = false;
                     window.__iosDoPrint = function () {
                         window.__iosPrintAt = Date.now();
                         window.print();
                     };
+                    // afterprint 在面板打开期间会反复假触发（WebKit bug
+                    // 245171/316284）：面板刚弹出时来一两轮，用户每次调整
+                    // 打印缩放百分比（重渲染）还会再来一轮——时间窗守卫挡
+                    // 不住后者（实测第一次调 99% 正常、第二次调 98% 时页面
+                    // 已被上一轮假信号触发 reload → 预览全白）。
+                    // 因此：观察到面板失焦特征（blur）后，afterprint 一律
+                    // 不可信，唯一可靠的"面板已关闭"信号是 window focus
+                    // （焦点从打印面板归还页面）。
                     window.onafterprint = function () {
                         if (window.__printReturned) return;
-                        // 面板刚弹出时的假信号：忽略，否则打印预览会全白
-                        if (Date.now() - window.__iosPrintAt < 1500) return;
+                        if (window.__sawBlur) return; // 面板交互期内全部忽略
+                        // 兜底：从未观察到失焦特征的老系统，超长时间后才信任
+                        if (Date.now() - window.__iosPrintAt < 8000) return;
                         window.__printReturned = true;
                         setTimeout(function () { location.reload(); }, 400);
                     };
+                    // 面板生命周期（实测 iOS 26，WebKit bug 316284 时序日志）：
+                    // print() 后 ~50ms window blur = 打印面板接管焦点；
+                    // 面板真正关闭（打印完成或取消）时 window focus 归还页面
+                    window.addEventListener('blur', function () {
+                        if (Date.now() - window.__iosPrintAt < 3000) window.__sawBlur = true;
+                    });
+                    window.addEventListener('focus', function () {
+                        if (window.__printReturned || !window.__sawBlur) return;
+                        window.__printReturned = true;
+                        setTimeout(function () { location.reload(); }, 400);
+                    });
 
                     // 仍在用户手势调用栈内：iOS 必弹打印面板；万一被系统丢弃，
                     // 屏幕上的「立即打印」按钮就是兜底入口
