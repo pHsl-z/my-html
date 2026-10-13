@@ -2518,6 +2518,21 @@
         // 初始化编辑器 - 修改为清空状态
         htmlEditor.value = '';
         updateCharCount();
+
+        // 桌面端（Mac/Windows 横屏，鼠标键盘交互）默认展开左侧代码窗口，
+        // 避免左侧只剩一条黑色空白区；手机/平板等触摸设备维持默认折叠，
+        // 不挤占预览空间。AI文档与预览的布局比例本身不变。
+        try {
+            if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+                window.matchMedia('(min-width: 769px)').matches) {
+                var __desktopPanel = document.querySelector('.editor-panel');
+                var __desktopArrow = document.getElementById('editorToggleArrow');
+                if (__desktopPanel && __desktopPanel.classList.contains('collapsed')) {
+                    __desktopPanel.classList.remove('collapsed');
+                    if (__desktopArrow) __desktopArrow.textContent = '▲';
+                }
+            }
+        } catch (e) {}
         
         // IE浏览器兼容性：确保iframe正确初始化
         if (document.documentMode || /Edge/.test(navigator.userAgent)) {
