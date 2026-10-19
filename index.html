@@ -4604,13 +4604,23 @@
                                 });
                             }
                         } catch (e) {}
-                        if (mjPromise) {
-                            Promise.race([mjPromise, new Promise(function(r) { setTimeout(r, 5000); })]).then(resolve, resolve);
-                        } else {
-                            resolve();
-                        }
+                        var finishChain = Promise.resolve(mjPromise)
+                            .then(function() { return waitForIframeFonts(iframeDoc); });
+                        Promise.race([finishChain, new Promise(function(r) { setTimeout(r, 9000); })]).then(resolve, resolve);
                     }
                 }, 300);
+            });
+        }
+
+        // 等待 iframe 内声明的字体加载完成（MathJax v2 的数学字体按需逐个下载，
+        // 字体未就绪时 html2canvas 用系统字体绘制，字形宽度不同导致公式错位/换行）
+        function waitForIframeFonts(iframeDoc) {
+            return new Promise(function(res) {
+                try {
+                    if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+                        Promise.race([iframeDoc.fonts.ready, new Promise(function(r) { setTimeout(r, 3000); })]).then(res, res);
+                    } else res();
+                } catch (e) { res(); }
             });
         }
 
