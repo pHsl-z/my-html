@@ -4577,13 +4577,31 @@
                     var mjLoading = false;
                     try {
                         if (!win.MathJax && iframeDoc.querySelector('script[src*="mathjax"]')) mjLoading = true;
+                        // KaTeX 同理：核心库未加载完说明公式尚未排版
+                        if (!win.katex && iframeDoc.querySelector('script[src*="katex"]')) mjLoading = true;
                     } catch (e) {}
                     if ((stable >= 5 && !mjLoading) || Date.now() - start >= timeoutMs) {
                         clearInterval(timer);
                         var mjPromise = null;
                         try {
                             if (win.MathJax && win.MathJax.startup && win.MathJax.startup.promise) {
-                                mjPromise = win.MathJax.startup.promise;
+                                // MathJax v3：写入式 iframe 错过 load 时序时 startup.promise
+                                // 因 pageReady 未触发而永远 pending，需先主动调 pageReady()
+                                // 促成启动完成，再补一次排版（幂等），公式才不会停留在源码状态
+                                mjPromise = Promise.resolve().then(function() {
+                                    try { if (win.MathJax.startup.pageReady) win.MathJax.startup.pageReady(); } catch (e) {}
+                                }).then(function() {
+                                    return win.MathJax.startup.promise;
+                                }).then(function() {
+                                    return win.MathJax.typesetPromise ? win.MathJax.typesetPromise() : Promise.resolve();
+                                }).catch(function() {});
+                            } else if (win.MathJax && win.MathJax.Hub && win.MathJax.Hub.Queue) {
+                                // MathJax v2：初始 typeset 挂在 window.onload 上，写入式 iframe
+                                // 在脚本加载完之前 load 就已结束，排版永远不会自动执行 → 主动排队 Typeset
+                                mjPromise = new Promise(function(res) {
+                                    try { win.MathJax.Hub.Queue(["Typeset", win.MathJax.Hub], function() { res(); }); }
+                                    catch (e) { res(); }
+                                });
                             }
                         } catch (e) {}
                         if (mjPromise) {
