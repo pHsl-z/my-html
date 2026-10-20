@@ -3373,6 +3373,7 @@
                             <button class="btn btn-sm btn-success" onclick="exportToPdf()" style="flex: 1; justify-content: center;">📄 导出PDF</button>
                             <button class="btn btn-sm btn-success" onclick="showDocxExportPanel()" style="flex: 1; justify-content: center;">📝 导出Word</button>
                             <button class="btn btn-sm btn-info" onclick="showPdfExportPanel()" style="flex: 1; justify-content: center;">📄 PDF多方案</button>
+                            <button class="btn btn-sm btn-warning" onclick="showImageExportPanel()" style="flex: 1; justify-content: center;">🖼️ 图片多方案</button>
                             <button class="btn btn-sm btn-secondary" onclick="showTemplatePanel()" style="flex: 1; justify-content: center;">📋 模板</button>
                         </div>
                     </div>
@@ -5578,6 +5579,233 @@
                 methodCards +
             '</div>';
             showModal('📄 PDF多方案导出', content);
+        }
+
+        /* ==================== 图片多方案导出（测试/筛选用） ==================== */
+
+        var IMG_EXP_METHODS = [
+            { id: 0, name: 'html2canvas（当前方案）', desc: '现有"导出图片"使用的库，canvas 逐元素绘制' },
+            { id: 1, name: 'html-to-image', desc: 'dom-to-image 现代分支，SVG foreignObject 机制' },
+            { id: 2, name: 'modern-screenshot', desc: '新库，对各类 CSS 特性支持较好' },
+            { id: 3, name: 'snapdom', desc: '2024 新库，主打速度快、还原准' },
+            { id: 4, name: 'dom-to-image', desc: '老牌经典库（2015），固定 1 倍率' },
+            { id: 5, name: 'foreignObject 手工实现', desc: '零依赖，纯手写 SVG 截图' }
+        ];
+        var __imgExpResults = {};
+
+        function showImageExportPanel() {
+            var cards = IMG_EXP_METHODS.map(function(m) {
+                return '<div id="imgexp-card-' + m.id + '" style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                        '<span style="color:#e6e6e6;font-size:13px;font-weight:500;">' + (m.id + 1) + ' · ' + m.name + '</span>' +
+                        '<span id="imgexp-st-' + m.id + '" style="font-size:11px;color:#888;white-space:nowrap;">待运行</span>' +
+                    '</div>' +
+                    '<div style="color:#888;font-size:11px;margin:4px 0 8px;line-height:1.5;">' + m.desc + '</div>' +
+                    '<div style="display:flex;gap:8px;">' +
+                        '<button class="btn btn-sm btn-primary" onclick="imgExpRun(' + m.id + ')" style="font-size:11px;padding:4px 14px;">▶ 运行</button>' +
+                    '</div>' +
+                    '<div id="imgexp-body-' + m.id + '"></div>' +
+                '</div>';
+            }).join('');
+
+            var content = '<div style="max-height:62vh;overflow-y:auto;">' +
+                '<div style="margin-bottom:10px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">🖼️ 图片多方案导出</span>' +
+                        '<span style="color:#888;font-size:11px;">共6种方案</span>' +
+                    '</div>' +
+                    '<p style="color:#888;font-size:11px;line-height:1.5;">逐个运行对比效果与速度，失败的方案会显示具体原因（用于诊断 iOS 问题）。生成后可点"保存图片"。</p>' +
+                    '<div style="display:flex;align-items:center;gap:12px;margin:8px 0;">' +
+                        '<span style="color:#888;font-size:11px;">倍率：</span>' +
+                        '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="1"> 1x</label>' +
+                        '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="2" checked> 2x</label>' +
+                        '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="3"> 3x</label>' +
+                        '<button class="btn btn-sm btn-success" onclick="imgExpRunAll()" style="font-size:11px;padding:4px 14px;margin-left:auto;">▶ 全部运行</button>' +
+                    '</div>' +
+                '</div>' +
+                cards +
+            '</div>';
+            showModal('🖼️ 图片多方案导出', content);
+        }
+
+        function imgExpGetScale() {
+            var r = document.querySelector('input[name=imgexp-scale]:checked');
+            return r ? parseInt(r.value, 10) : 2;
+        }
+
+        function imgExpSetState(id, text, color) {
+            var el = document.getElementById('imgexp-st-' + id);
+            if (el) { el.textContent = text; el.style.color = color || '#888'; }
+        }
+
+        function imgExpSetBody(id, html) {
+            var el = document.getElementById('imgexp-body-' + id);
+            if (el) el.innerHTML = html;
+        }
+
+        /* 准备导出专用 iframe（复制现有导出流程：写入 → 清理 → 等渲染含 MathJax/字体 → 测量宽高） */
+        async function imgExpPrepare() {
+            var previewDoc = null;
+            for (var waited = 0; waited < 5000; waited += 200) {
+                previewDoc = previewFrame.contentDocument || (previewFrame.contentWindow && previewFrame.contentWindow.document);
+                if (previewDoc && previewDoc.body && previewDoc.body.innerHTML.trim()) break;
+                await new Promise(function(r) { setTimeout(r, 200); });
+            }
+            if (!previewDoc || !previewDoc.body || !previewDoc.body.innerHTML.trim()) throw new Error('预览内容为空，请先输入内容并预览');
+            var content = previewDoc.documentElement.outerHTML;
+            var old = document.getElementById('imgExportFrame');
+            if (old) old.remove();
+            var iframe = document.createElement('iframe');
+            iframe.id = 'imgExportFrame';
+            iframe.style.cssText = 'position:fixed;left:0;top:0;width:900px;height:900px;opacity:0.01;pointer-events:none;border:none;z-index:-1;';
+            document.body.appendChild(iframe);
+            var iframeDoc = iframe.contentDocument;
+            iframeDoc.open(); iframeDoc.write(content); iframeDoc.close();
+            sanitizePreviewDoc(iframeDoc);
+            await waitForIframeRender(iframeDoc, 12000);
+            var contentWidth = 0, minLeft = Infinity, maxRight = -Infinity, actualHeight = 0;
+            var kids = iframeDoc.body.children;
+            for (var i = 0; i < kids.length; i++) {
+                var kr = kids[i].getBoundingClientRect();
+                if (kr.width <= 0) continue;
+                minLeft = Math.min(minLeft, kr.left); maxRight = Math.max(maxRight, kr.right);
+                actualHeight = Math.max(actualHeight, kr.bottom);
+            }
+            if (minLeft === Infinity) { contentWidth = 900; actualHeight = iframeDoc.body.scrollHeight; }
+            else { contentWidth = Math.min(900, Math.ceil(maxRight - minLeft) + 4); actualHeight = Math.ceil(actualHeight) + 4; }
+            return { iframe: iframe, iframeDoc: iframeDoc, contentWidth: contentWidth, actualHeight: actualHeight };
+        }
+
+        function imgExpCleanup(prep) { try { if (prep && prep.iframe && prep.iframe.parentNode) prep.iframe.remove(); } catch (e) {} }
+
+        /* 库按需加载 */
+        function imgExpLoadScript(url, check) {
+            return new Promise(function(res, rej) {
+                if (check()) return res();
+                var s = document.createElement('script');
+                s.src = url;
+                s.onload = function() { check() ? res() : rej(new Error('脚本已加载但全局对象不存在')); };
+                s.onerror = function() { rej(new Error('脚本加载失败（网络/CDN 不可达）')); };
+                document.head.appendChild(s);
+            });
+        }
+        function imgExpLoadModern() {
+            if (window.modernScreenshot) return Promise.resolve();
+            return import('https://cdn.jsdelivr.net/npm/modern-screenshot@4/dist/index.mjs')
+                .then(function(m) { window.modernScreenshot = m; })
+                .catch(function() {
+                    return import('https://unpkg.com/modern-screenshot@4/dist/index.mjs').then(function(m) { window.modernScreenshot = m; });
+                });
+        }
+
+        /* toBlob 包装：iOS 上大 canvas 可能返回 null 或永不回调，显式暴露原因 */
+        function imgExpToBlob(canvas) {
+            return new Promise(function(res, rej) {
+                var done = false;
+                canvas.toBlob(function(b) {
+                    if (done) return; done = true;
+                    b ? res(b) : rej(new Error('toBlob 返回 null（canvas 面积可能超出本机上限，试试低倍率）'));
+                }, 'image/png');
+                setTimeout(function() { if (!done) { done = true; rej(new Error('toBlob 15 秒无响应')); } }, 15000);
+            });
+        }
+
+        async function imgExpDataUrlInfo(url) {
+            var blob = await fetch(url).then(function(r) { return r.blob(); });
+            var img = new Image();
+            await new Promise(function(res, rej) { img.onload = res; img.onerror = function() { rej(new Error('结果图片解码失败')); }; img.src = url; });
+            return { blob: blob, w: img.naturalWidth, h: img.naturalHeight };
+        }
+
+        /* ---- 6 个渲染 runner：输入 (iframeDoc, contentWidth, actualHeight, scale)，输出 {blob,w,h} ---- */
+        async function imgExpHtml2Canvas(d, cw, ah, scale) {
+            var canvas = await html2canvas(d.body, { scale: scale, backgroundColor: '#ffffff', logging: false, width: cw, height: ah, windowWidth: 900, windowHeight: ah });
+            var blob = await imgExpToBlob(canvas);
+            return { blob: blob, w: canvas.width, h: canvas.height };
+        }
+        async function imgExpHtmlToImage(d, cw, ah, scale) {
+            await imgExpLoadScript('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js', function() { return !!window.htmlToImage; });
+            var url = await window.htmlToImage.toPng(d.body, { pixelRatio: scale, backgroundColor: '#ffffff' });
+            var info = await imgExpDataUrlInfo(url);
+            return info;
+        }
+        async function imgExpModern(d, cw, ah, scale) {
+            await imgExpLoadModern();
+            var url = await window.modernScreenshot.domToPng(d.body, { scale: scale, backgroundColor: '#ffffff' });
+            return await imgExpDataUrlInfo(url);
+        }
+        async function imgExpSnapdom(d, cw, ah, scale) {
+            await imgExpLoadScript('https://cdn.jsdelivr.net/npm/@zumer/snapdom@1/dist/snapdom.min.js', function() { return !!window.snapdom; });
+            var r = await window.snapdom(d.body, { scale: scale, backgroundColor: '#ffffff' });
+            var url = (typeof r === 'string') ? r : (r && r.src) ? r.src : (r && r.toDataURL) ? r.toDataURL('image/png') : (r && r.url) ? r.url : null;
+            if (r && r.toPng && !url) { var p = await r.toPng(); url = (p && p.src) ? p.src : p; }
+            if (!url) throw new Error('snapdom 返回了无法识别的结果');
+            return await imgExpDataUrlInfo(url);
+        }
+        async function imgExpDomToImage(d, cw, ah, scale) {
+            await imgExpLoadScript('https://cdn.jsdelivr.net/npm/dom-to-image@2.6.0/dist/dom-to-image.min.js', function() { return !!window.domtoimage; });
+            var url = await window.domtoimage.toPng(d.body, { style: { margin: '0' } });
+            return await imgExpDataUrlInfo(url);
+        }
+        async function imgExpForeignObject(d, cw, ah, scale) {
+            var w = d.body.scrollWidth, h = d.body.scrollHeight;
+            var clone = d.documentElement.cloneNode(true);
+            var scripts = clone.querySelectorAll('script');
+            for (var i = 0; i < scripts.length; i++) scripts[i].remove();
+            var xml = new XMLSerializer().serializeToString(clone);
+            xml = xml.replace(/^<html[^>]*>/, '<html xmlns="http://www.w3.org/1999/xhtml">');
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject width="100%" height="100%">' + xml + '</foreignObject></svg>';
+            var img = new Image();
+            await new Promise(function(res, rej) { img.onload = res; img.onerror = function() { rej(new Error('SVG 加载失败（浏览器对 foreignObject 支持受限）')); }; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+            var c = document.createElement('canvas');
+            c.width = w * scale; c.height = h * scale;
+            var ctx = c.getContext('2d');
+            if (!ctx) throw new Error('getContext 返回 null（canvas 尺寸超上限，试试低倍率）');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            var blob = await imgExpToBlob(c);
+            return { blob: blob, w: c.width, h: c.height };
+        }
+
+        var IMG_EXP_RUNNERS = [imgExpHtml2Canvas, imgExpHtmlToImage, imgExpModern, imgExpSnapdom, imgExpDomToImage, imgExpForeignObject];
+
+        async function imgExpRun(id) {
+            var m = IMG_EXP_METHODS[id];
+            imgExpSetState(id, '运行中…', '#ffd57a');
+            imgExpSetBody(id, '');
+            var t = performance.now();
+            var prep = null;
+            try {
+                prep = await imgExpPrepare();
+                var result = await IMG_EXP_RUNNERS[id](prep.iframeDoc, prep.contentWidth, prep.actualHeight, imgExpGetScale());
+                __imgExpResults[id] = result.blob;
+                var secs = ((performance.now() - t) / 1000).toFixed(1);
+                imgExpSetState(id, '✓ 成功 ' + secs + 's', '#7be4a8');
+                imgExpSetBody(id,
+                    '<div style="font-size:11px;color:#8ab;margin:8px 0 4px;">' + result.w + '×' + result.h + ' · ' + (result.blob.size / 1024).toFixed(0) + ' KB · 耗时 ' + secs + 's</div>' +
+                    '<div style="background:#fff;border-radius:6px;padding:4px;"><img src="' + URL.createObjectURL(result.blob) + '" style="max-width:100%;height:auto;display:block;"></div>' +
+                    '<button class="btn btn-sm btn-success" onclick="imgExpSave(' + id + ')" style="font-size:11px;padding:4px 14px;margin-top:6px;">💾 保存图片</button>');
+            } catch (e) {
+                var secs2 = ((performance.now() - t) / 1000).toFixed(1);
+                imgExpSetState(id, '✗ 失败', '#ff9a9a');
+                imgExpSetBody(id, '<div style="font-size:11px;color:#ffd57a;background:#3a2a00;padding:6px;border-radius:4px;margin-top:6px;line-height:1.5;">' + ((e && e.message) ? e.message : String(e)) + '</div>');
+            } finally {
+                imgExpCleanup(prep);
+            }
+        }
+
+        async function imgExpRunAll() {
+            for (var i = 0; i < IMG_EXP_METHODS.length; i++) {
+                await imgExpRun(i);
+            }
+            showToast('6 个方案全部运行完毕，请查看各卡片结果', 'info');
+        }
+
+        function imgExpSave(id) {
+            var blob = __imgExpResults[id];
+            if (!blob) { showToast('请先运行该方案生成图片', 'error'); return; }
+            if (isIOS()) { showImageSaveModal(blob); }
+            else { fallbackDownload(blob, '导出图片_方案' + (id + 1) + '.png'); }
         }
 
         function showTemplatePanel() {
