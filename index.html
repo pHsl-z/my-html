@@ -5585,28 +5585,43 @@
             showModal('📄 PDF多方案导出', content);
         }
 
-        /* ==================== 图片多方案导出（测试/筛选用） ==================== */
+        /* ==================== 图片多方案导出 ==================== */
 
         var IMG_EXP_METHODS = [
-            { id: 0, name: 'html2canvas（当前方案）', desc: '现有"导出图片"使用的库，canvas 逐元素绘制' },
-            { id: 1, name: 'html-to-image', desc: 'dom-to-image 现代分支，SVG foreignObject 机制' },
-            { id: 2, name: 'modern-screenshot', desc: '新库，对各类 CSS 特性支持较好' },
-            { id: 3, name: 'snapdom', desc: '2024 新库，主打速度快、还原准' },
-            { id: 4, name: 'dom-to-image', desc: '老牌经典库（2015），固定 1 倍率' },
-            { id: 5, name: 'foreignObject 手工实现', desc: '零依赖，纯手写 SVG 截图' }
+            { id: 0, name: 'html2canvas（当前方案）', desc: '现有"导出图片"使用的库，canvas 逐元素绘制', lib: 'html2canvas', ready: function() { return !!window.html2canvas; } },
+            { id: 1, name: 'html-to-image', desc: 'dom-to-image 现代分支，SVG foreignObject 机制', lib: 'CDN', ready: function() { return !!window.htmlToImage; } },
+            { id: 2, name: 'modern-screenshot', desc: '新库，对各类 CSS 特性支持较好', lib: 'CDN', ready: function() { return !!window.modernScreenshot; } },
+            { id: 3, name: 'snapdom', desc: '2024 新库，主打速度快、还原准', lib: 'CDN', ready: function() { return !!window.snapdom; } },
+            { id: 4, name: 'dom-to-image', desc: '老牌经典库（2015），固定 1 倍率', lib: 'CDN', ready: function() { return !!window.domtoimage; } },
+            { id: 5, name: 'foreignObject 手工实现', desc: '零依赖，纯手写 SVG 截图', lib: '无依赖', ready: function() { return true; } },
+            { id: 6, name: 'html2canvas-pro', desc: 'html2canvas 维护分支，支持现代 CSS（oklch 颜色、锥形渐变等）', lib: 'CDN', ready: function() { return !!__imgExpH2CPro; } },
+            { id: 7, name: 'dom-to-image-more', desc: 'dom-to-image 维护分支，修复中文字体、内联样式等大量问题，固定 1 倍率', lib: 'CDN', ready: function() { return !!__imgExpDtiMore; } },
+            { id: 8, name: 'html2canvas 增强版', desc: '当前方案 + 数学字体就绪等待（最长 10 秒），公式文档更稳', lib: 'html2canvas', ready: function() { return !!window.html2canvas; } }
         ];
         var __imgExpResults = {};
+        var __imgExpH2CPro = null;   // html2canvas-pro 独立引用（避免覆盖原版全局）
+        var __imgExpDtiMore = null;  // dom-to-image-more 独立引用
 
         function showImageExportPanel() {
             var cards = IMG_EXP_METHODS.map(function(m) {
+                var ready = m.ready();
+                var btnText = ready ? '🚀 导出图片' : '📥 加载并导出';
+                var btnClass = ready ? 'btn-success' : 'btn-warning';
                 return '<div id="imgexp-card-' + m.id + '" style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-                        '<span style="color:#e6e6e6;font-size:13px;font-weight:500;">' + (m.id + 1) + ' · ' + m.name + '</span>' +
-                        '<span id="imgexp-st-' + m.id + '" style="font-size:11px;color:#888;white-space:nowrap;">待运行</span>' +
+                        '<span style="color:#e6e6e6;font-size:13px;font-weight:500;">' + (m.id + 1) + '. ' + m.name + '</span>' +
+                        '<span style="display:flex;align-items:center;gap:6px;">' +
+                            '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(151,119,43,.2);color:#e0b45c;">PNG</span>' +
+                            '<span id="imgexp-st-' + m.id + '" style="font-size:11px;color:#888;white-space:nowrap;">待运行</span>' +
+                        '</span>' +
                     '</div>' +
                     '<div style="color:#888;font-size:11px;margin:4px 0 8px;line-height:1.5;">' + m.desc + '</div>' +
-                    '<div style="display:flex;gap:8px;">' +
-                        '<button class="btn btn-sm btn-primary" onclick="imgExpRun(' + m.id + ')" style="font-size:11px;padding:4px 14px;">▶ 运行</button>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                        '<span style="font-size:10px;color:#666;">依赖：' + m.lib + (ready ? ' ✅' : ' 🟡') + '</span>' +
+                        '<span style="display:flex;gap:6px;">' +
+                            '<button class="btn btn-sm btn-secondary" onclick="imgExpRun(' + m.id + ')" style="font-size:11px;padding:4px 10px;">▶ 测试</button>' +
+                            '<button class="btn btn-sm ' + btnClass + '" onclick="imgExpExport(' + m.id + ')" style="font-size:11px;padding:4px 12px;">' + btnText + '</button>' +
+                        '</span>' +
                     '</div>' +
                     '<div id="imgexp-body-' + m.id + '"></div>' +
                 '</div>';
@@ -5616,15 +5631,15 @@
                 '<div style="margin-bottom:10px;">' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
                         '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">🖼️ 图片多方案导出</span>' +
-                        '<span style="color:#888;font-size:11px;">共6种方案</span>' +
+                        '<span style="color:#888;font-size:11px;">共' + IMG_EXP_METHODS.length + '种方案</span>' +
                     '</div>' +
-                    '<p style="color:#888;font-size:11px;line-height:1.5;">逐个运行对比效果与速度，失败的方案会显示具体原因（用于诊断 iOS 问题）。生成后可点"保存图片"。</p>' +
-                    '<div style="display:flex;align-items:center;gap:12px;margin:8px 0;">' +
+                    '<p style="color:#888;font-size:11px;line-height:1.5;">点「导出图片」直接生成并保存（自动加载所需库）；点「测试」只生成预览不保存。失败会显示具体原因，便于排查 iOS 问题。</p>' +
+                    '<div style="display:flex;align-items:center;gap:12px;margin:8px 0;flex-wrap:wrap;">' +
                         '<span style="color:#888;font-size:11px;">倍率：</span>' +
                         '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="1"> 1x</label>' +
                         '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="2" checked> 2x</label>' +
                         '<label style="font-size:11px;color:#aaa;"><input type="radio" name="imgexp-scale" value="3"> 3x</label>' +
-                        '<button class="btn btn-sm btn-success" onclick="imgExpRunAll()" style="font-size:11px;padding:4px 14px;margin-left:auto;">▶ 全部运行</button>' +
+                        '<button class="btn btn-sm btn-success" onclick="imgExpRunAll()" style="font-size:11px;padding:4px 14px;margin-left:auto;">▶ 全部测试</button>' +
                     '</div>' +
                 '</div>' +
                 cards +
@@ -5771,12 +5786,58 @@
             return { blob: blob, w: c.width, h: c.height };
         }
 
-        var IMG_EXP_RUNNERS = [imgExpHtml2Canvas, imgExpHtmlToImage, imgExpModern, imgExpSnapdom, imgExpDomToImage, imgExpForeignObject];
+        /* ---- 新增方案库加载：html2canvas-pro / dom-to-image-more 的 UMD 全局名与原版相同，需强制加载后立即取引用并恢复原全局 ---- */
+        function imgExpLoadScriptForce(url) {
+            return new Promise(function(res, rej) {
+                var s = document.createElement('script');
+                s.onload = function() { res(); };
+                s.onerror = function() { rej(new Error('脚本加载失败（网络/CDN 不可达）')); };
+                s.src = url;
+                document.head.appendChild(s);
+            });
+        }
+        async function imgExpLoadH2CPro() {
+            if (__imgExpH2CPro) return;
+            var saved = window.html2canvas;
+            await imgExpLoadScriptForce('https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js');
+            __imgExpH2CPro = window.html2canvas;
+            if (saved) window.html2canvas = saved;
+        }
+        async function imgExpLoadDtiMore() {
+            if (__imgExpDtiMore) return __imgExpDtiMore;
+            var saved = window.domtoimage;
+            await imgExpLoadScriptForce('https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.5/dist/dom-to-image-more.min.js');
+            __imgExpDtiMore = window.domtoimage;
+            if (saved) window.domtoimage = saved;
+            return __imgExpDtiMore;
+        }
 
-        async function imgExpRun(id) {
+        async function imgExpHtml2CanvasPro(d, cw, ah, scale) {
+            await imgExpLoadH2CPro();
+            var canvas = await __imgExpH2CPro(d.body, { scale: scale, backgroundColor: '#ffffff', logging: false, width: cw, height: ah, windowWidth: 900, windowHeight: ah });
+            var blob = await imgExpToBlob(canvas);
+            return { blob: blob, w: canvas.width, h: canvas.height };
+        }
+        async function imgExpDomToImageMore(d, cw, ah, scale) {
+            var lib = await imgExpLoadDtiMore();
+            var url = await lib.toPng(d.body, { style: { margin: '0' } });
+            return await imgExpDataUrlInfo(url);
+        }
+        async function imgExpHtml2CanvasEnhanced(d, cw, ah, scale) {
+            /* 数学字体按需逐个下载：更长的字体就绪等待，避免字形宽度错误导致公式错位 */
+            try { if (d.fonts && d.fonts.ready) await Promise.race([d.fonts.ready, new Promise(function(r) { setTimeout(r, 10000); })]); } catch (e) {}
+            await new Promise(function(r) { setTimeout(r, 300); });
+            return await imgExpHtml2Canvas(d, cw, ah, scale);
+        }
+
+        var IMG_EXP_RUNNERS = [imgExpHtml2Canvas, imgExpHtmlToImage, imgExpModern, imgExpSnapdom, imgExpDomToImage, imgExpForeignObject, imgExpHtml2CanvasPro, imgExpDomToImageMore, imgExpHtml2CanvasEnhanced];
+
+        async function imgExpRun(id, autoSave) {
             var m = IMG_EXP_METHODS[id];
             imgExpSetState(id, '运行中…', '#ffd57a');
             imgExpSetBody(id, '');
+            var btns = document.querySelectorAll('#imgexp-card-' + id + ' button');
+            for (var bi = 0; bi < btns.length; bi++) btns[bi].disabled = true;
             var t = performance.now();
             var prep = null;
             try {
@@ -5788,21 +5849,28 @@
                 imgExpSetBody(id,
                     '<div style="font-size:11px;color:#8ab;margin:8px 0 4px;">' + result.w + '×' + result.h + ' · ' + (result.blob.size / 1024).toFixed(0) + ' KB · 耗时 ' + secs + 's</div>' +
                     '<div style="background:#fff;border-radius:6px;padding:4px;"><img src="' + URL.createObjectURL(result.blob) + '" style="max-width:100%;height:auto;display:block;"></div>' +
-                    '<button class="btn btn-sm btn-success" onclick="imgExpSave(' + id + ')" style="font-size:11px;padding:4px 14px;margin-top:6px;">💾 保存图片</button>');
+                    (autoSave ? '' : '<button class="btn btn-sm btn-success" onclick="imgExpSave(' + id + ')" style="font-size:11px;padding:4px 14px;margin-top:6px;">💾 保存图片</button>'));
+                if (autoSave) imgExpSave(id);
             } catch (e) {
                 var secs2 = ((performance.now() - t) / 1000).toFixed(1);
                 imgExpSetState(id, '✗ 失败', '#ff9a9a');
                 imgExpSetBody(id, '<div style="font-size:11px;color:#ffd57a;background:#3a2a00;padding:6px;border-radius:4px;margin-top:6px;line-height:1.5;">' + ((e && e.message) ? e.message : String(e)) + '</div>');
             } finally {
                 imgExpCleanup(prep);
+                var btns2 = document.querySelectorAll('#imgexp-card-' + id + ' button');
+                for (var bj = 0; bj < btns2.length; bj++) btns2[bj].disabled = false;
             }
+        }
+
+        async function imgExpExport(id) {
+            await imgExpRun(id, true);
         }
 
         async function imgExpRunAll() {
             for (var i = 0; i < IMG_EXP_METHODS.length; i++) {
                 await imgExpRun(i);
             }
-            showToast('6 个方案全部运行完毕，请查看各卡片结果', 'info');
+            showToast(IMG_EXP_METHODS.length + ' 个方案全部测试完毕，请查看各卡片结果', 'info');
         }
 
         function imgExpSave(id) {
