@@ -3398,18 +3398,47 @@
             const settingsContent = `
                 <div style="max-height: 60vh; overflow-y: auto;">
                     <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">🔗 分享设置</h4>
-                        <div style="margin-bottom: 16px;">
-                            <label for="modalShareBaseUrl" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">分享链接基础URL：</label>
-                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                                <input type="text" id="modalShareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 200px;">
-                                <button class="btn btn-sm btn-primary" onclick="saveModalShareBaseUrl()">保存</button>
-                                <button class="btn btn-sm btn-secondary" onclick="resetModalShareBaseUrl()">重置</button>
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">☁️ 收藏夹云同步（GitHub）</h4>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 140px;">
+                                <label for="favSyncOwner" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">GitHub 用户名：</label>
+                                <input type="text" id="favSyncOwner" placeholder="例如：pHsl-z" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
                             </div>
-                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
+                            <div style="flex: 1; min-width: 140px;">
+                                <label for="favSyncRepo" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">仓库名（建议私有）：</label>
+                                <input type="text" id="favSyncRepo" placeholder="例如：my-favorites-sync" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
                         </div>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 120px;">
+                                <label for="favSyncBranch" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">分支：</label>
+                                <input type="text" id="favSyncBranch" placeholder="main" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label for="favSyncPath" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">文件路径：</label>
+                                <input type="text" id="favSyncPath" placeholder="favorites.json" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label for="favSyncToken" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">访问令牌（Fine-grained PAT）：</label>
+                            <input type="password" id="favSyncToken" autocomplete="off" placeholder="github_pat_ 或 ghp_ 开头" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 6px 0 0;">创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。Repository access 仅选择该仓库，权限只需 Contents: Read and write。令牌仅保存在本设备浏览器，不会写入代码；输入框留空表示保留已保存的令牌。</p>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label for="favSyncDevice" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">设备名称（用于区分多端）：</label>
+                            <input type="text" id="favSyncDevice" placeholder="例如：我的iPad" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-primary" onclick="saveModalFavSync()">保存</button>
+                            <button class="btn btn-sm btn-secondary" onclick="testFavSyncConnection()">测试连接</button>
+                            <button class="btn btn-sm btn-secondary" onclick="favSyncConfigImportClick()" title="从配置 MD / JSON 文件自动填入，免手动输入">📥 导入配置文件</button>
+                            <button class="btn btn-sm btn-secondary" onclick="favSyncLinkGenClick()" title="生成含二维码的一键配置链接（含令牌，仅限自己设备间使用）">🔗 生成配置链接</button>
+                            <input type="file" id="favSyncImportFile" accept=".md,.markdown,.json,.txt" style="display: none;" onchange="handleFavSyncConfigImport(this)">
+                            <span id="favSyncTestResult" style="font-size: 12px;"></span>
+                        </div>
+                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。上传和拉取均为「合并模式」：多台设备的内容会自动合并保留（双方都不会被覆盖），删除也会跨设备生效。换新设备时，点「📥 导入配置文件」选择配置文档即可一键填入（令牌等敏感信息请勿公开分享）。</p>
                     </div>
-                    
+
                     <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
                         <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">💾 自动保存</h4>
                         <div style="margin-bottom: 16px;">
@@ -3525,47 +3554,18 @@
                             <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置DOCX导出的正文字号，影响方案4/5。</p>
                         </div>
                     </div>
-                    
+
                     <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">☁️ 收藏夹云同步（GitHub）</h4>
-                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 140px;">
-                                <label for="favSyncOwner" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">GitHub 用户名：</label>
-                                <input type="text" id="favSyncOwner" placeholder="例如：pHsl-z" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
+                        <h4 style="color: #e6e6e6; margin-bottom: 16px; font-size: 14px; font-weight: 500;">🔗 分享设置</h4>
+                        <div style="margin-bottom: 16px;">
+                            <label for="modalShareBaseUrl" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 8px; font-size: 13px; font-weight: 500;">分享链接基础URL：</label>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                                <input type="text" id="modalShareBaseUrl" class="setting-input" placeholder="例如：https://example.com/editor.html" style="padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; min-width: 200px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveModalShareBaseUrl()">保存</button>
+                                <button class="btn btn-sm btn-secondary" onclick="resetModalShareBaseUrl()">重置</button>
                             </div>
-                            <div style="flex: 1; min-width: 140px;">
-                                <label for="favSyncRepo" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">仓库名（建议私有）：</label>
-                                <input type="text" id="favSyncRepo" placeholder="例如：my-favorites-sync" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
-                            </div>
+                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 0;">设置用于生成分享链接的基础URL，默认使用当前页面URL。</p>
                         </div>
-                        <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 120px;">
-                                <label for="favSyncBranch" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">分支：</label>
-                                <input type="text" id="favSyncBranch" placeholder="main" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
-                            </div>
-                            <div style="flex: 1; min-width: 120px;">
-                                <label for="favSyncPath" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">文件路径：</label>
-                                <input type="text" id="favSyncPath" placeholder="favorites.json" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <label for="favSyncToken" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">访问令牌（Fine-grained PAT）：</label>
-                            <input type="password" id="favSyncToken" autocomplete="off" placeholder="github_pat_ 或 ghp_ 开头" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
-                            <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 6px 0 0;">创建方法：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。Repository access 仅选择该仓库，权限只需 Contents: Read and write。令牌仅保存在本设备浏览器，不会写入代码；输入框留空表示保留已保存的令牌。</p>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <label for="favSyncDevice" class="setting-label" style="display: block; color: #e6e6e6; margin-bottom: 6px; font-size: 12px; font-weight: 500;">设备名称（用于区分多端）：</label>
-                            <input type="text" id="favSyncDevice" placeholder="例如：我的iPad" style="width: 100%; padding: 8px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; color: #e6e6e6; font-size: 13px; border-radius: 4px; outline: none; box-sizing: border-box;">
-                        </div>
-                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-primary" onclick="saveModalFavSync()">保存</button>
-                            <button class="btn btn-sm btn-secondary" onclick="testFavSyncConnection()">测试连接</button>
-                            <button class="btn btn-sm btn-secondary" onclick="favSyncConfigImportClick()" title="从配置 MD / JSON 文件自动填入，免手动输入">📥 导入配置文件</button>
-                            <button class="btn btn-sm btn-secondary" onclick="favSyncLinkGenClick()" title="生成含二维码的一键配置链接（含令牌，仅限自己设备间使用）">🔗 生成配置链接</button>
-                            <input type="file" id="favSyncImportFile" accept=".md,.markdown,.json,.txt" style="display: none;" onchange="handleFavSyncConfigImport(this)">
-                            <span id="favSyncTestResult" style="font-size: 12px;"></span>
-                        </div>
-                        <p style="color: #888888; font-size: 11px; line-height: 1.5; margin: 10px 0 0;">配置后，在收藏夹页面点击「☁️ 同步」即可在多台设备间上传 / 拉取收藏数据。上传和拉取均为「合并模式」：多台设备的内容会自动合并保留（双方都不会被覆盖），删除也会跨设备生效。换新设备时，点「📥 导入配置文件」选择配置文档即可一键填入（令牌等敏感信息请勿公开分享）。</p>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap;">
