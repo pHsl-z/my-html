@@ -4736,12 +4736,22 @@
                         };
                     };
 
+                    // 本机实测：iPhone 上原版 html2canvas 无法出图，仅 html2canvas-pro 成功。
+                    // iOS 优先用 pro（按需加载，失败则回退原版），桌面端保持原版不变
+                    let h2cFn = html2canvas;
+                    if (isIOS() && typeof imgExpLoadH2CPro === 'function') {
+                        try {
+                            await imgExpLoadH2CPro();
+                            if (__imgExpH2CPro) h2cFn = __imgExpH2CPro;
+                        } catch (e) {}
+                    }
+
                     let canvas;
                     try {
-                        canvas = await html2canvas(iframeDoc.body, renderOpts(scale));
+                        canvas = await h2cFn(iframeDoc.body, renderOpts(scale));
                     } catch (e) {
                         if (scale > 1) {
-                            canvas = await html2canvas(iframeDoc.body, renderOpts(1));
+                            canvas = await h2cFn(iframeDoc.body, renderOpts(1));
                         } else {
                             throw e;
                         }
@@ -5608,7 +5618,7 @@
             { id: 3, name: 'snapdom', desc: '2024 新库，主打速度快、还原准', lib: 'CDN', ready: function() { return !!window.snapdom; } },
             { id: 4, name: 'dom-to-image', desc: '老牌经典库（2015），固定 1 倍率', lib: 'CDN', ready: function() { return !!window.domtoimage; } },
             { id: 5, name: 'foreignObject 手工实现', desc: '零依赖，纯手写 SVG 截图', lib: '无依赖', ready: function() { return true; } },
-            { id: 6, name: 'html2canvas-pro', desc: 'html2canvas 维护分支，支持现代 CSS（oklch 颜色、锥形渐变等）', lib: 'CDN', ready: function() { return !!__imgExpH2CPro; } },
+            { id: 6, name: 'html2canvas-pro', desc: 'html2canvas 维护分支，支持现代 CSS（oklch 颜色、锥形渐变等）', lib: 'CDN', verified: 'iPhone 实测可用', ready: function() { return !!__imgExpH2CPro; } },
             { id: 7, name: 'dom-to-image-more', desc: 'dom-to-image 维护分支，修复中文字体、内联样式等大量问题，固定 1 倍率', lib: 'CDN', ready: function() { return !!__imgExpDtiMore; } },
             { id: 8, name: 'html2canvas 增强版', desc: '当前方案 + 数学字体就绪等待（最长 10 秒），公式文档更稳', lib: 'html2canvas', ready: function() { return !!window.html2canvas; } }
         ];
@@ -5621,10 +5631,14 @@
                 var ready = m.ready();
                 var btnText = ready ? '🚀 导出图片' : '📥 加载并导出';
                 var btnClass = ready ? 'btn-success' : 'btn-warning';
-                return '<div id="imgexp-card-' + m.id + '" style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">' +
+                // verified：用户在本机实测通过的方案，加绿色描边与标记，避免再逐个试错
+                var cardBorder = m.verified ? 'border:1px solid #2f9e63;box-shadow:0 0 0 1px rgba(47,158,99,.22);' : 'border:1px solid #2a2a2a;';
+                var verifiedBadge = m.verified ? '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(47,158,99,.22);color:#7be4a8;white-space:nowrap;">✅ ' + m.verified + '</span>' : '';
+                return '<div id="imgexp-card-' + m.id + '" style="padding:12px;margin-bottom:8px;background:#1a1a1a;border-radius:8px;' + cardBorder + '">' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                         '<span style="color:#e6e6e6;font-size:13px;font-weight:500;">' + (m.id + 1) + '. ' + m.name + '</span>' +
-                        '<span style="display:flex;align-items:center;gap:6px;">' +
+                        '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">' +
+                            verifiedBadge +
                             '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(151,119,43,.2);color:#e0b45c;">PNG</span>' +
                             '<span id="imgexp-st-' + m.id + '" style="font-size:11px;color:#888;white-space:nowrap;">待运行</span>' +
                         '</span>' +
@@ -5647,6 +5661,7 @@
                         '<span style="color:#e6e6e6;font-size:14px;font-weight:500;">🖼️ 图片多方案导出</span>' +
                         '<span style="color:#888;font-size:11px;">共' + IMG_EXP_METHODS.length + '种方案</span>' +
                     '</div>' +
+                    '<p style="color:#7be4a8;font-size:11px;line-height:1.5;margin:0 0 6px;">✅ 本机实测结论：<b>方案7 · html2canvas-pro</b> 可以成功导出，其余方案均失败（已在该卡片加绿色标记）。手机上导出请直接用它。</p>' +
                     '<p style="color:#888;font-size:11px;line-height:1.5;">点「导出图片」直接生成并保存（自动加载所需库）；点「测试」只生成预览不保存。失败会显示具体原因，便于排查 iOS 问题。</p>' +
                     '<div style="display:flex;align-items:center;gap:12px;margin:8px 0;flex-wrap:wrap;">' +
                         '<span style="color:#888;font-size:11px;">倍率：</span>' +
