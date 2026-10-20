@@ -4630,6 +4630,18 @@
         }
 
         // 整页导出为 PNG 长图：文字与公式无损，iOS 相册原生支持
+        /* MathJax v3 每个公式内含 <mjx-assistive-mml>（供屏幕阅读器的 MathML 副本，
+           以 1px clip 隐藏）。html2canvas 对 clip 隐藏支持不完整，会把这层隐藏文字
+           一并绘制：与可见公式叠加产生"重影"，还会撑高导出画布（实测 798px 宽文档
+           多出约 1000px 高度）、渲染耗时增加约 3 倍。导出前移除，预览显示不受影响。 */
+        function stripAssistiveMathMl(doc) {
+            try {
+                if (!doc || !doc.querySelectorAll) return;
+                var nodes = doc.querySelectorAll('mjx-assistive-mml');
+                for (var i = 0; i < nodes.length; i++) nodes[i].remove();
+            } catch (e) {}
+        }
+
         async function exportToImage() {
             const content = htmlEditor.value.trim();
             if (!content) {
@@ -4664,6 +4676,8 @@
                     sanitizePreviewDoc(iframeDoc);
 
                     await waitForIframeRender(iframeDoc, 12000);
+                    // MathJax 排版完成后才存在 assistive-mml，须在等待之后移除
+                    stripAssistiveMathMl(iframeDoc);
 
                     // 内容真实宽度 = body 直接子元素的跨度（最右 - 最左）。
                     // scrollWidth 在内容窄于视口时返回视口宽（900），
@@ -5682,6 +5696,8 @@
             iframeDoc.open(); iframeDoc.write(content); iframeDoc.close();
             sanitizePreviewDoc(iframeDoc);
             await waitForIframeRender(iframeDoc, 12000);
+            // MathJax 排版完成后才存在 assistive-mml，须在等待之后移除
+            stripAssistiveMathMl(iframeDoc);
             var contentWidth = 0, minLeft = Infinity, maxRight = -Infinity, actualHeight = 0;
             var kids = iframeDoc.body.children;
             for (var i = 0; i < kids.length; i++) {
