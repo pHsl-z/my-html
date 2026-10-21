@@ -182,6 +182,10 @@
             overscroll-behavior: contain;
             overflow: auto;
             touch-action: pan-x pan-y;
+            /* iOS 滚动丝滑优化：强制 iframe 独立 GPU 合成层，滚动重绘不阻塞主线程
+               （普通/全屏态通用，全屏变体只覆盖尺寸不覆盖本属性） */
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
 
         /* 按钮触摸优化 - 针对iOS Edge */
@@ -2851,10 +2855,12 @@
                                     curEvent = e;
                                     setTimeout(function () { curEvent = null; }, 0);
                                 };
-                                previewDoc.addEventListener('touchstart', track, true);
-                                previewDoc.addEventListener('touchmove', track, true);
-                                previewDoc.addEventListener('touchend', trackEnd, true);
-                                previewDoc.addEventListener('touchcancel', trackEnd, true);
+                                // passive:true：监听器只记录引用、从不 preventDefault，
+                                // 标记为被动可避免 iOS 每次触摸滚动前同步等待该监听器
+                                previewDoc.addEventListener('touchstart', track, { capture: true, passive: true });
+                                previewDoc.addEventListener('touchmove', track, { capture: true, passive: true });
+                                previewDoc.addEventListener('touchend', trackEnd, { capture: true, passive: true });
+                                previewDoc.addEventListener('touchcancel', trackEnd, { capture: true, passive: true });
                                 pw.Touch.prototype.preventDefault = function () {
                                     if (curEvent && curEvent.cancelable) curEvent.preventDefault();
                                 };
