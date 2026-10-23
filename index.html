@@ -4742,10 +4742,10 @@
                         };
                     };
 
-                    // 本机实测：iPhone 上原版 html2canvas 无法出图，仅 html2canvas-pro 成功。
-                    // iOS 优先用 pro（按需加载，失败则回退原版），桌面端保持原版不变
+                    // 用户实测：原版 html2canvas 在 iPhone 上无法出图，方案7（html2canvas-pro）实测可用。
+                    // 主「导出图片」统一使用 html2canvas-pro（按需加载，加载失败自动回退原版）
                     let h2cFn = html2canvas;
-                    if (isIOS() && typeof imgExpLoadH2CPro === 'function') {
+                    if (typeof imgExpLoadH2CPro === 'function') {
                         try {
                             await imgExpLoadH2CPro();
                             if (__imgExpH2CPro) h2cFn = __imgExpH2CPro;
