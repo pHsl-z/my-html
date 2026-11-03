@@ -4336,8 +4336,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.36';
-        const APP_BUILD_TIME = '2026-11-03 22:38';
+        const APP_VERSION = 'v1.37';
+        const APP_BUILD_TIME = '2026-11-04 02:10';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6210,41 +6210,15 @@
                     // （二次打印时内存紧张尤其容易中招）
                     try { document.body.getBoundingClientRect(); } catch (e) {}
 
-                    // 面板关闭（含取消）后自动返回；处理器挂在 window 上，
-                    // 不随 DOM 替换而失效。
-                    // iOS 已知怪癖（WebKit bug 245171 / 316284，实测 iOS 26）：
-                    // print() 调用后、打印面板还开着的时候，afterprint 就会
-                    // "假触发"（面板弹出 + 每次调整打印百分比重渲染都会来）。
-                    // 此刻绝不能 reload——用户还在看预览，底层页面一旦换页，
-                    // iOS 打印预览重渲染就会抓到空白文档，预览全白。
-                    window.__iosPrintAt = Date.now();
-                    window.__printReturned = false;
-                    window.__sawBlur = false;
-                    window.__iosDoPrint = function () {
-                        window.__iosPrintAt = Date.now();
-                        // 先确保本窗口持有焦点：打印面板接管时才会触发 blur、
-                        // 关闭时才会触发 focus——返回信号完全依赖这一对事件
-                        try { window.focus(); } catch (e) {}
-                        window.print();
-                    };
-                    // afterprint 绝不作为返回信号（WebKit bug 245171/316284，
-                    // 实测 iOS 26.5）：面板打开期间它会随每次调整缩放百分比
-                    // 反复假触发，1.5s 与 8s 时间窗守卫均被后续缩放操作击穿
-                    // （实测：前几秒缩放正常，8s 后再点缩放全白）。任何时间
-                    // 窗口都不可靠，故彻底不监听 afterprint。
-                    // 面板真正关闭的唯一可靠信号：window blur（面板接管焦点）
-                    // 之后的 window focus（焦点归还页面）。
-                    // 注：若个别流程 blur 未触发（如页面刚加载就打印），自动
-                    // 返回会缺席，用户点控制条「返回编辑器」即可——宁可多
-                    // 点一下，绝不能在面板打开期间 reload 导致预览全白。
-                    window.addEventListener('blur', function () {
-                        if (Date.now() - window.__iosPrintAt < 3000) window.__sawBlur = true;
-                    });
-                    window.addEventListener('focus', function () {
-                        if (window.__printReturned || !window.__sawBlur) return;
-                        window.__printReturned = true;
-                        setTimeout(function () { location.reload(); }, 400);
-                    });
+                    window.__iosDoPrint = function () { window.print(); };
+                    // 不做"自动返回"：iOS 26 实测，打印面板打开期间只要在
+                    // 面板里连续调节缩放（例如调到 95%），WebKit 就会反复假
+                    // 触发 window focus。旧代码一收到 focus 就 reload，面板
+                    // 重渲染时抓到正在加载的空白文档，打印预览就变成空白页
+                    //（现象：前几秒缩放正常，过一会儿再点缩放全白）。
+                    // WebKit 没有任何可靠的"面板已关闭"信号（bug 245171 /
+                    // 316284），因此返回统一交给控制条上的「↩ 返回编辑器」
+                    // 按钮，宁可多点一下，也绝不能在面板打开期间整页替换。
 
                     // 仍在用户手势调用栈内：iOS 必弹打印面板；万一被系统丢弃，
                     // 屏幕上的「立即打印」按钮就是兜底入口
