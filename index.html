@@ -4335,9 +4335,9 @@
             }
         }
         
-        // 版本更新时间的兜底值（离线打开或取不到服务器时间时显示）
-        // 每次发布新版本时更新这一行
-        const APP_BUILD_TIME = '2026-11-03 20:11';
+        // 版本号与更新时间：每次发布新版本时同时更新这两行
+        const APP_VERSION = 'v1.34';
+        const APP_BUILD_TIME = '2026-11-03 21:56';
 
         // 功能简介显示函数
         function showHelp() {
@@ -4420,7 +4420,7 @@
                 </div>
 
                 <div style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e8e8ed;">
-                    <span id="helpBuildTime" style="color: #a1a1a6; font-size: 12px;">版本更新时间：${APP_BUILD_TIME}</span>
+                    <span id="helpBuildTime" style="color: #a1a1a6; font-size: 12px;">版本 ${APP_VERSION} · 更新 ${APP_BUILD_TIME}</span>
                 </div>
             `;
 
@@ -4439,7 +4439,7 @@
                     .then(function(lm) {
                         const d = new Date(lm);
                         if (!lm || isNaN(d.getTime())) return;
-                        el.textContent = '版本更新时间：' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' +
+                        el.textContent = '版本 ' + APP_VERSION + ' · 更新 ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' +
                             pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '（AI 修改）';
                     })
                     .catch(function() { /* 离线或取不到头信息：保留兜底值 */ });
