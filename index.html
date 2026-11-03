@@ -6040,9 +6040,73 @@
             } catch (e) { return { revert: null, scaled: [] }; }
         }
 
+        // 识别按"纸张"排版的分页块：.page / .a4-page / .paper 等类名，
+        // 或 body 直接子元素中宽 ≥190mm、高 ≥240mm 的块（作者常自定义类名）
+        function getPaperBlocks(pDoc) {
+            var out = [];
+            if (!pDoc || !pDoc.querySelectorAll) return out;
+            var sels = ['.page', '.a4-page', '.paper', '.sheet', '.page-a4'];
+            for (var s = 0; s < sels.length; s++) {
+                var nodes = pDoc.querySelectorAll(sels[s]);
+                for (var i = 0; i < nodes.length; i++) {
+                    if (out.indexOf(nodes[i]) < 0) out.push(nodes[i]);
+                }
+            }
+            if (!out.length && pDoc.body) {
+                var pxPerMm = 96 / 25.4;
+                var kids = pDoc.body.children;
+                for (var j = 0; j < kids.length; j++) {
+                    var r = kids[j].getBoundingClientRect();
+                    if (r.width / pxPerMm >= 190 && r.height / pxPerMm >= 240) out.push(kids[j]);
+                }
+            }
+            return out;
+        }
+
+        // 把纸张块等比缩进可打印区域（宽、高同时约束）。
+        // 常见问题：文档写 .a4-page{width:210mm}，而打印又有 12mm 页边距，
+        // 可打印宽只有 186mm → 右侧文字被裁掉。缩放后整体落进可打印区。
+        // 用 zoom 而不是 transform：zoom 同时改变布局尺寸（min-height 297mm
+        // 也跟着缩），分页框才不会仍按 297mm 计算而多出空白页。
+        var __zoomSupported = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '0.5');
+        function applyScaleToPrintableArea(blocks, printableWmm, printableHmm) {
+            var pxPerMm = 96 / 25.4;
+            var touched = [], scaled = [];
+            for (var i = 0; i < blocks.length; i++) {
+                var b = blocks[i];
+                var r = b.getBoundingClientRect();
+                var wmm = r.width / pxPerMm, hmm = r.height / pxPerMm;
+                if (!wmm || !hmm) continue;
+                var k = Math.min(1, printableWmm / wmm, printableHmm / hmm);
+                if (k >= 0.999) continue;
+                touched.push({ el: b, style: b.getAttribute('style') });
+                scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((wmm - printableWmm) * 10) / 10) });
+                if (__zoomSupported) {
+                    b.style.zoom = k;
+                } else {
+                    // 回退：transform 不改变布局尺寸，用负 margin 收回多出的占位高度
+                    b.style.transform = 'scale(' + k + ')';
+                    b.style.transformOrigin = 'top left';
+                    b.style.position = 'relative';
+                    b.style.marginBottom = (-(hmm * (1 - k))).toFixed(2) + 'mm';
+                }
+            }
+            if (!touched.length) return { revert: null, scaled: [] };
+            return {
+                scaled: scaled,
+                revert: function() {
+                    touched.forEach(function(t) {
+                        if (t.style === null) t.el.removeAttribute('style');
+                        else t.el.setAttribute('style', t.style);
+                    });
+                }
+            };
+        }
+
         // 打印：全自动保证 A4 版面（iOS 与 macOS 一致）
         // 1) 有 .page 分页结构的文档：超高页自动等比缩放进 A4，@page 强制 A4、边距 0
-        // 2) 无分页结构的流式文档：@page 强制 A4、边距 12mm，内容自然分页
+        // 2) 自定义纸张块（.a4-page 等）：等比缩进可打印区，避免右侧/底部被裁
+        // 3) 无分页结构的流式文档：@page 强制 A4、边距 12mm，内容自然分页
         // 全程同步执行，保持在用户手势内（iOS 要求 print() 必须由手势触发）
         function printCurrentPreview() {
             try {
@@ -6057,12 +6121,27 @@
 
                 const firstPage = previewDoc.querySelector('.page');
                 const pxPerMm = 96 / 25.4;
-                const landscape = firstPage && firstPage.getBoundingClientRect().width / pxPerMm > 260;
-                const pageMargin = firstPage ? '0' : '12mm';
-                const orient = landscape ? 'landscape' : 'portrait';
+                let pageMargin = firstPage ? '0' : '12mm';
+                let orient = firstPage && firstPage.getBoundingClientRect().width / pxPerMm > 260 ? 'landscape' : 'portrait';
 
-                // 自动缩放超高页（临时改预览 DOM，打印后恢复）
-                const fit = applyScaleToFitPages(previewDoc);
+                // 打印前把版面缩进可打印区（临时改预览 DOM，打印后恢复）
+                let fit;
+                if (firstPage) {
+                    // .page 结构：@page 边距 0，只按纸高缩放超高页
+                    fit = applyScaleToFitPages(previewDoc);
+                } else {
+                    // 自定义纸张块（如 .a4-page 宽 210mm）：带页边距时可打印宽只有
+                    // 210-24=186mm，块超出 24mm，右侧文字会被裁掉 → 等比缩进
+                    const blocks = getPaperBlocks(previewDoc);
+                    const firstWmm = blocks.length ? blocks[0].getBoundingClientRect().width / pxPerMm : 0;
+                    if (firstWmm > 260) orient = 'landscape';
+                    const paperW = firstWmm > 260 ? 297 : 210;
+                    const paperH = firstWmm > 260 ? 210 : 297;
+                    const m = 12;
+                    fit = blocks.length
+                        ? applyScaleToPrintableArea(blocks, paperW - m * 2, paperH - m * 2)
+                        : { revert: null, scaled: [] };
+                }
                 const scaledText = fit.scaled.map(function(s) { return '第 ' + s.page + ' 页（' + Math.round(s.k * 100) + '%）'; }).join('、');
 
                 if (isIOS()) {
