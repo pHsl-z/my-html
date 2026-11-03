@@ -6088,33 +6088,39 @@
             return out;
         }
 
-        // 把纸张块等比缩进可打印区域（宽、高同时约束）。
-        // 常见问题：文档写 .a4-page{width:210mm}，而打印又有 12mm 页边距，
-        // 可打印宽只有 186mm → 右侧文字被裁掉。缩放后整体落进可打印区。
-        // 用 zoom 而不是 transform：zoom 同时改变布局尺寸（min-height 297mm
-        // 也跟着缩），分页框才不会仍按 297mm 计算而多出空白页。
-        var __zoomSupported = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '0.5');
+        // 把纸张块收进可打印区域，避免右侧/底部被裁掉。
+        // 关键：收缩的是"真实布局宽度"，不是 zoom/transform 缩放。
+        // iOS 打印引擎会忽略 zoom，靠缩放仍然横向裁切；把块宽直接设成
+        // 可打印宽度后文字重新折行，任何打印引擎都不可能超出纸张。
+        // 收窄后内容会变高，超出可打印高度时再用 transform 等比压缩，
+        // 并用负 margin 收回占位高度（transform 若不生效只是多出一页，不会裁字）。
         function applyScaleToPrintableArea(blocks, printableWmm, printableHmm) {
             var pxPerMm = 96 / 25.4;
             var touched = [], scaled = [];
             for (var i = 0; i < blocks.length; i++) {
                 var b = blocks[i];
-                var r = b.getBoundingClientRect();
-                var wmm = r.width / pxPerMm, hmm = r.height / pxPerMm;
-                if (!wmm || !hmm) continue;
-                var k = Math.min(1, printableWmm / wmm, printableHmm / hmm);
-                if (k >= 0.999) continue;
+                var w0 = b.getBoundingClientRect().width / pxPerMm;
+                if (!w0) continue;
                 touched.push({ el: b, style: b.getAttribute('style') });
-                scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((wmm - printableWmm) * 10) / 10) });
-                if (__zoomSupported) {
-                    b.style.zoom = k;
-                } else {
-                    // 回退：transform 不改变布局尺寸，用负 margin 收回多出的占位高度
+
+                // 1) 布局宽度收到可打印宽度（留 10mm 打印安全余量，
+                //    兼容打印机不可打印边缘、系统默认页边距，甚至 iOS 忽略
+                //    @page 后用 16mm 边距的情形）
+                var targetW = Math.min(w0, printableWmm - 10);
+                if (w0 > targetW) b.style.setProperty('width', targetW.toFixed(2) + 'mm', 'important');
+                // 解除纸张块的固定页高，改按内容实际高度判断
+                b.style.setProperty('min-height', '0mm', 'important');
+
+                // 2) 折行后高度若超出可打印高度，等比压缩
+                var hmm = b.getBoundingClientRect().height / pxPerMm;
+                var k = Math.min(1, printableHmm / hmm);
+                if (k < 0.999) {
                     b.style.transform = 'scale(' + k + ')';
                     b.style.transformOrigin = 'top left';
                     b.style.position = 'relative';
                     b.style.marginBottom = (-(hmm * (1 - k))).toFixed(2) + 'mm';
                 }
+                scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((w0 - targetW) * 10) / 10) });
             }
             if (!touched.length) return { revert: null, scaled: [] };
             return {
@@ -6167,7 +6173,12 @@
                         ? applyScaleToPrintableArea(blocks, paperW - m * 2, paperH - m * 2)
                         : { revert: null, scaled: [] };
                 }
-                const scaledText = fit.scaled.map(function(s) { return '第 ' + s.page + ' 页（' + Math.round(s.k * 100) + '%）'; }).join('、');
+                // 提示文案：宽度收窄 + 需要时的高度压缩
+                const fitDesc = fit.scaled.length
+                    ? (fit.scaled.some(function(s) { return s.k < 1; })
+                        ? '已自动缩放 ' + fit.scaled.map(function(s) { return '第 ' + s.page + ' 页（' + Math.round(s.k * 100) + '%）'; }).join('、')
+                        : '已自动收进 A4 可打印区域（' + fit.scaled.length + ' 页）')
+                    : '';
 
                 if (isIOS()) {
                     try {
@@ -6190,7 +6201,7 @@
 
                     // 常驻控制条：自动打印未弹出时点「立即打印」，自动返回失效时点「返回编辑器」
                     // padding-top 加安全区高度，避开灵动岛/状态栏
-                    var barText = fit.scaled.length ? '🖨️ 已自动缩放 ' + scaledText + ' 适配 A4' : '🖨️ 打印预览';
+                    var barText = fitDesc ? '🖨️ ' + fitDesc : '🖨️ 打印预览';
                     var bar = '<div id="_pbar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 9px);display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;">'
                         + '<span>' + barText + '</span>'
                         + '<button onclick="window.__iosDoPrint()" style="background:#00a86b;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">🖨️ 立即打印</button>'
@@ -6269,7 +6280,7 @@
                     }
                 `;
                 previewDoc.head.appendChild(printStyle);
-                if (fit.scaled.length) showToast('已自动缩放 ' + scaledText + ' 以适配 A4', 'success');
+                if (fitDesc) showToast(fitDesc, 'success');
                 previewFrame.contentWindow.print();
                 if (fit.revert) fit.revert();
                 setTimeout(() => {
