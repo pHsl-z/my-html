@@ -4336,8 +4336,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.34';
-        const APP_BUILD_TIME = '2026-11-03 21:56';
+        const APP_VERSION = 'v1.35';
+        const APP_BUILD_TIME = '2026-11-03 22:12';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6096,18 +6096,24 @@
         // 并用负 margin 收回占位高度（transform 若不生效只是多出一页，不会裁字）。
         function applyScaleToPrintableArea(blocks, printableWmm, printableHmm) {
             var pxPerMm = 96 / 25.4;
-            var touched = [], scaled = [];
+            var touched = [], scaled = [], fitW = 0;
             for (var i = 0; i < blocks.length; i++) {
                 var b = blocks[i];
                 var w0 = b.getBoundingClientRect().width / pxPerMm;
                 if (!w0) continue;
-                touched.push({ el: b, style: b.getAttribute('style') });
+                touched.push({ el: b, style: b.getAttribute('style'), hadClass: b.classList.contains('__pfit') });
+                // 打上标记类：快照里还有一条打印样式表按这个类再约束一次宽度，
+                // 双保险（内联 !important + 类规则），不依赖某一个引擎的偏好
+                b.classList.add('__pfit');
 
-                // 1) 布局宽度收到可打印宽度（留 10mm 打印安全余量，
-                //    兼容打印机不可打印边缘、系统默认页边距，甚至 iOS 忽略
-                //    @page 后用 16mm 边距的情形）
-                var targetW = Math.min(w0, printableWmm - 10);
+                // 1) 布局宽度收到可打印宽度（留 18mm 安全余量，覆盖打印机
+                //    不可打印边缘、系统默认页边距，以及 iOS 按 16mm 边距排版
+                //    等情形，保证任何引擎都不会横向溢出纸张）
+                var targetW = Math.min(w0, printableWmm - 18);
                 if (w0 > targetW) b.style.setProperty('width', targetW.toFixed(2) + 'mm', 'important');
+                fitW = Math.max(fitW, targetW);
+                // 内边距算进宽度里，防止 width + padding 再次超出纸张
+                b.style.setProperty('box-sizing', 'border-box', 'important');
                 // 解除纸张块的固定页高，改按内容实际高度判断
                 b.style.setProperty('min-height', '0mm', 'important');
 
@@ -6122,13 +6128,15 @@
                 }
                 scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((w0 - targetW) * 10) / 10) });
             }
-            if (!touched.length) return { revert: null, scaled: [] };
+            if (!touched.length) return { revert: null, scaled: [], fitWmm: 0 };
             return {
                 scaled: scaled,
+                fitWmm: Math.round(fitW * 100) / 100,
                 revert: function() {
                     touched.forEach(function(t) {
                         if (t.style === null) t.el.removeAttribute('style');
                         else t.el.setAttribute('style', t.style);
+                        if (!t.hadClass) t.el.classList.remove('__pfit');
                     });
                 }
             };
@@ -6196,8 +6204,14 @@
                     // 换成确定的配置，使 env(safe-area-inset-*) 生效可用
                     fullHtml = fullHtml.replace(/<meta(?=[^>]*name=["']?viewport["']?)[^>]*>/gi, '');
 
+                    // 纸张块双保险：内联宽度之外，再用类规则约束一次；
+                    // 子元素（图片/表格/代码块等）限宽，防止个别元素撑破版面
+                    var fitCss = fit.fitWmm
+                        ? '.__pfit{width:' + fit.fitWmm + 'mm !important;max-width:' + fit.fitWmm + 'mm !important;box-sizing:border-box !important;min-height:0 !important;}'
+                          + '.__pfit img,.__pfit table,.__pfit pre,.__pfit svg,.__pfit canvas,.__pfit iframe{max-width:100% !important;}'
+                        : '';
                     var printCss = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
-                        + '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}</style>';
+                        + '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' + fitCss + '</style>';
 
                     // 常驻控制条：自动打印未弹出时点「立即打印」，自动返回失效时点「返回编辑器」
                     // padding-top 加安全区高度，避开灵动岛/状态栏
@@ -6277,6 +6291,8 @@
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
+                        ${fit.fitWmm ? `.__pfit{width:${fit.fitWmm}mm !important;max-width:${fit.fitWmm}mm !important;box-sizing:border-box !important;min-height:0 !important;}
+                        .__pfit img,.__pfit table,.__pfit pre,.__pfit svg,.__pfit canvas,.__pfit iframe{max-width:100% !important;}` : ''}
                     }
                 `;
                 previewDoc.head.appendChild(printStyle);
