@@ -984,6 +984,125 @@
             }
         }
 
+        /* 手机横屏侧栏：把「AI文档」「预览」两块标题栏收进右侧竖栏，
+           预览独占左侧全部高度（原来两行标题栏要吃掉 126px 高度）。
+           仅 iOS 横屏、且代码窗口处于折叠状态时由 updateLandscapeRail() 启用 */
+        @media (orientation: landscape) and (max-height: 520px) {
+            .container.rail-mode {
+                flex-direction: row;
+            }
+
+            /* 标题栏已搬进侧栏，折叠状态下代码面板本身隐藏 */
+            .container.rail-mode .editor-panel {
+                display: none;
+            }
+
+            .container.rail-mode .preview-panel {
+                flex: 1;
+                min-width: 0;
+                order: 1;
+            }
+
+            #sideRail {
+                order: 2;
+                flex: 0 0 124px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 8px 6px;
+                padding-right: calc(6px + env(safe-area-inset-right));
+                background: #1a1a1a;
+                border-left: 1px solid #2a2a2a;
+                box-sizing: border-box;
+            }
+
+            #sideRail .panel-header {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 6px;
+                padding: 0;
+                border: none;
+                background: transparent;
+            }
+
+            #sideRail .panel-header + .panel-header {
+                border-top: 1px solid #2a2a2a;
+                padding-top: 10px;
+            }
+
+            #sideRail .panel-title {
+                display: flex;
+                width: 100%;
+                gap: 0;
+            }
+
+            #sideRail .panel-title .dropdown {
+                width: 100%;
+            }
+
+            #sideRail .dropdown-toggle {
+                width: 100%;
+                justify-content: space-between;
+                padding: 4px 2px;
+                font-size: 12px;
+            }
+
+            #sideRail .btn-group {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                width: 100%;
+                margin: 0;
+            }
+
+            #sideRail .btn-group .btn {
+                padding: 7px 2px;
+                min-height: 30px;
+                font-size: 10px;
+                justify-content: center;
+                white-space: nowrap;
+            }
+
+            /* 「导出图片」4 个字半栏放不下，占满整行 */
+            #sideRail #exportImageBtn {
+                grid-column: 1 / -1;
+            }
+
+            /* 下拉菜单贴右边缘向左展开，避免超出屏幕 */
+            #sideRail .dropdown-menu {
+                left: auto;
+                right: 0;
+                min-width: 168px;
+            }
+        }
+
+        /* 横屏侧栏模式下代码面板被隐藏，提示消息改为相对视口定位 */
+        body > .toast {
+            position: fixed;
+            top: calc(env(safe-area-inset-top) + 12px);
+            left: 50%;
+            transform: translate(-50%, -12px);
+            background: rgba(30, 30, 30, 0.95);
+            color: #ffffff;
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            z-index: 100000;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            max-width: min(360px, calc(100vw - 32px));
+            width: auto;
+        }
+
+        body > .toast.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+
         /* 全屏预览移动设备优化 */
         @media (max-width: 768px) and (orientation: portrait) {
             .fullscreen-preview .panel-header {
@@ -3103,6 +3222,17 @@
 
                 // 打印前调用：清除缩放状态，避免 transform 干扰 A4 测量与排版
                 doc.__pzReset = function () { try { applyTransform(1); } catch (e) {} };
+                // 父页面调用：把预览缩放到指定比例（横屏侧栏自动适配整页宽度用）
+                doc.__pzSet = function (s) { try { applyTransform(s); } catch (e) {} };
+                // 横屏侧栏模式下预览区比整页窄，自动缩放让整页横向放得下，
+                // 避免每行末尾被右边缘截断（pill 会显示当前比例，可点一下重置）
+                try {
+                    var railHost = (win.parent && win.parent !== win) ? win.parent : null;
+                    if (railHost && railHost.document.querySelector('.container.rail-mode')) {
+                        var cw = Math.max(doc.documentElement.scrollWidth || 0, doc.body.scrollWidth || 0);
+                        if (cw > win.innerWidth) applyTransform(Math.max(MIN, win.innerWidth / cw));
+                    }
+                } catch (e) {}
                 // 序列化预览 DOM 前调用：临时摘除缩放痕迹，返回恢复函数
                 doc.__pzSuspend = function () {
                     try {
@@ -3309,6 +3439,91 @@
             if (!panel) return;
             const collapsed = panel.classList.toggle('collapsed');
             if (arrow) arrow.textContent = collapsed ? '▼' : '▲';
+            // 展开/折叠会改变横屏侧栏是否适用
+            updateLandscapeRail();
+        }
+
+        function findRailHeader(panel) {
+            for (var i = 0; i < panel.children.length; i++) {
+                if (panel.children[i].classList.contains('panel-header')) return panel.children[i];
+            }
+            return null;
+        }
+
+        // 手机横屏侧栏：
+        // 横屏时把「AI文档」与「预览」两块标题栏搬进右侧竖栏，预览独占剩余空间，
+        // 省下原来两行标题栏占用的约 126px 高度。仅在 iOS 横屏、且代码窗口
+        // 折叠（标题栏里没有编辑区）时启用；竖屏、展开编辑区、全屏预览时还原。
+        var __railTimer = null;
+        function updateLandscapeRail() {
+            try {
+                var container = document.querySelector('.container');
+                var editorPanel = document.querySelector('.editor-panel');
+                var previewPanel = document.querySelector('.preview-panel');
+                if (!container || !editorPanel || !previewPanel) return;
+                var rail = document.getElementById('sideRail');
+                var want = isIOS() &&
+                    window.matchMedia('(orientation: landscape)').matches &&
+                    window.innerHeight <= 520 &&
+                    editorPanel.classList.contains('collapsed') &&
+                    !previewPanel.classList.contains('fullscreen-preview');
+
+                if (want) {
+                    if (container.classList.contains('rail-mode')) return;
+                    var eh = findRailHeader(editorPanel);
+                    var ph = findRailHeader(previewPanel);
+                    if (!eh || !ph) return;
+                    if (!rail) {
+                        rail = document.createElement('div');
+                        rail.id = 'sideRail';
+                        container.appendChild(rail);
+                    }
+                    eh.setAttribute('data-rail', 'editor');
+                    ph.setAttribute('data-rail', 'preview');
+                    rail.appendChild(eh);
+                    rail.appendChild(ph);
+                    container.classList.add('rail-mode');
+                    fitPreviewIntoRail();
+                } else if (container.classList.contains('rail-mode')) {
+                    var eh2 = rail && rail.querySelector('[data-rail="editor"]');
+                    var ph2 = rail && rail.querySelector('[data-rail="preview"]');
+                    if (eh2) {
+                        eh2.removeAttribute('data-rail');
+                        editorPanel.insertBefore(eh2, editorPanel.firstChild);
+                    }
+                    if (ph2) {
+                        ph2.removeAttribute('data-rail');
+                        previewPanel.insertBefore(ph2, previewPanel.firstChild);
+                    }
+                    container.classList.remove('rail-mode');
+                    resetPreviewRailFit();
+                }
+            } catch (e) {}
+        }
+
+        // 竖栏占去右侧宽度后，预览比整页（如 A4 794px）窄，自动缩放到刚好放下
+        var __railFitted = false;
+        function fitPreviewIntoRail() {
+            try {
+                var frame = document.getElementById('previewFrame');
+                var doc = frame && (frame.contentDocument || frame.contentWindow.document);
+                if (!doc || !doc.__pzSet || !frame) return;
+                var fw = frame.clientWidth;
+                var cw = Math.max(doc.documentElement.scrollWidth || 0, doc.body ? doc.body.scrollWidth : 0);
+                if (!fw || !cw || cw <= fw) return;
+                doc.__pzSet(Math.max(0.3, fw / cw));
+                __railFitted = true;
+            } catch (e) {}
+        }
+
+        function resetPreviewRailFit() {
+            if (!__railFitted) return;
+            try {
+                var frame = document.getElementById('previewFrame');
+                var doc = frame && (frame.contentDocument || frame.contentWindow.document);
+                if (doc && doc.__pzSet) doc.__pzSet(1);
+            } catch (e) {}
+            __railFitted = false;
         }
 
         // 预览区是 iframe，点击其内部时父页面收不到 click 事件，改由 window blur 关闭所有下拉菜单
@@ -4066,8 +4281,10 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
+            // 横屏侧栏模式下代码面板被隐藏，提示改挂到 body（用视口定位样式）
+            const railMode = document.querySelector('.container.rail-mode');
             const editorPanel = document.querySelector('.editor-panel');
-            (editorPanel || document.body).appendChild(toast);
+            ((railMode ? null : editorPanel) || document.body).appendChild(toast);
             
             // iPad设备调整通知位置（针对代码面板内的toast）
             adjustToastPositionForiPad();
@@ -4266,11 +4483,14 @@
         window.addEventListener('orientationchange', function() {
             // 等待方向变化完成
             setTimeout(updateViewportHeight, 300);
+            setTimeout(updateLandscapeRail, 350);
         });
 
         // 监听视口大小变化（包括地址栏收起/展开）
         window.addEventListener('resize', function() {
             updateViewportHeight();
+            clearTimeout(__railTimer);
+            __railTimer = setTimeout(updateLandscapeRail, 120);
         });
 
         // iOS Safari: 监听 visualViewport 变化（更精确的刘海区域变化检测）
@@ -4282,6 +4502,8 @@
 
         // 初始化视口高度
         updateViewportHeight();
+        // 初始化横屏侧栏（iOS 横屏 + 代码窗口折叠时把标题栏收到右侧）
+        updateLandscapeRail();
         
         function adjustToastPositionForiPad() {
             if (isIOS()) {
@@ -4336,8 +4558,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.37';
-        const APP_BUILD_TIME = '2026-11-04 02:10';
+        const APP_VERSION = 'v1.38';
+        const APP_BUILD_TIME = '2026-11-04 02:28';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6290,6 +6512,9 @@
                 document.body.appendChild(closeBtn);
             }
             
+            // 全屏预览时还原侧栏，退出后再收回去
+            updateLandscapeRail();
+
             // 延迟刷新预览以确保正确渲染
             setTimeout(() => {
                 refreshPreview();
