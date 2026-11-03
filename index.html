@@ -4335,6 +4335,10 @@
             }
         }
         
+        // 版本更新时间的兜底值（离线打开或取不到服务器时间时显示）
+        // 每次发布新版本时更新这一行
+        const APP_BUILD_TIME = '2026-11-03 20:11';
+
         // 功能简介显示函数
         function showHelp() {
             // 创建模态框
@@ -4414,11 +4418,32 @@
                         font-weight: 500;
                     ">关闭</button>
                 </div>
+
+                <div style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e8e8ed;">
+                    <span id="helpBuildTime" style="color: #a1a1a6; font-size: 12px;">版本更新时间：${APP_BUILD_TIME}</span>
+                </div>
             `;
 
             modal.appendChild(content);
             modal.className = 'modal';
             document.body.appendChild(modal);
+
+            // 版本更新时间：优先读页面自身的 Last-Modified（就是本次部署时间），
+            // 取不到时保留兜底值 APP_BUILD_TIME（如离线打开）
+            (function() {
+                const el = modal.querySelector('#helpBuildTime');
+                if (!el) return;
+                function pad(n) { return (n < 10 ? '0' : '') + n; }
+                fetch(location.href.split('#')[0], { method: 'HEAD', cache: 'no-store' })
+                    .then(function(r) { return r.headers.get('last-modified'); })
+                    .then(function(lm) {
+                        const d = new Date(lm);
+                        if (!lm || isNaN(d.getTime())) return;
+                        el.textContent = '版本更新时间：' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' +
+                            pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '（AI 修改）';
+                    })
+                    .catch(function() { /* 离线或取不到头信息：保留兜底值 */ });
+            })();
 
             // 统一关闭函数：移除模态框和ESC监听器，避免事件泄漏
             function closeHelp() {
