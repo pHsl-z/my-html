@@ -4336,8 +4336,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.35';
-        const APP_BUILD_TIME = '2026-11-03 22:12';
+        const APP_VERSION = 'v1.36';
+        const APP_BUILD_TIME = '2026-11-03 22:38';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6027,44 +6027,6 @@
             return trimmed;
         }
 
-        // 临时把预览中超高的 .page 等比缩放进 A4 纸高
-        // 返回 { revert: 恢复函数|null, scaled: [{page, k, mm}] }
-        function applyScaleToFitPages(pDoc) {
-            try {
-                if (!pDoc) return { revert: null, scaled: [] };
-                var pages = pDoc.querySelectorAll('.page');
-                if (!pages.length) return { revert: null, scaled: [] };
-                var pxPerMm = 96 / 25.4;
-                var paperWmm = pages[0].getBoundingClientRect().width / pxPerMm;
-                var targetHmm = paperWmm > 260 ? 210 : 297;
-                var touched = [], scaled = [];
-                for (var i = 0; i < pages.length; i++) {
-                    var p = pages[i];
-                    var hmm = p.getBoundingClientRect().height / pxPerMm;
-                    if (hmm <= targetHmm + 1) continue;
-                    var k = targetHmm / hmm;
-                    touched.push({ el: p, style: p.getAttribute('style') });
-                    scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.round(hmm - targetHmm) });
-                    p.style.transform = 'scale(' + k + ')';
-                    p.style.transformOrigin = 'top left';
-                    p.style.position = 'relative';
-                    p.style.left = (paperWmm * (1 - k) / 2) + 'mm';
-                    // scale 不改变布局高度，负 margin 把缩放后的剩余占位收回来
-                    p.style.marginBottom = (-(hmm - targetHmm)) + 'mm';
-                }
-                if (!touched.length) return { revert: null, scaled: [] };
-                return {
-                    scaled: scaled,
-                    revert: function() {
-                        touched.forEach(function(r) {
-                            if (r.style === null) r.el.removeAttribute('style');
-                            else r.el.setAttribute('style', r.style);
-                        });
-                    }
-                };
-            } catch (e) { return { revert: null, scaled: [] }; }
-        }
-
         // 识别按"纸张"排版的分页块：.page / .a4-page / .paper 等类名，
         // 或 body 直接子元素中宽 ≥190mm、高 ≥240mm 的块（作者常自定义类名）
         function getPaperBlocks(pDoc) {
@@ -6143,8 +6105,11 @@
         }
 
         // 打印：全自动保证 A4 版面（iOS 与 macOS 一致）
-        // 1) 有 .page 分页结构的文档：超高页自动等比缩放进 A4，@page 强制 A4、边距 0
-        // 2) 自定义纸张块（.a4-page 等）：等比缩进可打印区，避免右侧/底部被裁
+        // 1) 有 .page 分页结构的文档 / 自定义纸张块（.a4-page 等）：一律把块的
+        //    真实布局宽度收进可打印区（210-24=186mm，再留 18mm 余量），
+        //    文字重新折行；高度超出可打印高度时再等比压缩
+        // 2) 这样做的原因：iOS 打印会套用自己的页边距，若假设"210mm 块正好
+        //    铺满纸张"（@page 边距 0），右侧必然被裁掉
         // 3) 无分页结构的流式文档：@page 强制 A4、边距 12mm，内容自然分页
         // 全程同步执行，保持在用户手势内（iOS 要求 print() 必须由手势触发）
         function printCurrentPreview() {
@@ -6160,14 +6125,24 @@
 
                 const firstPage = previewDoc.querySelector('.page');
                 const pxPerMm = 96 / 25.4;
-                let pageMargin = firstPage ? '0' : '12mm';
+                // 边距统一用 12mm。以前对 .page 文档用 0 边距，等于假设
+                // "210mm 的块正好铺满纸张"；但 iOS 打印仍会套用它自己的
+                // 页边距，结果右侧被裁掉一大片。任何结构都不再做这个假设。
+                let pageMargin = '12mm';
                 let orient = firstPage && firstPage.getBoundingClientRect().width / pxPerMm > 260 ? 'landscape' : 'portrait';
 
-                // 打印前把版面缩进可打印区（临时改预览 DOM，打印后恢复）
+                // 打印前把版面收进可打印区（临时改预览 DOM，打印后恢复）
                 let fit;
                 if (firstPage) {
-                    // .page 结构：@page 边距 0，只按纸高缩放超高页
-                    fit = applyScaleToFitPages(previewDoc);
+                    // .page 分页结构：块宽通常就是 210mm，按高度收窄的同时
+                    // 也要按宽度收窄，否则 iOS 会按自己的页边距裁掉右侧
+                    const pageBlocks = Array.prototype.slice.call(previewDoc.querySelectorAll('.page'));
+                    const firstWmm = firstPage.getBoundingClientRect().width / pxPerMm;
+                    if (firstWmm > 260) orient = 'landscape';
+                    const paperW = firstWmm > 260 ? 297 : 210;
+                    const paperH = firstWmm > 260 ? 210 : 297;
+                    const m = 12;
+                    fit = applyScaleToPrintableArea(pageBlocks, paperW - m * 2, paperH - m * 2);
                 } else {
                     // 自定义纸张块（如 .a4-page 宽 210mm）：带页边距时可打印宽只有
                     // 210-24=186mm，块超出 24mm，右侧文字会被裁掉 → 等比缩进
