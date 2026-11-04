@@ -4558,8 +4558,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.39';
-        const APP_BUILD_TIME = '2026-11-04 19:55';
+        const APP_VERSION = 'v1.40';
+        const APP_BUILD_TIME = '2026-11-04 20:18';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6403,15 +6403,49 @@
                         sessionStorage.setItem('_iosPrintFlag', '1');
                     } catch(e) {}
 
-                    // 序列化预览（带走缩放样式），剥离脚本：打印静态快照，避免二次排版
-                    var fullHtml = previewDoc.documentElement.innerHTML;
-                    if (fit.revert) fit.revert();
-                    fullHtml = fullHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
+                    // 快照打印：不再整页替换、也不再靠 reload 返回。
+                    // 1) 把宿主应用的 head/body 子节点"摘下来"暂存——不销毁，
+                    //    事件监听器都还挂在同一批 DOM 对象上，挂回去即可复用
+                    // 2) 把预览文档克隆进主文档打印（剥离脚本，保留内联缩放样式）
+                    // 3) 「返回编辑器」移除快照节点、宿主节点原位挂回，毫秒级完成
+                    //    （location.reload() 要重新下载并初始化整个应用，
+                    //      iPhone 上要等好几秒）
+                    var pHead = previewDoc.head;
+                    var pBody = previewDoc.body;
+                    var savedHead = Array.prototype.slice.call(document.head.childNodes);
+                    var savedBody = Array.prototype.slice.call(document.body.childNodes);
+                    savedHead.forEach(function(n) { try { document.head.removeChild(n); } catch (e) {} });
+                    savedBody.forEach(function(n) { try { document.body.removeChild(n); } catch (e) {} });
 
-                    // 统一接管 viewport：剥离文档自带的（部分带 viewport-fit=cover，
-                    // 会让固定在 top:0 的控制条顶进灵动岛/刘海点不到），
-                    // 换成确定的配置，使 env(safe-area-inset-*) 生效可用
-                    fullHtml = fullHtml.replace(/<meta(?=[^>]*name=["']?viewport["']?)[^>]*>/gi, '');
+                    var snapshotNodes = [];
+                    function skipSnapshotNode(n, inHead) {
+                        if (n.nodeType !== 1) return false;
+                        var tag = n.tagName.toUpperCase();
+                        if (tag === 'SCRIPT' || tag === 'TITLE' || tag === 'BASE') return true;
+                        if (inHead && tag === 'META' && /viewport/i.test(n.getAttribute('name') || '')) return true;
+                        return false;
+                    }
+                    Array.prototype.slice.call(pHead.childNodes).forEach(function(n) {
+                        if (skipSnapshotNode(n, true)) return;
+                        var c = document.importNode(n, true);
+                        document.head.appendChild(c);
+                        snapshotNodes.push(c);
+                    });
+                    Array.prototype.slice.call(pBody.childNodes).forEach(function(n) {
+                        if (skipSnapshotNode(n, false)) return;
+                        var c = document.importNode(n, true);
+                        document.body.appendChild(c);
+                        snapshotNodes.push(c);
+                    });
+                    if (fit.revert) fit.revert();
+
+                    // 统一接管 viewport：文档自带的已剔除（部分带
+                    // viewport-fit=cover，会让固定在 top:0 的控制条顶进灵动岛点不到）
+                    var vpMeta = document.createElement('meta');
+                    vpMeta.setAttribute('name', 'viewport');
+                    vpMeta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+                    document.head.appendChild(vpMeta);
+                    snapshotNodes.push(vpMeta);
 
                     // 纸张块双保险：内联宽度之外，再用类规则约束一次；
                     // 子元素（图片/表格/代码块等）限宽，防止个别元素撑破版面
@@ -6419,30 +6453,49 @@
                         ? '.__pfit{width:' + fit.fitWmm + 'mm !important;max-width:' + fit.fitWmm + 'mm !important;box-sizing:border-box !important;min-height:0 !important;}'
                           + '.__pfit img,.__pfit table,.__pfit pre,.__pfit svg,.__pfit canvas,.__pfit iframe{max-width:100% !important;}'
                         : '';
-                    var printCss = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
-                        + '<style>@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' + fitCss + '</style>';
+                    var stEl = document.createElement('style');
+                    stEl.textContent = '@page{size:A4 ' + orient + ';margin:' + pageMargin + ';}'
+                        + '*,*::before,*::after{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}'
+                        + fitCss
+                        + '@media print{#_pbar{display:none !important;}}';
+                    document.head.appendChild(stEl);
+                    snapshotNodes.push(stEl);
 
-                    // 常驻控制条：自动打印未弹出时点「立即打印」，自动返回失效时点「返回编辑器」
+                    // 常驻控制条：点「立即打印」重新打印，点「返回编辑器」原地还原
                     // padding-top 加安全区高度，避开灵动岛/状态栏
                     var barText = fitDesc ? '🖨️ ' + fitDesc : '🖨️ 打印预览';
-                    var bar = '<div id="_pbar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 9px);display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;">'
-                        + '<span>' + barText + '</span>'
+                    var bar = document.createElement('div');
+                    bar.id = '_pbar';
+                    bar.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a1a1a;color:#e6e6e6;font:13px -apple-system,sans-serif;padding:9px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 9px);display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;box-sizing:border-box;');
+                    bar.innerHTML = '<span>' + barText + '</span>'
                         + '<button onclick="window.__iosDoPrint()" style="background:#00a86b;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">🖨️ 立即打印</button>'
-                        + '<button onclick="location.reload()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">↩ 返回编辑器</button>'
-                        + '</div>'
-                        + '<style>@media print{#_pbar{display:none !important;}}</style>';
+                        + '<button onclick="window.__iosReturn()" style="background:#2a5d9f;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;">↩ 返回编辑器</button>';
+                    document.body.appendChild(bar);
+                    snapshotNodes.push(bar);
 
-                    if (/<\/head>/i.test(fullHtml)) fullHtml = fullHtml.replace(/<\/head>/i, printCss + '</head>');
-                    else fullHtml = printCss + fullHtml;
-                    if (/<body[^>]*>/i.test(fullHtml)) fullHtml = fullHtml.replace(/<body([^>]*)>/i, '<body$1>' + bar);
-                    else fullHtml += bar;
-
-                    // DOM 整体替换当前页（比 document.write 稳定，无大文档截断白屏问题）
-                    document.documentElement.innerHTML = fullHtml;
                     // 强制同步排版：确保快照在 print() 前完成布局。iOS 打印
                     // 预览的初次渲染是异步的，若抓到未排版内容会输出空白
-                    // （二次打印时内存紧张尤其容易中招）
                     try { document.body.getBoundingClientRect(); } catch (e) {}
+
+                    // 原位还原：移除快照节点、把宿主节点按原顺序挂回。
+                    // 全程不触发页面导航，所以返回是即时的
+                    window.__iosReturned = false;
+                    window.__iosReturn = function () {
+                        if (window.__iosReturned) return;
+                        window.__iosReturned = true;
+                        try {
+                            snapshotNodes.forEach(function(n) { if (n.parentNode) n.parentNode.removeChild(n); });
+                            savedHead.forEach(function(n) { document.head.appendChild(n); });
+                            savedBody.forEach(function(n) { document.body.appendChild(n); });
+                            setTimeout(function() {
+                                try { updateViewportHeight(); } catch (e) {}
+                                try { updateLandscapeRail(); } catch (e) {}
+                                try { showToast('已返回编辑器', 'success'); } catch (e) {}
+                            }, 0);
+                        } catch (e) {
+                            location.reload();
+                        }
+                    };
 
                     window.__iosDoPrint = function () { window.print(); };
                     // 不做"自动返回"：iOS 26 实测，打印面板打开期间只要在
