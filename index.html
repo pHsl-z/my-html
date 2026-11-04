@@ -4558,8 +4558,8 @@
         }
         
         // 版本号与更新时间：每次发布新版本时同时更新这两行
-        const APP_VERSION = 'v1.38';
-        const APP_BUILD_TIME = '2026-11-04 02:28';
+        const APP_VERSION = 'v1.39';
+        const APP_BUILD_TIME = '2026-11-04 19:55';
 
         // 功能简介显示函数
         function showHelp() {
@@ -6269,6 +6269,11 @@
                     if (r.width / pxPerMm >= 190 && r.height / pxPerMm >= 240) out.push(kids[j]);
                 }
             }
+            // 去掉嵌套块（如 .paper > .sheet），只保留最外层，
+            // 否则同一块内容会被缩放两次
+            out = out.filter(function(el) {
+                return !out.some(function(other) { return other !== el && other.contains(el); });
+            });
             return out;
         }
 
@@ -6281,10 +6286,17 @@
         function applyScaleToPrintableArea(blocks, printableWmm, printableHmm) {
             var pxPerMm = 96 / 25.4;
             var touched = [], scaled = [], fitW = 0;
+            var pageNo = 0;
             for (var i = 0; i < blocks.length; i++) {
                 var b = blocks[i];
                 var w0 = b.getBoundingClientRect().width / pxPerMm;
                 if (!w0) continue;
+                var h0 = b.getBoundingClientRect().height / pxPerMm;
+                // 高度远超一页的块是"流式长文档"（例如整张 .sheet 里连续排了
+                // 20 道题）。这种情况要交给打印引擎自然分页；硬压进一页会把
+                // 整篇缩成一小块，字号也一起变小
+                if (h0 > printableHmm * 1.6) continue;
+                pageNo++;
                 touched.push({ el: b, style: b.getAttribute('style'), hadClass: b.classList.contains('__pfit') });
                 // 打上标记类：快照里还有一条打印样式表按这个类再约束一次宽度，
                 // 双保险（内联 !important + 类规则），不依赖某一个引擎的偏好
@@ -6310,7 +6322,7 @@
                     b.style.position = 'relative';
                     b.style.marginBottom = (-(hmm * (1 - k))).toFixed(2) + 'mm';
                 }
-                scaled.push({ page: i + 1, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((w0 - targetW) * 10) / 10) });
+                scaled.push({ page: pageNo, k: Math.round(k * 1000) / 1000, mm: Math.max(0, Math.round((w0 - targetW) * 10) / 10) });
             }
             if (!touched.length) return { revert: null, scaled: [], fitWmm: 0 };
             return {
